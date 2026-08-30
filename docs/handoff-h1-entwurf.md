@@ -9,14 +9,17 @@ forbidden_paths: ["app/src/domain/regeln.ts", "app/src/domain/oenologie.ts", "ap
 tests: ["cd app && npm ci && npx tsc --noEmit && npx vitest run && npm run build"]
 review_required: true
 done_criteria:
-  - "ALLE 27 Regressionstests in app/src/domain/regressionen-2025.test.ts bleiben gruen. Wer eine Regel abschwaechen will, schreibt das in '## Offene Punkte' des PR statt den Test anzupassen."
+  - "ALLE 31 Regressionstests in app/src/domain/regressionen-2025.test.ts bleiben gruen. Wer eine Regel abschwaechen will, schreibt das in '## Offene Punkte' des PR statt den Test anzupassen."
   - "npm run build erzeugt EINE app/dist/index.html (vite-plugin-singlefile) plus sw.js und manifest.webmanifest. Keine externen Requests, keine CDN-Referenzen, relative Pfade."
   - "PWA: auf dem iPhone ueber Safari 'Zum Home-Bildschirm' installierbar, laeuft danach vollstaendig offline. Service Worker cached die App-Huelle."
   - "Persistenz in IndexedDB. Kein Datenverlust bei Reload oder Offline-Nutzung. Fotos werden als Blob gespeichert."
-  - "Startdatensatz 2026 ist beim ersten Start sofort da: drei Chargen (Bottich 1 11,0 kg / Wanne 1 23,5 kg / Wanne 2 14,0 kg), Phase KALTMAZERATION, Startzeit 30.08.2026 17:00; Behaelter: Gaerbottich 1 (20 L, vorhanden), Gaerbottich 2-4 (20 L, vorhandenAb 2026-09-02), Gaerballon 1-2 (5 L, vorhanden), Gaerballon 3-6 (5 L, vorhandenAb 2026-09-04); Vorrat: Kaliumpyrosulfit 4 g, Hefenaehrsalz 60 g, Reinzuchthefe Steinberg 4 Beutel."
+  - "Startdatensatz 2026 ist beim ersten Start sofort da: drei Chargen wie sie heute physisch liegen (Bottich 1 11,0 kg / Wanne 1 23,5 kg / Wanne 2 14,0 kg), Phase KALTMAZERATION, Startzeit 30.08.2026 17:00; Behaelter: Gaerbottich 1 (20 L, vorhanden), Gaerbottich 2-4 (20 L, vorhandenAb 2026-09-02), Gaerballon 1-2 (5 L, vorhanden), Gaerballon 3-6 (5 L, vorhandenAb 2026-09-04), Gaerballon klein 3 L x2 (vorhandenAb 2026-09-04); Vorrat: Kaliumpyrosulfit 4 g (plus 100 g bestellt), Hefenaehrsalz 60 g, Reinzuchthefe Steinberg 4 Beutel."
+  - "UMVERTEILEN: Beim Anstellen muessen die drei Ausgangschargen auf vier Gaerbottiche zu je ~12,1 kg umverteilt werden koennen. Die App unterstuetzt Aufteilen und Zusammenfuehren von Chargen mit Mengenangabe; die Historie der Ausgangschargen bleibt ueber elternChargeId nachvollziehbar. vermischungErlaubt() aus regeln.ts wird dabei ausgewertet und blockiert bei ORANGE/RED."
   - "Ampel und Befunde kommen AUSSCHLIESSLICH aus domain/regeln.ts (befundeFuerCharge, ampelFuerCharge). Keine zweite Regelquelle in der UI, keine hartkodierten Schwellenwerte im Frontend."
   - "Gates werden ueber gateFuerPhase() gerendert. Ein nicht freigegebenes Gate deaktiviert den Weiter-Button sichtbar. 'Unbekannt' (erfuellt === null) wird optisch anders dargestellt als 'nicht erfuellt' (false), blockiert aber gleichermassen."
   - "Rechner fuer Schwefeln, Aufzuckern und Naehrsalz nutzen oenologie.ts. Jedes Ergebnis zeigt Formel und Sicherheitsgrad (gemessen/gerechnet/geschaetzt) an. Beim Schwefeln wird zusaetzlich der Restvorrat gegengerechnet und gewarnt, wenn die Zugabe ihn uebersteigt."
+  - "SAMMELAKTION: Messungen, Ereignisse und Zugaben lassen sich in einem Vorgang fuer MEHRERE ausgewaehlte Chargen erfassen. Andi fuehrt vier synchrone Gaerbottiche neben einem Vollzeitjob - viermal denselben Wert einzeln einzutippen ist der Weg, auf dem die Dokumentation im Alltag stirbt. Gespeichert wird pro Charge ein eigener Datensatz (keine Sammelobjekte), damit die Regelengine unveraendert je Charge rechnet. Bei Zugaben wird die Menge je Charge aus deren Volumen berechnet, nicht pauschal uebernommen."
+  - "MESSMETHODE: Bei den Messgroessen oechsle, sg und brix ist das Feld methode ('spindel' | 'refraktometer' | 'sonstige') zu erfassen. Default 'spindel'. Waehlt der Nutzer 'refraktometer' und die Charge ist bereits in oder nach der Gaerung, zeigt die UI unmittelbar den Hinweis aus Regel R-REFRAKTOMETER. Refraktometerwerte werden von der Gaerende-Beurteilung ausgeschlossen - das erledigt regeln.ts bereits, die UI darf es nicht umgehen."
   - "Jede Zugabe wird als Ereignis mit Stoff, Menge, Einheit, Zeitpunkt, Charge und PFLICHT-Begruendung gespeichert (Audit-Regel 13). Ohne Begruendung kein Speichern."
   - "Reminder: Die App erzeugt eine .ics-Datei je Termin und eine Sammel-.ics fuer den Jahrgang (VEVENT mit VALARM, DTSTART lokal, deutscher SUMMARY und DESCRIPTION). Download ueber Blob-URL. KEIN eigenes Push-/Benachrichtigungssystem bauen."
   - "Wiki: durchsuchbare Seiten mit Tags, Markdown-Teilmenge (Ueberschriften, Fett, Listen, Links), eigene Seiten anlegbar und editierbar, in IndexedDB persistiert. Mindestens die sechs im Mockup gezeigten Startseiten sind mit echtem Fachinhalt gefuellt."
@@ -39,9 +42,9 @@ dieses Auftrags, kein Vorschlag:
 | `typen.ts` | Datenmodell, 16 Phasen, Messgroessen, Ampel. Darf um Felder ERWEITERT werden. |
 | `oenologie.ts` | SO₂ molekular, Zuckerzugabe, Naehrsalzplan, Kopfraum, Ausbeute. Read-only. |
 | `regeln.ts` | Befunde, Ampel, fuenf Gates. Read-only. |
-| `regressionen-2025.test.ts` | 27 Tests, je einem Fehler aus 2025 zugeordnet. Read-only. |
+| `regressionen-2025.test.ts` | 31 Tests, je einem Fehler aus 2025 bzw. einer Regel fuer 2026 zugeordnet. Read-only. |
 
-Stand bei Uebergabe: 27 von 27 Tests gruen (`npx vitest run`).
+Stand bei Uebergabe: 31 von 31 Tests gruen (`npx vitest run`).
 
 ## Warum das so streng ist
 

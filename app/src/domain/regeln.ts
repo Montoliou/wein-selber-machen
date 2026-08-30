@@ -63,10 +63,22 @@ function alsSg(m: Messung | undefined): number | null {
   return null
 }
 
+/**
+ * Dichtereihe für Gärbeurteilungen. Refraktometerwerte fliegen bewusst raus:
+ * sobald Alkohol im Spiel ist, zeigt ein Refraktometer zu hoch an. Ein damit
+ * gemessenes "Gärende" wäre derselbe Selbstbetrug wie "kein Blubbern = fertig".
+ */
 function dichtereihe(stand: Datenstand, chargeId: string): Messung[] {
   return stand.messungen
     .filter(m => (m.typ === 'sg' || m.typ === 'oechsle') && m.chargeId === chargeId)
+    .filter(m => m.methode !== 'refraktometer')
     .sort((a, b) => b.zeit.localeCompare(a.zeit))
+}
+
+/** Gärt die Charge bereits oder ist sie durch die Gärung durch? Dann kein Refraktometer. */
+function alkoholVorhanden(phase: Charge['phase']): boolean {
+  return ['AKTIVE_GAERUNG', 'PRESS_GATE', 'NACHGAERUNG', 'GAERENDE_GATE', 'ERSTER_ABSTICH',
+    'AUSBAU', 'STABILITAETS_GATE', 'SUESSE_GATE', 'ABFUELL_GATE', 'FLASCHE'].includes(phase)
 }
 
 function stundenZwischen(a: string, b: string): number {
@@ -289,6 +301,23 @@ export function befundeFuerCharge(stand: Datenstand, charge: Charge, jetzt = new
       text: 'Presswein trägt mehr Trub, Gerbstoff und Hefebelastung. 2025 entwickelte genau diese Fraktion früh reduktive Noten.',
       massnahme: 'Nicht mit dem Vorlauf vereinigen, bevor beide Chargen über mehrere Wochen sauber sind.',
     })
+  }
+
+  // R-REFRAKTOMETER: Refraktometerwert nach Gärbeginn ist systematisch falsch
+  if (alkoholVorhanden(charge.phase)) {
+    const refra = stand.messungen
+      .filter(m => m.chargeId === charge.id && m.methode === 'refraktometer')
+      .filter(m => m.typ === 'oechsle' || m.typ === 'sg' || m.typ === 'brix')
+      .sort((a, b) => b.zeit.localeCompare(a.zeit))[0]
+    if (refra) {
+      b.push({
+        regelId: 'R-REFRAKTOMETER',
+        ampel: 'YELLOW',
+        titel: 'Refraktometerwert nach Gärbeginn',
+        text: 'Ethanol verändert den Brechungsindex. Sobald Alkohol im Ansatz ist, zeigt ein Refraktometer zu hoch an — der Wein wirkt süßer, als er ist. Der Wert wird für die Gärbeurteilung nicht herangezogen.',
+        massnahme: 'Mit der Spindel nachmessen. Das Refraktometer ist ab Gärbeginn nur noch für grobe Trends brauchbar.',
+      })
+    }
   }
 
   if (charge.gesperrt) {

@@ -48,9 +48,9 @@ export interface MessDefinition {
 
 export const MESS_DEFINITIONEN: MessDefinition[] = [
   { typ: 'temperatur', label: 'Temperatur', einheit: '°C', art: 'zahl' },
-  { typ: 'oechsle', label: 'Mostgewicht', einheit: '°Oe', art: 'zahl', hinweis: 'Spindel bei 20 °C ablesen' },
+  { typ: 'oechsle', label: 'Mostgewicht', einheit: '°Oe', art: 'zahl', hinweis: 'Messmethode angeben — Refraktometer nur vor Gärbeginn' },
   { typ: 'sg', label: 'Dichte (SG)', einheit: 'g/cm³', art: 'zahl', hinweis: 'Alternative zu °Oe, wird umgerechnet' },
-  { typ: 'brix', label: 'Brix', einheit: '°Bx', art: 'zahl' },
+  { typ: 'brix', label: 'Brix', einheit: '°Bx', art: 'zahl', hinweis: 'Refraktometerwert — nur vor Gärbeginn gültig' },
   { typ: 'ph', label: 'pH-Wert', einheit: '', art: 'zahl', hinweis: 'Vor jeder Messreihe kalibrieren' },
   { typ: 'gesamtsaeure', label: 'Gesamtsäure', einheit: 'g/L', art: 'zahl' },
   { typ: 'so2_frei', label: 'Freier SO₂', einheit: 'mg/L', art: 'zahl', hinweis: 'Nur eintragen, wenn wirklich titriert' },
@@ -69,6 +69,14 @@ export const MESS_DEFINITIONEN: MessDefinition[] = [
     optionen: ['keine', 'schwach', 'mittel', 'stark', 'sehr stark'] },
 ]
 
+/**
+ * Wie eine Dichte-/Zuckermessung zustande kam. Entscheidend, weil ein
+ * Refraktometer bei Anwesenheit von Alkohol systematisch falsch anzeigt:
+ * Ethanol verändert den Brechungsindex, der abgelesene Wert liegt zu hoch.
+ * Für das Gärende zählt deshalb ausschließlich die Spindel.
+ */
+export type MessMethode = 'spindel' | 'refraktometer' | 'sonstige'
+
 export interface Messung {
   id: string
   chargeId: string
@@ -76,6 +84,7 @@ export interface Messung {
   typ: MessTyp
   wert: number | null   // bei art 'auswahl' null
   text?: string         // bei art 'auswahl'
+  methode?: MessMethode // nur bei Dichte-/Zuckerwerten relevant
   notiz?: string
 }
 

@@ -29,8 +29,9 @@ function charge(p: Partial<Charge> = {}): Charge {
   }
 }
 
-function messung(chargeId: string, typ: Messung['typ'], wert: number | null, zeit: string, text?: string): Messung {
-  return { id: id(), chargeId, typ, wert, zeit, text }
+function messung(chargeId: string, typ: Messung['typ'], wert: number | null, zeit: string, text?: string,
+                 methode?: Messung['methode']): Messung {
+  return { id: id(), chargeId, typ, wert, zeit, text, methode }
 }
 
 function ereignis(chargeId: string, e: Partial<Ereignis>): Ereignis {
@@ -313,5 +314,54 @@ describe('Stabilitäts-Gate führt Unsicherheit sichtbar', () => {
     const so2Check = gate.checks.find(x => x.id === 'stab-so2')
     expect(so2Check?.erfuellt).toBeNull()          // unbekannt, nicht falsch
     expect(so2Check?.begruendung).toMatch(/unsicher|modelliert/i)
+  })
+})
+
+describe('2026-N1: Refraktometer nach Gärbeginn', () => {
+  it('lässt das Gärende-Gate nicht auf Refraktometerwerten aufbauen', () => {
+    const stand = leererStand()
+    const c = charge({ phase: 'GAERENDE_GATE' })
+    stand.chargen = [c]
+    // Zwei saubere, konstante Werte im richtigen Abstand — aber per Refraktometer.
+    stand.messungen = [
+      messung(c.id, 'oechsle', -5, '2026-09-08T08:00:00.000Z', undefined, 'refraktometer'),
+      messung(c.id, 'oechsle', -5, '2026-09-10T09:00:00.000Z', undefined, 'refraktometer'),
+    ]
+    const gate = gaerendeGate(stand, c)
+    expect(gate.freigegeben).toBe(false)
+    expect(gate.checks.find(x => x.id === 'gaerende-zwei-messungen')?.erfuellt).toBeNull()
+  })
+
+  it('gibt dasselbe Wertepaar frei, wenn es mit der Spindel gemessen wurde', () => {
+    const stand = leererStand()
+    const c = charge({ phase: 'GAERENDE_GATE' })
+    stand.chargen = [c]
+    stand.messungen = [
+      messung(c.id, 'oechsle', -5, '2026-09-08T08:00:00.000Z', undefined, 'spindel'),
+      messung(c.id, 'oechsle', -5, '2026-09-10T09:00:00.000Z', undefined, 'spindel'),
+    ]
+    expect(gaerendeGate(stand, c).freigegeben).toBe(true)
+  })
+
+  it('meldet einen Refraktometerwert in der Gärung als Abweichung', () => {
+    const stand = leererStand()
+    const c = charge({ phase: 'AKTIVE_GAERUNG', fuellLiter: 11 })
+    stand.chargen = [c]
+    stand.messungen = [messung(c.id, 'oechsle', 40, '2026-09-05T08:00:00.000Z', undefined, 'refraktometer')]
+    const befunde = befundeFuerCharge(stand, c, new Date('2026-09-05T10:00:00.000Z'))
+    expect(befunde.some(b => b.regelId === 'R-REFRAKTOMETER')).toBe(true)
+  })
+
+  it('lässt das Refraktometer vor Gärbeginn unbeanstandet', () => {
+    const stand = leererStand()
+    const c = charge({ phase: 'KALTMAZERATION', typ: 'maische', startdatum: '2026-08-30T17:00:00.000Z' })
+    stand.chargen = [c]
+    stand.messungen = [
+      messung(c.id, 'oechsle', 78, '2026-08-31T09:00:00.000Z', undefined, 'refraktometer'),
+      messung(c.id, 'temperatur', 5, '2026-08-31T09:00:00.000Z'),
+      messung(c.id, 'gaeraktivitaet', null, '2026-08-31T09:00:00.000Z', 'keine'),
+    ]
+    expect(befundeFuerCharge(stand, c, new Date('2026-08-31T10:00:00.000Z'))
+      .some(b => b.regelId === 'R-REFRAKTOMETER')).toBe(false)
   })
 })

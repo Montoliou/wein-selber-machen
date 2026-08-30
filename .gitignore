@@ -1,0 +1,10 @@
+# Zugangsdaten — niemals ins Repo
+.ftp-credentials
+
+# Abhängigkeiten und Build
+node_modules/
+app/node_modules/
+app/dist/
+
+# macOS
+.DS_Store

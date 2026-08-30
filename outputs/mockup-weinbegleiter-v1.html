@@ -1,0 +1,643 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Weinbegleiter 2026 — Mockup v1</title>
+<style>
+:root{
+  --bg:#14100f; --flaeche:#1e1917; --flaeche2:#272120; --rand:#392f2c;
+  --text:#f0e9e5; --text2:#a89a93; --text3:#7a6c65;
+  --wein:#8e1f36; --wein-hell:#c4415c; --gold:#c8a55b;
+  --gruen:#3f8a5a; --gelb:#c9a227; --orange:#cd6a24; --rot:#b4232f;
+  --r:14px; --schrift:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--text);font-family:var(--schrift);font-size:16px;line-height:1.5;
+  padding-bottom:76px;overscroll-behavior-y:none}
+.wrap{max-width:520px;margin:0 auto;padding:0 16px}
+
+header{position:sticky;top:0;z-index:20;background:rgba(20,16,15,.92);backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--rand)}
+.kopf{display:flex;align-items:center;gap:10px;padding:14px 16px;max-width:520px;margin:0 auto}
+.logo{width:30px;height:30px;border-radius:9px;background:linear-gradient(140deg,var(--wein),#5c1224);
+  display:grid;place-items:center;font-size:15px;flex:none}
+.kopf h1{font-size:16px;font-weight:650;letter-spacing:-.01em}
+.kopf .sub{font-size:12px;color:var(--text3);margin-top:-1px}
+.stand{margin-left:auto;font-size:11px;color:var(--text3);text-align:right;line-height:1.35}
+
+h2{font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--text3);
+  margin:26px 0 10px}
+h2:first-of-type{margin-top:18px}
+
+.karte{background:var(--flaeche);border:1px solid var(--rand);border-radius:var(--r);padding:14px;margin-bottom:10px}
+.karte.klick{cursor:pointer;transition:border-color .15s,transform .1s}
+.karte.klick:active{transform:scale(.99)}
+
+/* Ampel */
+.ampel{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;
+  padding:3px 9px;border-radius:99px;letter-spacing:.04em;text-transform:uppercase}
+.a-gruen{background:rgba(63,138,90,.16);color:#6fc492}
+.a-gelb{background:rgba(201,162,39,.16);color:#dcbb51}
+.a-orange{background:rgba(205,106,36,.18);color:#e8934f}
+.a-rot{background:rgba(180,35,47,.2);color:#e8646f}
+.punkt{width:7px;height:7px;border-radius:99px;background:currentColor}
+
+/* Chargenkarte */
+.charge-kopf{display:flex;align-items:flex-start;gap:10px;margin-bottom:9px}
+.charge-kopf .name{font-weight:650;font-size:16px}
+.charge-kopf .meta{font-size:12.5px;color:var(--text2);margin-top:2px}
+.charge-kopf .ampel{margin-left:auto;flex:none}
+.balken{display:flex;gap:3px;margin:11px 0 9px}
+.balken i{height:3px;flex:1;border-radius:2px;background:var(--rand)}
+.balken i.an{background:var(--wein-hell)}
+.balken i.jetzt{background:var(--gold);box-shadow:0 0 7px rgba(200,165,91,.6)}
+.zeile{display:flex;justify-content:space-between;gap:12px;font-size:13.5px;padding:4px 0}
+.zeile span:first-child{color:var(--text2)}
+.zeile b{font-weight:600;font-variant-numeric:tabular-nums}
+
+.aktion{display:flex;gap:10px;align-items:flex-start;padding:11px 12px;border-radius:11px;
+  background:var(--flaeche2);border-left:3px solid var(--gold);margin-top:10px}
+.aktion .ic{font-size:15px;line-height:1.3}
+.aktion .tx{font-size:13.5px}
+.aktion .tx b{display:block;font-size:14px;margin-bottom:1px}
+.aktion .tx small{color:var(--text2);font-size:12.5px}
+
+/* Befund */
+.befund{border-left:3px solid;padding:11px 12px;border-radius:11px;background:var(--flaeche2);margin-bottom:8px}
+.befund.b-rot{border-color:var(--rot)} .befund.b-orange{border-color:var(--orange)}
+.befund.b-gelb{border-color:var(--gelb)} .befund.b-gruen{border-color:var(--gruen)}
+.befund .t{font-weight:650;font-size:14px;margin-bottom:3px}
+.befund .x{font-size:13px;color:var(--text2)}
+.befund .m{font-size:13px;margin-top:7px;padding-top:7px;border-top:1px solid var(--rand);color:var(--text)}
+.befund .m b{color:var(--gold);font-weight:600}
+.regel-id{font-size:10px;color:var(--text3);font-family:ui-monospace,monospace;float:right}
+
+/* Gate */
+.check{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--rand);font-size:13.5px}
+.check:last-child{border:0}
+.check .st{flex:none;width:19px;height:19px;border-radius:99px;display:grid;place-items:center;
+  font-size:11px;font-weight:800;margin-top:1px}
+.st-ja{background:rgba(63,138,90,.2);color:#6fc492}
+.st-nein{background:rgba(180,35,47,.2);color:#e8646f}
+.st-unbek{background:rgba(122,108,101,.25);color:var(--text2)}
+.check .q{font-weight:550}
+.check .g{color:var(--text2);font-size:12.5px;margin-top:2px}
+.gate-kopf{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.gate-kopf h3{font-size:17px;font-weight:650}
+.sperre{background:rgba(180,35,47,.11);border:1px solid rgba(180,35,47,.4);border-radius:11px;
+  padding:11px 12px;font-size:13.5px;margin-top:12px}
+.sperre b{color:#e8646f}
+
+/* Buttons */
+.btn{display:block;width:100%;padding:13px;border-radius:12px;border:1px solid var(--rand);
+  background:var(--flaeche2);color:var(--text);font-size:15px;font-weight:600;font-family:inherit;
+  cursor:pointer;text-align:center;margin-top:8px}
+.btn.haupt{background:var(--wein);border-color:var(--wein);color:#fff}
+.btn.aus{opacity:.4;cursor:not-allowed}
+.btn-reihe{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.btn-reihe .btn{margin-top:0}
+
+/* Formfelder */
+label{display:block;font-size:12.5px;color:var(--text2);margin:12px 0 5px;font-weight:600}
+input,select,textarea{width:100%;padding:12px;border-radius:11px;border:1px solid var(--rand);
+  background:var(--flaeche2);color:var(--text);font-size:16px;font-family:inherit}
+.hint{font-size:12px;color:var(--text3);margin-top:5px}
+.chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:5px}
+.chip{padding:8px 13px;border-radius:99px;border:1px solid var(--rand);background:var(--flaeche2);
+  font-size:13.5px;cursor:pointer}
+.chip.an{background:var(--wein);border-color:var(--wein);color:#fff;font-weight:600}
+.chip.warn{border-color:rgba(205,106,36,.55)}
+
+/* Rechner-Ausgabe */
+.ergebnis{background:linear-gradient(150deg,rgba(142,31,54,.22),rgba(142,31,54,.06));
+  border:1px solid rgba(196,65,92,.35);border-radius:12px;padding:15px;margin-top:14px}
+.ergebnis .gross{font-size:31px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.ergebnis .einheit{font-size:14px;color:var(--text2);font-weight:500}
+.formel{font-family:ui-monospace,SFMono-Regular,monospace;font-size:11.5px;color:var(--text3);
+  margin-top:7px;padding-top:7px;border-top:1px solid var(--rand);word-break:break-word}
+.merker{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;padding:3px 8px;
+  border-radius:99px;letter-spacing:.05em;text-transform:uppercase;margin-bottom:9px}
+.m-gemessen{background:rgba(63,138,90,.18);color:#6fc492}
+.m-gerechnet{background:rgba(200,165,91,.16);color:var(--gold)}
+.m-geschaetzt{background:rgba(205,106,36,.18);color:#e8934f}
+.warnbox{background:rgba(205,106,36,.1);border:1px solid rgba(205,106,36,.32);border-radius:11px;
+  padding:11px 12px;font-size:13px;margin-top:10px;color:var(--text)}
+
+/* Wiki */
+.wiki-such{position:relative;margin-bottom:12px}
+.wiki-such input{padding-left:38px}
+.wiki-such .lupe{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--text3)}
+.tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:99px;background:var(--flaeche2);
+  border:1px solid var(--rand);color:var(--text2);margin:0 5px 5px 0}
+.wiki-e{padding:13px 0;border-bottom:1px solid var(--rand);cursor:pointer}
+.wiki-e:last-child{border:0}
+.wiki-e .t{font-weight:650;font-size:15px;margin-bottom:3px}
+.wiki-e .a{font-size:13px;color:var(--text2)}
+
+/* Termine */
+.termin{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--rand)}
+.termin:last-child{border:0}
+.datum{flex:none;width:46px;text-align:center;background:var(--flaeche2);border-radius:10px;padding:6px 0;
+  border:1px solid var(--rand)}
+.datum .tg{font-size:19px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.datum .mo{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
+.termin .inh{flex:1;min-width:0}
+.termin .inh b{font-size:14.5px;font-weight:600;display:block}
+.termin .inh small{font-size:12.5px;color:var(--text2)}
+.termin.faellig .datum{border-color:var(--gold);background:rgba(200,165,91,.12)}
+.termin.faellig .datum .tg{color:var(--gold)}
+.ics{font-size:11.5px;color:var(--gold);margin-top:5px;display:inline-block;font-weight:600}
+
+/* Klima */
+.klima{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.klima .k{background:var(--flaeche2);border:1px solid var(--rand);border-radius:11px;padding:12px}
+.klima .k .w{font-size:26px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.klima .k .l{font-size:11.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em}
+.spark{height:34px;margin-top:9px;display:flex;align-items:flex-end;gap:2px}
+.spark i{flex:1;background:var(--wein-hell);opacity:.5;border-radius:1px}
+
+/* Navigation */
+nav{position:fixed;bottom:0;left:0;right:0;background:rgba(20,16,15,.96);backdrop-filter:blur(14px);
+  border-top:1px solid var(--rand);display:flex;padding:7px 0 max(7px,env(safe-area-inset-bottom));z-index:30}
+nav .n{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:5px 0;cursor:pointer;
+  color:var(--text3);font-size:10.5px;font-weight:600}
+nav .n.an{color:var(--wein-hell)}
+nav .n .i{font-size:19px;line-height:1}
+
+.seite{display:none} .seite.an{display:block}
+.mock-hinweis{background:rgba(200,165,91,.09);border:1px dashed rgba(200,165,91,.4);border-radius:11px;
+  padding:11px 13px;font-size:12.5px;color:var(--text2);margin:14px 0}
+.mock-hinweis b{color:var(--gold)}
+.tabs{display:flex;gap:6px;margin-bottom:14px;overflow-x:auto;padding-bottom:2px}
+.tabs .t{padding:8px 14px;border-radius:99px;border:1px solid var(--rand);background:var(--flaeche2);
+  font-size:13.5px;white-space:nowrap;cursor:pointer}
+.tabs .t.an{background:var(--wein);border-color:var(--wein);color:#fff;font-weight:600}
+.zurueck{display:inline-flex;align-items:center;gap:6px;color:var(--text2);font-size:14px;
+  margin:14px 0 4px;cursor:pointer}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="kopf">
+    <div class="logo">🍇</div>
+    <div>
+      <h1>Weinbegleiter</h1>
+      <div class="sub">Jahrgang 2026 · Rotwein</div>
+    </div>
+    <div class="stand">30.08.2026<br>3 Chargen</div>
+  </div>
+</header>
+
+<!-- ══════════ HEUTE ══════════ -->
+<div class="seite an" id="s-heute"><div class="wrap">
+
+  <div class="mock-hinweis"><b>Mockup v1</b> — klickbar, ohne Funktion. Die Zahlen sind deine echten
+    Inventurdaten vom 30.08.2026. Navigation unten ist aktiv.</div>
+
+  <h2>Jetzt dran</h2>
+
+  <div class="karte" style="border-color:rgba(200,165,91,.45)">
+    <div class="aktion" style="margin-top:0">
+      <div class="ic">🍷</div>
+      <div class="tx">
+        <b>Bottich 1 heute anstellen</b>
+        <small>11,0 kg liegen bereits im 20-L-Bottich. Die weiteren Bottiche kommen erst
+        02.–03.09. — bis dahin wären es 96 h Kaltmazeration. Diese Charge jetzt anstellen
+        nimmt Risiko raus und kalibriert die Dosierung für die Hauptmenge.</small>
+      </div>
+    </div>
+    <div class="btn-reihe">
+      <button class="btn haupt">Anstellen starten</button>
+      <button class="btn">Später</button>
+    </div>
+  </div>
+
+  <div class="karte">
+    <div class="aktion" style="margin-top:0;border-left-color:var(--orange)">
+      <div class="ic">🌡️</div>
+      <div class="tx">
+        <b>Tageskontrolle Kaltmazeration</b>
+        <small>Wanne 1 und Wanne 2 · Temperatur, Geruch und Gäraktivität eintragen.
+        Fällig seit heute 08:00.</small>
+      </div>
+    </div>
+    <button class="btn haupt">Kontrolle erfassen</button>
+  </div>
+
+  <h2>Chargen</h2>
+
+  <div class="karte klick" onclick="zeig('s-charge')">
+    <div class="charge-kopf">
+      <div>
+        <div class="name">Bottich 1</div>
+        <div class="meta">11,0 kg · Maische · seit 30.08.</div>
+      </div>
+      <span class="ampel a-gruen"><i class="punkt"></i>Normal</span>
+    </div>
+    <div class="balken">
+      <i class="an"></i><i class="an"></i><i class="an"></i><i class="an"></i><i class="jetzt"></i>
+      <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+    </div>
+    <div class="zeile"><span>Phase</span><b>Kaltmazeration</b></div>
+    <div class="zeile"><span>Temperatur</span><b>8,0 °C</b></div>
+    <div class="zeile"><span>Mostgewicht</span><b>noch nicht gemessen</b></div>
+    <div class="zeile"><span>Liegt seit</span><b>0 Std.</b></div>
+  </div>
+
+  <div class="karte klick">
+    <div class="charge-kopf">
+      <div>
+        <div class="name">Wanne 1</div>
+        <div class="meta">23,5 kg · Maische · seit 30.08.</div>
+      </div>
+      <span class="ampel a-gelb"><i class="punkt"></i>Abweichung</span>
+    </div>
+    <div class="balken">
+      <i class="an"></i><i class="an"></i><i class="an"></i><i class="an"></i><i class="jetzt"></i>
+      <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+    </div>
+    <div class="zeile"><span>Phase</span><b>Kaltmazeration</b></div>
+    <div class="zeile"><span>Temperatur</span><b>8,0 °C</b></div>
+    <div class="zeile"><span>Braucht ab 02.09.</span><b>2 Gärbottiche</b></div>
+  </div>
+
+  <div class="karte klick">
+    <div class="charge-kopf">
+      <div>
+        <div class="name">Wanne 2</div>
+        <div class="meta">14,0 kg · Maische · seit 30.08.</div>
+      </div>
+      <span class="ampel a-gelb"><i class="punkt"></i>Abweichung</span>
+    </div>
+    <div class="balken">
+      <i class="an"></i><i class="an"></i><i class="an"></i><i class="an"></i><i class="jetzt"></i>
+      <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+    </div>
+    <div class="zeile"><span>Phase</span><b>Kaltmazeration</b></div>
+    <div class="zeile"><span>Temperatur</span><b>8,0 °C</b></div>
+  </div>
+
+  <h2>Kellerklima</h2>
+  <div class="klima">
+    <div class="k">
+      <div class="l">Kühlschrank</div>
+      <div class="w">8,0 °C</div>
+      <div class="spark"><i style="height:52%"></i><i style="height:58%"></i><i style="height:49%"></i>
+        <i style="height:61%"></i><i style="height:55%"></i><i style="height:63%"></i><i style="height:57%"></i></div>
+    </div>
+    <div class="k">
+      <div class="l">Keller</div>
+      <div class="w">17,4 °C</div>
+      <div class="spark"><i style="height:71%"></i><i style="height:68%"></i><i style="height:74%"></i>
+        <i style="height:69%"></i><i style="height:77%"></i><i style="height:72%"></i><i style="height:75%"></i></div>
+    </div>
+  </div>
+  <div class="hint" style="margin-top:9px">Sensor noch nicht verbunden — Werte manuell erfasst.
+    <span style="color:var(--gold)">Sensor einrichten →</span></div>
+
+  <h2>Vorrat</h2>
+  <div class="karte">
+    <div class="zeile"><span>Kaliumpyrosulfit</span><b style="color:#e8934f">4 g</b></div>
+    <div class="zeile"><span>Hefenährsalz</span><b>60 g + 2 angebrochen</b></div>
+    <div class="zeile"><span>Reinzuchthefe Steinberg</span><b>4 Beutel</b></div>
+    <div class="warnbox">Pyrosulfit reicht rechnerisch für <b>eine</b> Schwefelung von 7 L.
+      Der Jahresbedarf für ~33 L Wein liegt bei 12–15 g.</div>
+  </div>
+
+</div></div>
+
+<!-- ══════════ CHARGE ══════════ -->
+<div class="seite" id="s-charge"><div class="wrap">
+  <div class="zurueck" onclick="zeig('s-heute')">← Chargen</div>
+
+  <div class="charge-kopf" style="margin:10px 0 4px">
+    <div>
+      <div class="name" style="font-size:23px">Bottich 1</div>
+      <div class="meta">Maische · 11,0 kg · angelegt 30.08.2026</div>
+    </div>
+    <span class="ampel a-orange"><i class="punkt"></i>Isolieren</span>
+  </div>
+
+  <div class="tabs">
+    <div class="t an">Befunde</div><div class="t">Messungen</div>
+    <div class="t">Ereignisse</div><div class="t">Gefäß</div><div class="t">Fotos</div>
+  </div>
+
+  <div class="mock-hinweis">Beispielzustand mit Befunden — zeigt, wie die Regelengine spricht.</div>
+
+  <div class="befund b-orange">
+    <span class="regel-id">R-H2S</span>
+    <div class="t">H₂S-Note (faule Eier)</div>
+    <div class="x">Schwefelwasserstoff entsteht bei Hefestress, meist durch Stickstoffmangel oder
+      zu viel Trub. 2025 trat das beim Presswein auf.</div>
+    <div class="m"><b>Zu tun:</b> Charge isolieren. Sofort belüftend abziehen. Bleibt die Note,
+      kontrollierten Bench Trial mit Kupfer ansetzen — niemals eine Münze in den Wein.</div>
+  </div>
+
+  <div class="befund b-gelb">
+    <span class="regel-id">R-SO2-UNBEKANNT</span>
+    <div class="t">Freier SO₂ unbekannt</div>
+    <div class="x">Der pH ist mit 3,45 bekannt, der freie SO₂ nicht. Damit ist der molekulare
+      SO₂ nicht bestimmbar — nur modellierbar.</div>
+    <div class="m"><b>Zu tun:</b> Als bewusst unbekannt führen und dafür das Kontrollintervall
+      kurz halten. Eine Titration ist die einzige echte Abhilfe.</div>
+  </div>
+
+  <div class="befund b-gruen">
+    <span class="regel-id">R-KOPFRAUM</span>
+    <div class="t">Kopfraum 1,0 % — in Ordnung</div>
+    <div class="x">5,00 L Füllung, 0,05 L Kopfraum. Unter der Warnschwelle von 2 %.</div>
+  </div>
+
+  <h2>Letzte Messungen</h2>
+  <div class="karte">
+    <div class="zeile"><span>30.08. 17:10 · Temperatur</span><b>8,0 °C</b></div>
+    <div class="zeile"><span>30.08. 17:10 · Gäraktivität</span><b>keine</b></div>
+    <div class="zeile"><span>30.08. 17:10 · Geruch</span><b>sauber / fruchtig</b></div>
+    <div class="zeile"><span>30.08. 16:55 · Gewicht</span><b>11,0 kg</b></div>
+  </div>
+
+  <button class="btn haupt" onclick="zeig('s-messen')">Messung erfassen</button>
+  <button class="btn" onclick="zeig('s-rechner')">Zugabe berechnen</button>
+  <button class="btn" onclick="zeig('s-gate')">Gate prüfen</button>
+</div></div>
+
+<!-- ══════════ MESSEN ══════════ -->
+<div class="seite" id="s-messen"><div class="wrap">
+  <div class="zurueck" onclick="zeig('s-charge')">← Bottich 1</div>
+  <h2 style="margin-top:12px">Messung erfassen</h2>
+
+  <div class="karte">
+    <label>Was misst du?</label>
+    <div class="chips">
+      <div class="chip an">Temperatur</div><div class="chip">Mostgewicht</div>
+      <div class="chip">Dichte</div><div class="chip">pH</div>
+      <div class="chip">Geruch</div><div class="chip">Oberfläche</div>
+      <div class="chip">Gäraktivität</div><div class="chip">Kopfraum</div>
+    </div>
+
+    <label>Temperatur</label>
+    <input value="8,0" inputmode="decimal">
+    <div class="hint">°C · Zielkorridor Kaltmazeration 4–10 °C</div>
+
+    <label>Zeitpunkt</label>
+    <input value="30.08.2026, 17:10">
+
+    <label>Notiz (freiwillig)</label>
+    <textarea rows="2" placeholder="z. B. oben im Kühlschrank gemessen"></textarea>
+
+    <button class="btn haupt">Speichern</button>
+  </div>
+
+  <div class="mock-hinweis">Bei den Auswahlfeldern <b>Geruch</b> und <b>Oberfläche</b> lösen
+    einzelne Werte sofort Befunde aus — „faule Eier" setzt ORANGE, „Fruchtfliegen" setzt ROT.</div>
+</div></div>
+
+<!-- ══════════ RECHNER ══════════ -->
+<div class="seite" id="s-rechner"><div class="wrap">
+  <div class="zurueck" onclick="zeig('s-charge')">← Bottich 1</div>
+  <h2 style="margin-top:12px">Zugabe berechnen</h2>
+
+  <div class="tabs">
+    <div class="t an">Schwefeln</div><div class="t">Aufzuckern</div><div class="t">Nährsalz</div>
+  </div>
+
+  <div class="karte">
+    <label>Volumen</label>
+    <input value="7,0"><div class="hint">Liter</div>
+
+    <label>pH-Wert</label>
+    <input value="3,45"><div class="hint">gemessen am 30.08.2026</div>
+
+    <label>Freier SO₂ (Istwert)</label>
+    <input value="" placeholder="nicht gemessen">
+    <div class="hint">Leer lassen, wenn nicht titriert — die App rechnet dann eine Obergrenze.</div>
+
+    <div class="ergebnis">
+      <div class="merker m-geschaetzt">◐ Geschätzt</div>
+      <div><span class="gross">1,04</span> <span class="einheit">g Kaliumpyrosulfit</span></div>
+      <div style="font-size:13px;color:var(--text2);margin-top:6px">
+        Zielwert freier SO₂ bei pH 3,45: <b style="color:var(--text)">30 mg/L</b>
+        für 0,6 mg/L molekular</div>
+      <div class="formel">(7 L × 30 mg/L ÷ 0,5 Bindungsfaktor) ÷ 576 mg/g</div>
+    </div>
+
+    <div class="warnbox">
+      Freier SO₂ ist nicht gemessen. Die Rechnung unterstellt einen Ausgangswert von 0 mg/L
+      und liefert damit eine <b>Obergrenze, keine Punktdosis</b>. Ein Teil des SO₂ bindet sofort
+      an Acetaldehyd und Farbstoffe — der tatsächlich freie Wert bleibt ohne Titration unbekannt.
+    </div>
+
+    <div class="warnbox" style="background:rgba(180,35,47,.1);border-color:rgba(180,35,47,.32)">
+      Vorrat: <b>4 g</b>. Nach dieser Zugabe blieben <b>2,96 g</b> für den Rest des Jahrgangs.
+    </div>
+
+    <button class="btn haupt">Als Zugabe protokollieren</button>
+    <div class="hint" style="text-align:center;margin-top:8px">
+      Menge, Zeitpunkt, Charge und Begründung werden mitgeschrieben — Audit-Regel 13.</div>
+  </div>
+</div></div>
+
+<!-- ══════════ GATE ══════════ -->
+<div class="seite" id="s-gate"><div class="wrap">
+  <div class="zurueck" onclick="zeig('s-charge')">← Bottich 1</div>
+
+  <div class="gate-kopf" style="margin-top:14px">
+    <h3>Gärende-Gate</h3>
+    <span class="ampel a-rot" style="margin-left:auto"><i class="punkt"></i>Gesperrt</span>
+  </div>
+  <div class="hint" style="margin-bottom:14px">Alle Prüfungen müssen erfüllt sein.
+    Unbekannt zählt wie nicht erfüllt.</div>
+
+  <div class="karte">
+    <div class="check">
+      <div class="st st-nein">✕</div>
+      <div><div class="q">Zwei Dichtemessungen im Abstand von mindestens 48 Stunden?</div>
+        <div class="g">Abstand nur 6 Stunden — zu kurz, um Stillstand von Trägheit zu unterscheiden.</div></div>
+    </div>
+    <div class="check">
+      <div class="st st-ja">✓</div>
+      <div><div class="q">Sind beide Werte konstant (Δ ≤ 0,0010)?</div>
+        <div class="g">Δ = 0,0003.</div></div>
+    </div>
+    <div class="check">
+      <div class="st st-ja">✓</div>
+      <div><div class="q">Ist der Wein durchgegoren (SG ≤ 0,9960)?</div>
+        <div class="g">SG 0,9950 — durchgegoren.</div></div>
+    </div>
+    <div class="check">
+      <div class="st st-ja">✓</div>
+      <div><div class="q">Wird das Gärende ausschließlich über die Dichte bestimmt?</div>
+        <div class="g">Das Gärröhrchen zählt hier bewusst nicht. Ein ruhender Gärspund bedeutet
+          auch bei Restzucker oft nur, dass die Gärung schleicht oder das Gefäß undicht ist.</div></div>
+    </div>
+  </div>
+
+  <div class="sperre">
+    <b>Gate nicht freigegeben.</b> Die zweite Dichtemessung liegt zu nah an der ersten.
+    Miss frühestens am 02.09. um 09:00 erneut — dann sind die 48 Stunden erreicht.
+  </div>
+
+  <button class="btn aus">Phase abschließen</button>
+  <button class="btn">Erinnerung für 02.09. anlegen</button>
+
+  <div class="mock-hinweis">Genau dieses Gate hätte 2025 gegriffen: Der süße Weißwein galt als
+    „vergoren", weil nichts mehr blubberte — und gärte in der Flasche nach.</div>
+</div></div>
+
+<!-- ══════════ TERMINE ══════════ -->
+<div class="seite" id="s-termine"><div class="wrap">
+  <h2>Termine &amp; Erinnerungen</h2>
+
+  <div class="karte">
+    <div class="termin faellig">
+      <div class="datum"><div class="tg">30</div><div class="mo">Aug</div></div>
+      <div class="inh"><b>Bottich 1 anstellen</b>
+        <small>Hefe rehydrieren, Mostgewicht messen, erste Nährsalzportion (0,9 g)</small>
+        <div class="ics">📅 In Kalender übernehmen</div></div>
+    </div>
+    <div class="termin faellig">
+      <div class="datum"><div class="tg">31</div><div class="mo">Aug</div></div>
+      <div class="inh"><b>Tageskontrolle Kaltmazeration</b>
+        <small>Wanne 1 + Wanne 2 · Temperatur, Geruch, Gäraktivität</small>
+        <div class="ics">📅 In Kalender übernehmen</div></div>
+    </div>
+    <div class="termin">
+      <div class="datum"><div class="tg">02</div><div class="mo">Sep</div></div>
+      <div class="inh"><b>Gärbottiche prüfen und Hauptmenge anstellen</b>
+        <small>3 × 20 L erwartet · Wanne 1 auf zwei Bottiche aufteilen (max. 14 L je Bottich)</small>
+        <div class="ics">📅 In Kalender übernehmen</div></div>
+    </div>
+    <div class="termin">
+      <div class="datum"><div class="tg">04</div><div class="mo">Sep</div></div>
+      <div class="inh"><b>Gärballons erwartet</b>
+        <small>4 × 5 L · zusammen mit den vorhandenen 2 sind 30 L Ausbaukapazität da</small></div>
+    </div>
+    <div class="termin">
+      <div class="datum"><div class="tg">06</div><div class="mo">Sep</div></div>
+      <div class="inh"><b>Press-Gate prüfen</b>
+        <small>Dichte messen · pressen erst bei SG ≤ 1,010</small></div>
+    </div>
+  </div>
+
+  <button class="btn haupt">Alle Termine als .ics exportieren</button>
+  <div class="mock-hinweis">Die .ics-Datei landet im macOS-Kalender. Von dort liest der
+    <b>Morning-Brief von Mission Control</b> sie automatisch aus — kein zweites
+    Erinnerungssystem nötig.</div>
+</div></div>
+
+<!-- ══════════ WIKI ══════════ -->
+<div class="seite" id="s-wiki"><div class="wrap">
+  <h2>Wiki</h2>
+  <div class="wiki-such"><span class="lupe">🔍</span>
+    <input placeholder="Suchen — z. B. Kopfraum, Abstich, SO₂"></div>
+
+  <div>
+    <span class="tag">Grundlagen 6</span><span class="tag">Gärung 4</span>
+    <span class="tag">Schwefel 3</span><span class="tag">Ausbau 5</span>
+    <span class="tag">Fehlerbilder 7</span><span class="tag">Eigene Notizen 2</span>
+  </div>
+
+  <div class="karte" style="margin-top:12px">
+    <div class="wiki-e">
+      <div class="t">Warum Kopfraum Wein tötet</div>
+      <div class="a">Sauerstoff, Kahmhefe, Essigbakterien — und warum randvoll die einzige
+        einfache Antwort ist.</div>
+    </div>
+    <div class="wiki-e">
+      <div class="t">Freier, gebundener und molekularer SO₂</div>
+      <div class="a">Warum derselbe Zahlenwert bei pH 3,4 schützt und bei pH 3,8 nicht mehr.</div>
+    </div>
+    <div class="wiki-e">
+      <div class="t">Gärende richtig feststellen</div>
+      <div class="a">Zwei Dichtemessungen, 48 Stunden Abstand. Warum das Gärröhrchen lügt.</div>
+    </div>
+    <div class="wiki-e">
+      <div class="t">Hefenährsalz richtig dosieren</div>
+      <div class="a">30 g je 100 L, drei Portionen, und warum späte Gaben schaden.</div>
+    </div>
+    <div class="wiki-e">
+      <div class="t">H₂S — erkennen und beheben</div>
+      <div class="a">Belüftend abziehen, Bench Trial, und warum die Cent-Methode Unfug ist.</div>
+    </div>
+    <div class="wiki-e">
+      <div class="t">Vorlauf und Presswein</div>
+      <div class="a">Warum die beiden Fraktionen getrennt bleiben.</div>
+    </div>
+  </div>
+
+  <button class="btn">＋ Eigene Seite anlegen</button>
+
+  <h2>Jahrgang 2025 — Post-Mortem</h2>
+  <div class="karte klick" style="border-color:rgba(180,35,47,.35)">
+    <div class="charge-kopf">
+      <div><div class="name">Was 2025 schiefging</div>
+        <div class="meta">9 gesicherte Fakten · 6 Hypothesen · 11 fehlende Messwerte</div></div>
+      <span class="ampel a-rot"><i class="punkt"></i>Verworfen</span>
+    </div>
+    <div class="zeile"><span>Hauptwein rot</span><b>gekippt 29.08.2026</b></div>
+    <div class="zeile"><span>Presswein</span><b>erholt, säuerlich</b></div>
+    <div class="zeile"><span>Weißwein süß</span><b>refermentiert</b></div>
+    <div class="mock-hinweis" style="margin:12px 0 0">Die Seite trennt strikt zwischen
+      <b>gesichert</b>, <b>wahrscheinlich</b> und <b>offen</b>. Keine erfundene Root Cause.</div>
+  </div>
+</div></div>
+
+<!-- ══════════ MEHR ══════════ -->
+<div class="seite" id="s-mehr"><div class="wrap">
+  <h2>Export</h2>
+  <div class="karte">
+    <button class="btn">Jahrgang als Markdown</button>
+    <button class="btn">Messreihen als CSV</button>
+    <button class="btn">Vollsicherung als JSON</button>
+    <button class="btn">Alles als ZIP inkl. Fotos</button>
+  </div>
+
+  <h2>Kellersensor</h2>
+  <div class="karte">
+    <label>Adapter</label>
+    <select><option>Shelly Cloud</option><option>Govee</option><option>Generisches JSON</option></select>
+    <label>Endpunkt</label>
+    <input placeholder="https://…" >
+    <div class="hint">Muss HTTPS sein — die App läuft selbst über HTTPS und darf keine
+      unverschlüsselten Geräte im Heimnetz abfragen.</div>
+    <button class="btn">Verbindung testen</button>
+  </div>
+
+  <h2>Behälter</h2>
+  <div class="karte">
+    <div class="zeile"><span>Gärbottich 1 · 20 L</span><b>belegt</b></div>
+    <div class="zeile"><span>Gärbottich 2–4 · 20 L</span><b style="color:var(--gold)">ab 02.09.</b></div>
+    <div class="zeile"><span>Gärballon 1–2 · 5 L</span><b>frei</b></div>
+    <div class="zeile"><span>Gärballon 3–6 · 5 L</span><b style="color:var(--gold)">ab 04.09.</b></div>
+    <button class="btn">＋ Behälter anlegen</button>
+  </div>
+</div></div>
+
+<nav>
+  <div class="n an" data-z="s-heute"><span class="i">🍇</span>Heute</div>
+  <div class="n" data-z="s-termine"><span class="i">📅</span>Termine</div>
+  <div class="n" data-z="s-wiki"><span class="i">📖</span>Wiki</div>
+  <div class="n" data-z="s-mehr"><span class="i">⚙️</span>Mehr</div>
+</nav>
+
+<script>
+function zeig(id){
+  document.querySelectorAll('.seite').forEach(s=>s.classList.toggle('an',s.id===id));
+  document.querySelectorAll('nav .n').forEach(n=>n.classList.toggle('an',n.dataset.z===id));
+  window.scrollTo(0,0);
+}
+document.querySelectorAll('nav .n').forEach(n=>n.onclick=()=>zeig(n.dataset.z));
+document.querySelectorAll('.tabs').forEach(g=>{
+  g.querySelectorAll('.t').forEach(t=>t.onclick=()=>{
+    g.querySelectorAll('.t').forEach(x=>x.classList.remove('an'));t.classList.add('an');});
+});
+document.querySelectorAll('.chips').forEach(g=>{
+  g.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{
+    g.querySelectorAll('.chip').forEach(x=>x.classList.remove('an'));c.classList.add('an');});
+});
+</script>
+</body>
+</html>

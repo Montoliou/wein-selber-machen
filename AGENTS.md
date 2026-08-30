@@ -1,5 +1,29 @@
 # wein-selber-machen — Projektvertrag für Codex (angelegt 2026-08-30 via Projekt-Anmeldung)
 
+## LEITPLANKEN FÜR CODEX — vor jedem Bau lesen
+
+**`app/src/domain/` ist Spezifikation, nicht Vorschlag. Nicht verändern.**
+Die vier Dateien darin (`typen.ts`, `oenologie.ts`, `regeln.ts`, `regressionen-2025.test.ts`)
+tragen die önologische Fachwahrheit und 31 Regressionstests. Jeder Test bildet einen
+dokumentierten Fehler des Jahrgangs 2025 ab, an dem ein kompletter Wein verloren ging.
+
+- `npx vitest run` muss **31 von 31** grün liefern. Immer.
+- Wer einen Test anpassen möchte, um zu bauen, hat den Auftrag missverstanden.
+  Der richtige Weg ist ein Absatz unter `## Offene Punkte` im PR.
+- Die UI darf **keine eigenen Schwellenwerte** mitbringen. Ampel, Befunde und Gates
+  kommen ausschließlich aus `regeln.ts` (`befundeFuerCharge`, `ampelFuerCharge`,
+  `gateFuerPhase`). Zweite Regelquelle im Frontend = Auftrag verfehlt.
+- `typen.ts` darf um **Felder erweitert** werden, wenn die Tests grün bleiben.
+  Semantik bestehender Felder ändern: nein.
+
+**Design-Soll:** `outputs/mockup-weinbegleiter-v1.html` — von Andi abgenommen.
+**Fachquellen:** `inputs/handoff-2026-08-30/wein-app-handoff-2026/`
+**`inputs/` und `outputs/` sind tabu.** `.ftp-credentials` niemals committen.
+
+**Bei fachlicher Unsicherheit nicht raten.** Fakten, Hypothesen und offene Fragen bleiben
+getrennt — das ist der Grundsatz des ganzen Projekts, nachdem 2025 aus Vermutungen
+Gewissheiten gemacht wurden.
+
 **Zweck:** Eine Begleitung für die Weinherstellung. Von der Rebe bis zum fertigen Wein
 **Cluster:** privat · **Wiki-Seite:** `~/SynologyDrive/Mission-Control-Wissen/projekte/wein-selber-machen.md`
 

@@ -101,3 +101,20 @@ Claude-Arbeit (sie ist Spezifikation), UI und Persistenz gehören Codex.
   Govee / generisches JSON). Wichtig: Die App läuft über HTTPS und kann kein
   unverschlüsseltes Gerät im Heimnetz abfragen (Mixed Content).
 - Abnahme des Mockups durch Andi → erst danach geht der Handoff an Codex.
+
+## Nachtrag 30.08.2026 (abends)
+
+- **Remote:** https://github.com/Montoliou/wein-selber-machen.git · `main` · privat.
+  `.ftp-credentials` und `node_modules` sind in `.gitignore`.
+- **Mockup abgenommen** von Andi. Handoff **H1 (Weinbegleiter MVP)** liegt seither im Postfach:
+  `Vault/handoffs/inbox/wein-h1-app-mvp.md`.
+- **Alle Chargen werden gleichzeitig angestellt** (Andis Entscheidung, Arbeitsaufwand neben
+  dem Beruf). Vorgezogener Start von Bottich 1 verworfen. Auflage: Kühlschrank auf 4–5 °C.
+- **Vierter Gärbottich bleibt bestellt** — mit dreien läge der Füllgrad bei 73 % statt 55 %.
+- **Neue Regel R-REFRAKTOMETER:** Ein Refraktometer zeigt bei Alkohol systematisch zu hoch an.
+  `Messung.methode` ('spindel' | 'refraktometer' | 'sonstige') ist neu im Datenmodell;
+  Refraktometerwerte sind von der Gärende-Beurteilung ausgeschlossen. 31 Tests grün.
+- **Neu im Spec:** Sammelaktionen über mehrere Chargen (vier synchrone Bottiche einmal erfassen)
+  und Umverteilen der drei Ausgangschargen auf vier Gärbottiche beim Anstellen.
+- **Bestellt:** Kaliumpyrosulfit + 2 × 3-L-Ballons. Offen: pH-Meter mit Kalibrierlösungen.
+- **Presse zurückgestellt** — erst Vorlauf abtropfen, dann nur Trester pressen.

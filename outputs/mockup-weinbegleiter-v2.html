@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Weinbegleiter 2026 — Mockup v2</title>
+<style>
+:root{
+  --bg:#14100f; --flaeche:#1e1917; --flaeche2:#272120; --rand:#392f2c;
+  --text:#f0e9e5; --text2:#a89a93; --text3:#7a6c65;
+  --wein:#8e1f36; --wein-hell:#c4415c; --gold:#c8a55b;
+  --gruen:#3f8a5a; --gelb:#c9a227; --orange:#cd6a24; --rot:#b4232f;
+  --r:14px; --schrift:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--text);font-family:var(--schrift);font-size:16px;line-height:1.5;padding-bottom:78px}
+.wrap{max-width:520px;margin:0 auto;padding:0 16px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+header{position:sticky;top:0;z-index:20;background:rgba(20,16,15,.94);backdrop-filter:blur(12px);border-bottom:1px solid var(--rand)}
+.kopf{display:flex;align-items:center;gap:10px;padding:12px 16px;max-width:520px;margin:0 auto}
+.logo{width:28px;height:28px;border-radius:8px;background:linear-gradient(140deg,var(--wein),#5c1224);display:grid;place-items:center;font-size:14px;flex:none}
+.kopf h1{font-size:15px;font-weight:650}
+.kopf .sub{font-size:11.5px;color:var(--text3);margin-top:-2px}
+
+/* ── STATUSBAND: der Zwei-Sekunden-Blick ─────────────────────── */
+.statusband{display:flex;align-items:center;gap:0;margin:14px 0 4px;background:var(--flaeche);
+  border:1px solid var(--rand);border-radius:var(--r);overflow:hidden}
+.sb{flex:1;padding:11px 8px;text-align:center;border-right:1px solid var(--rand)}
+.sb:last-child{border-right:0}
+.sb .w{font-size:19px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.02em;line-height:1.15}
+.sb .l{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
+.sb.gut .w{color:#6fc492}
+.sb.warn .w{color:var(--gold)}
+
+/* ── GÄRKURVE ─────────────────────────────────────────────────── */
+.kurve-karte{background:var(--flaeche);border:1px solid var(--rand);border-radius:var(--r);padding:14px;margin-bottom:10px}
+.kurve-kopf{display:flex;align-items:baseline;gap:8px;margin-bottom:2px}
+.kurve-kopf h3{font-size:14.5px;font-weight:650}
+.kurve-kopf .jetzt{margin-left:auto;font-size:12.5px;color:var(--text2)}
+.kurve-kopf .jetzt b{color:var(--text);font-variant-numeric:tabular-nums}
+svg.kurve{width:100%;height:132px;display:block;margin-top:8px;overflow:visible}
+.pfad-ist{fill:none;stroke:var(--wein-hell);stroke-width:2.5;stroke-linecap:round;
+  stroke-dasharray:400;stroke-dashoffset:400;animation:zeichnen 1s .2s ease-out forwards}
+.pfad-prog{fill:none;stroke:var(--text3);stroke-width:2;stroke-dasharray:4 4;opacity:0;
+  animation:einblenden .6s 1.1s ease-out forwards}
+@keyframes zeichnen{to{stroke-dashoffset:0}}
+@keyframes einblenden{to{opacity:.75}}
+.punkt-ist{fill:var(--wein-hell);opacity:0;animation:einblenden .3s 1s ease-out forwards}
+.pressband{fill:rgba(63,138,90,.13);opacity:0;animation:einblenden .5s 1.4s ease-out forwards}
+.achse{stroke:var(--rand);stroke-width:1}
+.achstext{fill:var(--text3);font-size:9.5px;font-family:var(--schrift)}
+.presslabel{fill:#6fc492;font-size:9.5px;font-weight:700;font-family:var(--schrift);letter-spacing:.04em}
+
+/* ── ERKLÄRSCHUBLADE: geschlossen, stört den Blick nicht ──────── */
+details.erklaer{margin-top:10px;border-top:1px solid var(--rand);padding-top:9px}
+details.erklaer summary{list-style:none;cursor:pointer;font-size:12.5px;color:var(--gold);
+  font-weight:600;display:flex;align-items:center;gap:6px}
+details.erklaer summary::-webkit-details-marker{display:none}
+details.erklaer summary .pfeil{transition:transform .2s;font-size:10px}
+details.erklaer[open] summary .pfeil{transform:rotate(90deg)}
+details.erklaer .inhalt{font-size:13px;color:var(--text2);margin-top:8px;animation:aufklappen .25s ease-out}
+details.erklaer .inhalt b{color:var(--text);font-weight:600}
+details.erklaer .inhalt p+p{margin-top:7px}
+@keyframes aufklappen{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+
+h2{font-size:11.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--text3);margin:22px 0 9px}
+.karte{background:var(--flaeche);border:1px solid var(--rand);border-radius:var(--r);padding:14px;margin-bottom:10px}
+.karte.klick{cursor:pointer}
+
+/* ── PHASEN-ZEITSTRAHL ───────────────────────────────────────── */
+.strahl{display:flex;gap:0;margin:12px 0 6px;position:relative}
+.ph{flex:1;position:relative;text-align:center;min-width:0}
+.ph .kn{width:11px;height:11px;border-radius:99px;background:var(--rand);margin:0 auto 5px;position:relative;z-index:2;
+  border:2px solid var(--bg)}
+.ph.fertig .kn{background:var(--wein-hell)}
+.ph.jetzt .kn{background:var(--gold);box-shadow:0 0 0 4px rgba(200,165,91,.22);animation:pulsieren 2.2s ease-in-out infinite}
+.ph.gate .kn{background:transparent;border:2px solid var(--gruen)}
+@keyframes pulsieren{0%,100%{box-shadow:0 0 0 4px rgba(200,165,91,.22)}50%{box-shadow:0 0 0 8px rgba(200,165,91,.07)}}
+.ph::before{content:'';position:absolute;top:5px;left:-50%;width:100%;height:2px;background:var(--rand);z-index:1}
+.ph:first-child::before{display:none}
+.ph.fertig::before,.ph.jetzt::before{background:var(--wein-hell)}
+.ph .lb{font-size:9.5px;color:var(--text3);line-height:1.25;word-break:break-word}
+.ph.jetzt .lb{color:var(--gold);font-weight:700}
+.ph.gate .lb{color:#6fc492}
+
+/* Chargenkarte */
+.charge-kopf{display:flex;align-items:flex-start;gap:10px;margin-bottom:8px}
+.charge-kopf .name{font-weight:650;font-size:15.5px}
+.charge-kopf .meta{font-size:12px;color:var(--text2);margin-top:1px}
+.ampel{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700;padding:3px 8px;
+  border-radius:99px;letter-spacing:.05em;text-transform:uppercase;margin-left:auto;flex:none}
+.a-gruen{background:rgba(63,138,90,.16);color:#6fc492}
+.a-gelb{background:rgba(201,162,39,.16);color:#dcbb51}
+.a-orange{background:rgba(205,106,36,.18);color:#e8934f}
+.a-rot{background:rgba(180,35,47,.2);color:#e8646f}
+.punkt{width:6px;height:6px;border-radius:99px;background:currentColor}
+.werte{display:flex;gap:0;margin-top:10px;border-top:1px solid var(--rand);padding-top:9px}
+.werte .v{flex:1;text-align:center;border-right:1px solid var(--rand)}
+.werte .v:last-child{border:0}
+.werte .v .z{font-size:16px;font-weight:650;font-variant-numeric:tabular-nums}
+.werte .v .k{font-size:9.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-top:1px}
+.trend{font-size:11px;margin-left:3px;color:var(--text3)}
+
+/* Aktion */
+.aktion{display:flex;gap:11px;align-items:flex-start;padding:12px;border-radius:12px;
+  background:var(--flaeche2);border-left:3px solid var(--gold)}
+.aktion .ic{font-size:19px;line-height:1.15;flex:none}
+.aktion .tx b{display:block;font-size:14.5px;margin-bottom:2px}
+.aktion .tx small{color:var(--text2);font-size:12.5px}
+
+/* Hut-Animation */
+.hut{width:46px;height:46px;flex:none;border-radius:9px;background:var(--flaeche);border:1px solid var(--rand);
+  position:relative;overflow:hidden}
+.hut .fl{position:absolute;left:0;right:0;bottom:0;height:60%;background:linear-gradient(180deg,#7d1f33,#5c1224)}
+.hut .kap{position:absolute;left:5px;right:5px;height:9px;border-radius:3px;background:#6b5a4a;
+  top:40%;animation:huthub 3.4s ease-in-out infinite}
+@keyframes huthub{0%,45%{top:40%}55%,75%{top:74%}100%{top:40%}}
+.hut .bl{position:absolute;width:3px;height:3px;border-radius:99px;background:rgba(255,255,255,.4);
+  bottom:8px;animation:steigen 2.2s linear infinite}
+.hut .bl:nth-child(3){left:12px;animation-delay:0s}
+.hut .bl:nth-child(4){left:24px;animation-delay:.8s}
+.hut .bl:nth-child(5){left:33px;animation-delay:1.5s}
+@keyframes steigen{0%{bottom:6px;opacity:0}20%{opacity:.8}100%{bottom:30px;opacity:0}}
+
+/* Buttons */
+.btn{display:block;width:100%;padding:13px;border-radius:12px;border:1px solid var(--rand);
+  background:var(--flaeche2);color:var(--text);font-size:15px;font-weight:600;font-family:inherit;cursor:pointer;text-align:center;margin-top:8px}
+.btn.haupt{background:var(--wein);border-color:var(--wein);color:#fff}
+.btn.aus{opacity:.4}
+.btn-reihe{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.btn-reihe .btn{margin-top:0}
+
+/* Gate */
+.check{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--rand);font-size:13.5px;
+  opacity:0;animation:eintreten .35s ease-out forwards}
+.check:nth-child(1){animation-delay:.1s}.check:nth-child(2){animation-delay:.25s}
+.check:nth-child(3){animation-delay:.4s}.check:nth-child(4){animation-delay:.55s}
+@keyframes eintreten{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:none}}
+.check:last-child{border:0}
+.check .st{flex:none;width:19px;height:19px;border-radius:99px;display:grid;place-items:center;font-size:11px;font-weight:800;margin-top:1px}
+.st-ja{background:rgba(63,138,90,.2);color:#6fc492}
+.st-nein{background:rgba(180,35,47,.2);color:#e8646f}
+.st-unbek{background:rgba(122,108,101,.25);color:var(--text2)}
+.check .q{font-weight:550}
+.check .g{color:var(--text2);font-size:12.5px;margin-top:2px}
+.sperre{background:rgba(180,35,47,.11);border:1px solid rgba(180,35,47,.4);border-radius:11px;padding:11px 12px;font-size:13.5px;margin-top:12px}
+.sperre b{color:#e8646f}
+
+/* Persistenter Fehler */
+.meldung{display:flex;gap:10px;align-items:flex-start;padding:12px;border-radius:12px;margin:12px 0;
+  background:rgba(180,35,47,.12);border:1px solid rgba(180,35,47,.4);animation:eintreten .3s ease-out}
+.meldung.erfolg{background:rgba(63,138,90,.12);border-color:rgba(63,138,90,.4)}
+.meldung .tx{flex:1;font-size:13.5px}
+.meldung .tx b{display:block;margin-bottom:2px}
+.meldung .zu{background:none;border:0;color:var(--text3);font-size:19px;cursor:pointer;line-height:1;padding:0 2px}
+
+.mock{background:rgba(200,165,91,.09);border:1px dashed rgba(200,165,91,.4);border-radius:11px;
+  padding:10px 12px;font-size:12.5px;color:var(--text2);margin:14px 0}
+.mock b{color:var(--gold)}
+.zurueck{display:inline-flex;align-items:center;gap:6px;color:var(--text2);font-size:14px;margin:14px 0 2px;cursor:pointer}
+
+nav{position:fixed;bottom:0;left:0;right:0;background:rgba(20,16,15,.96);backdrop-filter:blur(14px);
+  border-top:1px solid var(--rand);display:flex;padding:7px 0 max(7px,env(safe-area-inset-bottom));z-index:30}
+nav .n{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:5px 0;cursor:pointer;color:var(--text3);font-size:10.5px;font-weight:600}
+nav .n.an{color:var(--wein-hell)}
+nav .n .i{font-size:18px;line-height:1}
+.seite{display:none}.seite.an{display:block}
+</style>
+</head>
+<body>
+
+<header><div class="kopf">
+  <div class="logo">🍇</div>
+  <div><h1>Weinbegleiter</h1><div class="sub">Jahrgang 2026 · Rotwein</div></div>
+</div></header>
+
+<!-- ══════ HEUTE ══════ -->
+<div class="seite an" id="s-heute"><div class="wrap">
+
+  <!-- Der Zwei-Sekunden-Blick. Kommt zuerst, immer. -->
+  <div class="statusband">
+    <div class="sb gut"><div class="w">4</div><div class="l">Chargen</div></div>
+    <div class="sb gut"><div class="w">grün</div><div class="l">Ampel</div></div>
+    <div class="sb"><div class="w">Tag 1</div><div class="l">Gärung</div></div>
+    <div class="sb warn"><div class="w">2</div><div class="l">offen</div></div>
+  </div>
+
+  <div class="mock"><b>Mockup v2</b> — Statusband und Kurve zuerst, Erklärungen in
+    Schubladen darunter. Alles klickbar, ohne Funktion.</div>
+
+  <!-- Gärkurve: ein Blick sagt, ob es normal läuft -->
+  <div class="kurve-karte">
+    <div class="kurve-kopf">
+      <h3>Gärverlauf</h3>
+      <div class="jetzt">jetzt <b>82 °Oe</b></div>
+    </div>
+    <svg class="kurve" viewBox="0 0 320 132" preserveAspectRatio="none" aria-label="Gärverlauf">
+      <rect class="pressband" x="0" y="96" width="320" height="20"></rect>
+      <text class="presslabel" x="4" y="110">PRESSFENSTER · SG 1,010</text>
+      <line class="achse" x1="0" y1="116" x2="320" y2="116"></line>
+      <path class="pfad-ist" d="M8,18 L44,19"></path>
+      <path class="pfad-prog" d="M44,19 L100,42 L156,68 L212,90 L268,104 L312,110"></path>
+      <circle class="punkt-ist" cx="8" cy="18" r="3.5"></circle>
+      <circle class="punkt-ist" cx="44" cy="19" r="3.5"></circle>
+      <text class="achstext" x="4" y="130">02.09.</text>
+      <text class="achstext" x="140" y="130">04.09.</text>
+      <text class="achstext" x="280" y="130">07.09.</text>
+    </svg>
+
+    <details class="erklaer">
+      <summary><span class="pfeil">▸</span> Worauf du bei der Kurve achtest</summary>
+      <div class="inhalt">
+        <p>Die durchgezogene Linie sind <b>deine Messwerte</b>, gestrichelt ist der
+        erwartete Verlauf. Solange du grob auf der gestrichelten Linie bleibst, ist alles
+        in Ordnung.</p>
+        <p><b>Wird die Kurve flacher</b> als erwartet, stockt die Gärung — dann schauen wir
+        auf Temperatur und Nährsalz.</p>
+        <p><b>Das grüne Band ist das Pressfenster.</b> Gepresst wird, wenn die Dichte dort
+        ankommt — nicht nach Gefühl und nicht nach Kalender.</p>
+      </div>
+    </details>
+  </div>
+
+  <!-- Jetzt dran -->
+  <h2>Jetzt dran</h2>
+  <div class="karte" style="border-color:rgba(200,165,91,.4)">
+    <div class="aktion" style="border:0;padding:0;background:none">
+      <div class="hut"><div class="fl"></div><div class="kap"></div>
+        <i class="bl"></i><i class="bl"></i><i class="bl"></i></div>
+      <div class="tx">
+        <b>Tresterhut unterstoßen</b>
+        <small>Alle vier Bottiche · zweimal täglich · zuletzt heute 18:15</small>
+      </div>
+    </div>
+    <details class="erklaer">
+      <summary><span class="pfeil">▸</span> Warum das wichtig ist</summary>
+      <div class="inhalt">
+        <p>Die Schalen werden vom Gärgas nach oben getragen und bilden einen festen Deckel.
+        Bleibt er liegen, <b>trocknet er aus</b> — und ein trockener Hut über gärendem Most
+        ist der Ort, an dem sich Essigbakterien ansiedeln.</p>
+        <p>Beim Unterstoßen holst du außerdem Farbe und Gerbstoff aus den Schalen. Ohne
+        Unterstoßen bleibt der Wein blass.</p>
+      </div>
+    </details>
+    <div class="btn-reihe">
+      <button class="btn haupt">Erledigt · alle 4</button>
+      <button class="btn">Später</button>
+    </div>
+  </div>
+
+  <div class="karte">
+    <div class="aktion" style="border:0;padding:0;background:none">
+      <div class="ic">🌡️</div>
+      <div class="tx"><b>Abendmessung</b>
+        <small>Temperatur bei allen vier, Dichte bei Bottich 1</small></div>
+    </div>
+    <button class="btn haupt">Sammelaktion starten</button>
+  </div>
+
+  <!-- Wo stehen wir -->
+  <h2>Wo der Jahrgang steht</h2>
+  <div class="karte">
+    <div class="strahl">
+      <div class="ph fertig"><div class="kn"></div><div class="lb">Ernte</div></div>
+      <div class="ph fertig"><div class="kn"></div><div class="lb">Mazeration</div></div>
+      <div class="ph fertig"><div class="kn"></div><div class="lb">Anstellen</div></div>
+      <div class="ph jetzt"><div class="kn"></div><div class="lb">Gärung</div></div>
+      <div class="ph gate"><div class="kn"></div><div class="lb">Press-Gate</div></div>
+      <div class="ph"><div class="kn"></div><div class="lb">Abstich</div></div>
+      <div class="ph"><div class="kn"></div><div class="lb">Ausbau</div></div>
+    </div>
+    <div style="font-size:13.5px;margin-top:12px">
+      <b>Aktive Gärung, Tag 1.</b> Die Hefe verwandelt Zucker in Alkohol und Kohlensäure.
+      Deine Aufgabe ist jetzt: Hut unterstoßen, Temperatur unter 28 °C halten, Dichte verfolgen.
+    </div>
+    <details class="erklaer">
+      <summary><span class="pfeil">▸</span> Was als Nächstes kommt</summary>
+      <div class="inhalt">
+        <p><b>In 2 Tagen:</b> Nährsalz Portion 2. Die letzte Gabe muss rein, bevor die
+        Spindel unter 1,025 fällt — danach nimmt die Hefe keinen Stickstoff mehr auf.</p>
+        <p><b>In etwa 5 Tagen:</b> das Press-Gate. Dort trennst du Vorlauf und Presswein,
+        und ab da werden sie getrennt geführt.</p>
+      </div>
+    </details>
+  </div>
+
+  <h2>Chargen</h2>
+  <div class="karte klick" onclick="zeig('s-charge')">
+    <div class="charge-kopf">
+      <div><div class="name">Bottich 1</div><div class="meta">13,1 kg · seit 30.08.</div></div>
+      <span class="ampel a-gruen"><i class="punkt"></i>Normal</span>
+    </div>
+    <div class="werte">
+      <div class="v"><div class="z">21,6°</div><div class="k">Temperatur</div></div>
+      <div class="v"><div class="z">82<span class="trend">→</span></div><div class="k">°Oe</div></div>
+      <div class="v"><div class="z">stark</div><div class="k">Gärung</div></div>
+    </div>
+  </div>
+  <div class="karte klick">
+    <div class="charge-kopf">
+      <div><div class="name">Bottich 2</div><div class="meta">12,3 kg · seit 30.08.</div></div>
+      <span class="ampel a-gruen"><i class="punkt"></i>Normal</span>
+    </div>
+    <div class="werte">
+      <div class="v"><div class="z">21,7°</div><div class="k">Temperatur</div></div>
+      <div class="v"><div class="z">54</div><div class="k">°Oe</div></div>
+      <div class="v"><div class="z">stark</div><div class="k">Gärung</div></div>
+    </div>
+  </div>
+</div></div>
+
+<!-- ══════ CHARGE ══════ -->
+<div class="seite" id="s-charge"><div class="wrap">
+  <div class="zurueck" onclick="zeig('s-heute')">← Heute</div>
+  <div class="charge-kopf" style="margin:8px 0 4px">
+    <div><div class="name" style="font-size:21px">Bottich 1</div>
+      <div class="meta">13,1 kg · Aktive Gärung · Tag 1</div></div>
+    <span class="ampel a-gruen"><i class="punkt"></i>Normal</span>
+  </div>
+
+  <div class="meldung erfolg">
+    <div class="tx"><b>Vollsicherung importiert</b>
+      4 Chargen, 30 Messungen, 20 Ereignisse übernommen.</div>
+    <button class="zu" onclick="this.parentElement.remove()">×</button>
+  </div>
+
+  <div class="mock">Meldungen <b>bleiben stehen</b>, bis man sie wegtippt.
+    In v1 blendeten sie nach Sekunden weg — so ist ein fehlgeschlagener Import
+    unbemerkt geblieben.</div>
+
+  <h2>Verlauf</h2>
+  <div class="kurve-karte" style="margin-bottom:10px">
+    <svg class="kurve" viewBox="0 0 320 132" preserveAspectRatio="none">
+      <rect class="pressband" x="0" y="96" width="320" height="20"></rect>
+      <text class="presslabel" x="4" y="110">PRESSFENSTER</text>
+      <line class="achse" x1="0" y1="116" x2="320" y2="116"></line>
+      <path class="pfad-ist" d="M8,18 L44,19"></path>
+      <path class="pfad-prog" d="M44,19 L100,42 L156,68 L212,90 L268,104 L312,110"></path>
+      <circle class="punkt-ist" cx="8" cy="18" r="3.5"></circle>
+      <circle class="punkt-ist" cx="44" cy="19" r="3.5"></circle>
+    </svg>
+  </div>
+
+  <h2>Befunde</h2>
+  <div class="karte" style="font-size:13.5px;color:var(--text2)">
+    Keine Befunde. Die Regelengine meldet für diese Charge <b style="color:#6fc492">GREEN</b>.
+    <details class="erklaer">
+      <summary><span class="pfeil">▸</span> Was die Ampel prüft</summary>
+      <div class="inhalt">
+        <p>Bei jeder Messung laufen alle Regeln neu: Oberfläche, Geruch, Kopfraum,
+        Temperatur, Kontrollabstand, Nährsalzmenge.</p>
+        <p><b>Gelb</b> ist eine Abweichung zum Nachsehen. <b>Orange</b> heißt, die Charge
+        wird isoliert geführt. <b>Rot</b> sperrt sie — keine Vermischung, keine Abfüllung.</p>
+      </div>
+    </details>
+  </div>
+
+  <button class="btn haupt">Messung erfassen</button>
+  <button class="btn" onclick="zeig('s-gate')">Press-Gate prüfen</button>
+</div></div>
+
+<!-- ══════ GATE ══════ -->
+<div class="seite" id="s-gate"><div class="wrap">
+  <div class="zurueck" onclick="zeig('s-charge')">← Bottich 1</div>
+  <div style="display:flex;align-items:center;gap:10px;margin:12px 0 4px">
+    <h3 style="font-size:19px;font-weight:650">Press-Gate</h3>
+    <span class="ampel a-rot" style="margin-left:auto"><i class="punkt"></i>Gesperrt</span>
+  </div>
+  <div style="font-size:12.5px;color:var(--text3);margin-bottom:12px">
+    Alle Prüfungen müssen erfüllt sein. Unbekannt zählt wie nicht erfüllt.</div>
+
+  <div class="karte" id="gate-liste">
+    <div class="check"><div class="st st-ja">✓</div>
+      <div><div class="q">Liegt eine aktuelle Dichtemessung vor?</div>
+        <div class="g">Zuletzt SG 1,0820 (82 °Oe).</div></div></div>
+    <div class="check"><div class="st st-nein">✕</div>
+      <div><div class="q">Ist der Zucker weit genug abgebaut (SG ≤ 1,010)?</div>
+        <div class="g">SG 1,0820 liegt noch hoch. Zu frühes Pressen bringt die Gärung
+          im Presswein ins Stocken.</div></div></div>
+    <div class="check"><div class="st st-ja">✓</div>
+      <div><div class="q">Stehen genug Gefäße für Vorlauf und Presswein bereit?</div>
+        <div class="g">6 freie Gefäße erfasst.</div></div></div>
+    <div class="check"><div class="st st-ja">✓</div>
+      <div><div class="q">Ist die Maische frei von Fehltönen?</div>
+        <div class="g">Zuletzt erfasst: hefig.</div></div></div>
+  </div>
+
+  <div class="sperre"><b>Gate nicht freigegeben.</b> Der Zucker ist noch nicht weit genug
+    abgebaut. Erwartet wird das Pressfenster um den 06.–07.09.</div>
+  <button class="btn aus">Pressen und aufteilen</button>
+  <button class="btn" onclick="nochmal()">Prüfung wiederholen</button>
+
+  <div class="mock">Die Prüfungen <b>laufen sichtbar durch</b>, statt fertig dazustehen.
+    Man sieht, dass wirklich gerechnet wurde — und woran es hängt.</div>
+</div></div>
+
+<nav>
+  <div class="n an" data-z="s-heute"><span class="i">🍇</span>Heute</div>
+  <div class="n" data-z="s-termine"><span class="i">📅</span>Termine</div>
+  <div class="n" data-z="s-wiki"><span class="i">📖</span>Wiki</div>
+  <div class="n" data-z="s-mehr"><span class="i">⚙️</span>Mehr</div>
+</nav>
+
+<script>
+function zeig(id){
+  document.querySelectorAll('.seite').forEach(s=>s.classList.toggle('an',s.id===id));
+  document.querySelectorAll('nav .n').forEach(n=>n.classList.toggle('an',n.dataset.z===id));
+  window.scrollTo(0,0);
+}
+document.querySelectorAll('nav .n').forEach(n=>n.onclick=()=>{ if(document.getElementById(n.dataset.z)) zeig(n.dataset.z); });
+function nochmal(){
+  const l=document.getElementById('gate-liste');
+  l.querySelectorAll('.check').forEach(c=>{c.style.animation='none';c.offsetHeight;c.style.animation=''});
+}
+</script>
+</body>
+</html>

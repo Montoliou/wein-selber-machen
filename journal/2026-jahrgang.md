@@ -161,7 +161,12 @@ Merkposten biologischer Säureabbau oben.
 | **Startdichte nach allen Zugaben (°Oe)** | **82** | *offen* | *offen* | *offen* |
 | Hefe (Steinberg) | ja | ja | ja | ja |
 | Nährsalz Portion 1 (g) | 0,90 | 0,85 | 0,90 | 0,75 |
-| Uhrzeit Anstellen | *offen* | | | |
+| Uhrzeit Anstellen | **ca. 13:45** | ca. 13:45 | ca. 13:45 | ca. 13:45 |
+
+Anstellzeit rekonstruiert, nicht protokolliert: Andis Foto „Hefe ist angesetzt und Zucker ist
+aufgelöst" trägt den Dateizeitstempel 12:57:38, die Codex-Abfrage zwei Nachrichten nach der
+82-°Oe-Messung lief um 14:16. Dazwischen liegen Einfüllen, Rühren, Temperaturmessung,
+Hefe- und Nährsalzgabe. Chat-Zeitstempel sind technisch nicht auslesbar.
 
 Zucker in einem gemeinsamen Ansatz gelöst: aus allen vier Bottichen je ~0,5 L Most,
 auf 60–70 °C erwärmt, 2,63 kg Zucker portionsweise eingerührt, in vier gleichen Teilen

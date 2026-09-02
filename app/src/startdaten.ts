@@ -66,11 +66,13 @@ const messungen: Messung[] = BOTTICHE.flatMap<Messung>(b => [
     notiz: 'Erwartete Weinmenge, gerechnet aus Nettogewicht × 0,70.' },
 ])
 
-// Kontrollmessung nach dem Aufzuckern — bisher nur Bottich 1 gemessen.
+// Startdichte nach allen Zugaben — bisher nur Bottich 1 gemessen.
 messungen.push({
   id: id('m'), chargeId: chargenId(1), zeit: '2026-09-02T13:30:00+02:00', typ: 'oechsle', wert: 82, methode: 'spindel',
-  notiz: 'Kontrollmessung nach dem Einrühren der Zuckerlösung. Ziel war 85 °Oe; '
-    + '82 liegt innerhalb der Ausbeuteunsicherheit von ±7 %. Bewusst nicht nachgezuckert.',
+  notiz: 'Startdichte der Gärung — gemessen, nachdem Zucker, Hefe und Nährsalz vollständig drin waren. '
+    + 'Ziel war 85 °Oe. Rund 1 °Oe der Differenz erklärt sich aus dem Anmachwasser der Hefe '
+    + '(0,5 L auf vier Bottiche, also 1,4 % Verdünnung), das in der Zuckerrechnung fehlte; '
+    + 'der Rest ist Ablesestreuung und Ausbeuteunsicherheit. Bewusst nicht nachgezuckert.',
 })
 
 const ereignisse: Ereignis[] = BOTTICHE.flatMap<Ereignis>(b => [

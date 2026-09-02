@@ -158,7 +158,7 @@ Merkposten biologischer Säureabbau oben.
 | | Bottich 1 | Bottich 2 | Bottich 3 | Bottich 4 |
 |---|---|---|---|---|
 | Zucker (g) | 665 | 665 | 680 | 620 |
-| **Kontrollmessung nach dem Zuckern (°Oe)** | **82** | *offen* | *offen* | *offen* |
+| **Startdichte nach allen Zugaben (°Oe)** | **82** | *offen* | *offen* | *offen* |
 | Hefe (Steinberg) | ja | ja | ja | ja |
 | Nährsalz Portion 1 (g) | 0,90 | 0,85 | 0,90 | 0,75 |
 | Uhrzeit Anstellen | *offen* | | | |
@@ -173,9 +173,24 @@ Einzelansätzen war nicht gerechtfertigt.
 Temperatur nach dem Einrühren: **21 °C**. Hefeansatz 28 °C — Differenz 7 K,
 also unkritisch, kein Angleichschritt nötig (kritisch wird es ab etwa 10 K).
 
-**Startdatenpunkt: 82 °Oe** statt der angestrebten 85. Abweichung 3,5 %, innerhalb
-der Ausbeuteunsicherheit; entspricht 10,25 statt 10,6 % vol. Auf Nachzuckern wurde
-bewusst verzichtet:
+**Startdichte: 82 °Oe** — gemessen bei Bottich 1, **nachdem Zucker, Hefe und Nährsalz
+vollständig drin waren**. Damit ist das kein verfehltes Ziel, sondern der tatsächliche
+Ausgangswert der Gärung und der Bezugspunkt für jede weitere Messung.
+
+**Warum 82 und nicht 85 — die Lücke ist zu einem Drittel ein Rechenfehler:**
+
+Die Hefe wurde in **0,5 L Wasser** rehydriert und auf vier Bottiche verteilt, also rund
+0,125 L je Bottich. Bei 9,2 L in Bottich 1 sind das 1,4 % Verdünnung und damit **etwa
+1 °Oe**. Dieses Anmachwasser war in meiner Zuckerrechnung nicht enthalten — die restlichen
+zwei Grad sind Ablesestreuung und Ausbeuteunsicherheit.
+
+*Merkposten für die Methode:* Beim nächsten Mal entweder in Most statt Wasser rehydrieren
+oder das Anmachwasser im Bezugsvolumen mitrechnen.
+
+Zuckerverbrauch der Hefe spielt keine Rolle: Zwischen Zugabe und Messung lag zu wenig Zeit,
+Reinzuchthefe hat eine Anlaufphase von mehreren Stunden.
+
+Auf Nachzuckern wurde bewusst verzichtet:
 
 1. Der Unterschied von 0,35 % vol liegt unter der Wahrnehmungsschwelle (spürbar ab
    etwa 0,5–1 % vol).

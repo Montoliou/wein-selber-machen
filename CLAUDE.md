@@ -139,7 +139,12 @@ angelegtes Projekt muss auf dem Mini **geklont** werden, sonst schlägt der Hand
 
 **Jahrgang:** 48,5 kg auf vier Bottiche (13,13/12,28/12,53/10,58 kg netto, Tara 1,175 kg).
 Mostgewichte 56/54/54/50 °Oe, volumengewichtet 53,7. Auf 85 °Oe aufgezuckert (2,63 kg
-als gemeinsamer Ansatz, geviertelt). Startdatenpunkt 82 °Oe. Angestellt bei 21 °C.
+als gemeinsamer Ansatz, geviertelt). **Startdichte 82 °Oe**, gemessen nach Zucker, Hefe
+UND Nährsalz. Angestellt bei 21 °C.
+
+**Rechenfehler zum Merken:** Das Anmachwasser der Hefe (0,5 L auf vier Bottiche) fehlte im
+Bezugsvolumen der Zuckerrechnung. Das sind 1,4 % Verdünnung und erklärt rund 1 der 3 fehlenden
+°Oe. Künftig entweder in Most statt Wasser rehydrieren oder das Wasser mitrechnen.
 
 **Fachliche Entscheidungen:**
 - **Ziel 85 statt 80 °Oe** — Andi: „Wir wollen nicht professionell sein, wir wollen einen

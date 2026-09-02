@@ -235,8 +235,33 @@ die Gärröhrchen blubbern. Foto: `inputs/` (Bottiche 1–4 im Keller, Hut deutl
 | | Bottich 1 | Bottich 2 | Bottich 3 | Bottich 4 |
 |---|---|---|---|---|
 | Gäraktivität | stark | stark | stark | stark |
-| Tresterhut | gebildet | gebildet | gebildet | gebildet |
-| Temperatur (°C) | *noch zu messen* | | | |
+| Tresterhut | gebildet, untergestoßen | gebildet, untergestoßen | gebildet, untergestoßen | gebildet, untergestoßen |
+| **Temperatur (°C)** | **21,6** | **21,7** | **21,5** | **21,6** |
+| **Dichte (°Oe)** | **82** | | | |
+
+**Temperaturverlauf:** von 21,0 °C beim Anstellen auf 21,5–21,7 °C nach fünf Stunden,
+also nur +0,6 K trotz sichtbar kräftiger Gärung. Spannweite über alle vier: 0,2 K.
+Grund ist die Aufteilung auf vier Bottiche à 11 L — zusammen deutlich mehr Oberfläche
+als ein einzelner 44-L-Behälter, die Gärwärme geht ab statt sich zu stauen.
+Der vierte Bottich wurde aus Kapazitätsgründen behalten; die Temperaturführung ist
+ein Nebeneffekt, der sich hier auszahlt.
+
+Die stärkste Wärmeentwicklung steht noch bevor (Höhepunkt der Gärung, 03.–04.09.).
+
+**Dichte unverändert bei 82 °Oe — kein Stillstand.** Um Bottich 1 um 1 °Oe zu senken,
+müssen rund 23 g Zucker vergoren werden; dabei entstehen etwa 6 L CO₂. Das reicht für
+kräftiges Blubbern und einen Tresterhut, bewegt die Spindel aber noch nicht sichtbar —
+zumal die Skala in Zweierschritten abgelesen wird.
+
+**Messfehler ab jetzt beachten:** Gelöstes CO₂ setzt sich an die Spindel und trägt sie.
+Während der Gärung wird systematisch **zu hoch** abgelesen, oft 1–3 °Oe. Probe vor dem
+Ablesen kräftig durchrühren oder stehen lassen, bis sie nicht mehr perlt.
+
+**Erwarteter Verlauf:** 03.09. ~70 · 04.09. ~50 · 05.09. ~30 · 06.09. ~15 °Oe.
+Press-Gate bei SG 1,010 (10 °Oe) also etwa 06.–07.09. Deutlich flacherer Verlauf wäre
+ein Anlass, Temperatur und Nährsalzversorgung zu prüfen.
+
+**Küchentuch unter Bottich 2 geklärt:** Ablage für Kelle und Topf, kein undichter Hahn.
 
 **Einordnung:** Eine rehydrierte Reinzuchthefe hat üblicherweise 6–24 Stunden Anlaufzeit.
 Der frühe Start erklärt sich aus zwei Gründen — die Wildhefe war beim Anstellen bereits

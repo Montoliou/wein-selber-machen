@@ -224,3 +224,35 @@ die typischerweise aus Stickstoffmangel unter Hefestress entstehen.
 - Tresterhut **zweimal täglich** unterstoßen.
 - Pressen erst bei **SG ≤ 1,010**, nicht nach Gefühl.
 - Refraktometer ab Gärbeginn ungültig — nur Spindel.
+
+---
+
+## 02.09.2026, 18:15 — Gärstart bestätigt
+
+**4,7 Stunden nach dem Anstellen** haben alle vier Bottiche einen Tresterhut gebildet,
+die Gärröhrchen blubbern. Foto: `inputs/` (Bottiche 1–4 im Keller, Hut deutlich sichtbar).
+
+| | Bottich 1 | Bottich 2 | Bottich 3 | Bottich 4 |
+|---|---|---|---|---|
+| Gäraktivität | stark | stark | stark | stark |
+| Tresterhut | gebildet | gebildet | gebildet | gebildet |
+| Temperatur (°C) | *noch zu messen* | | | |
+
+**Einordnung:** Eine rehydrierte Reinzuchthefe hat üblicherweise 6–24 Stunden Anlaufzeit.
+Der frühe Start erklärt sich aus zwei Gründen — die Wildhefe war beim Anstellen bereits
+aktiv (malzige Note am Morgen), und es wurde mit zwei Beuteln auf 34 L großzügig dosiert.
+Bei dieser Dosierung setzt sich die Reinzuchthefe gegen die Wildflora durch.
+
+**Farbumschlag:** Die Flüssigkeit ist von grünlich-braun auf tiefrot umgeschlagen. Der
+entstehende Alkohol löst die Anthocyane aus den Schalen — die Maischegärung arbeitet.
+
+**Daraus folgt sofort:**
+- Tresterhut ab jetzt **zweimal täglich** unterstoßen, mit sauberem Gerät.
+- Temperatur **heute Abend erneut** messen. Eine so schnell anspringende Gärung erzeugt
+  entsprechend Wärme; über 28 °C leidet das Aroma und die Hefe kann absterben (R-GAERTEMPERATUR).
+- Deckel während der Hauptgärung **lose auflegen** statt verriegeln — Schaum setzt sonst
+  das Gärröhrchen von unten zu.
+
+**Offene Rückfrage:** Unter dem Ablaufhahn von Bottich 2 liegt ein Tuch mit bräunlichen
+Flecken. Zu klären, ob Tropfen vom Probeziehen oder ein undichter Hahn. Ein undichter Hahn
+wäre Verlust, Sauerstoffeintritt und Keimweg.

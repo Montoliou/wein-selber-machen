@@ -16,6 +16,11 @@ geschrieben. Andi hatte die App geöffnet, bevor der Seed auf die echten vier Bo
 umgestellt war — und ein Deploy überschreibt bestehende Daten grundsätzlich nicht.
 Diese Datei stellt den korrekten Stand her, ohne dass Gerätedaten gelöscht werden müssen.
 
+**Korrektur 02.09. abends:** Die erste Fassung war der nackte Datenstand ohne die
+Sicherungshülle. Der Import verlangt `{ schema: "weinbegleiter-v1", exportiert, datenstand,
+fotos }` und hat die Datei deshalb abgelehnt — die Fehlermeldung erschien nur als kurzes
+Statusband und wurde übersehen. Format korrigiert.
+
 Enthält: vier Chargen (Bottich 1–4), 30 Messungen, 20 Ereignisse, 5 Reminder,
 Behälterliste, Vorrat und die Wiki-Startseiten. Stand nach der ersten Kontrolle
 am 02.09.2026 um 18:15.

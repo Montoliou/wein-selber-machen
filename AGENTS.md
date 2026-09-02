@@ -125,3 +125,47 @@ Claude-Arbeit (sie ist Spezifikation), UI und Persistenz gehören Codex.
   Govee / generisches JSON). Wichtig: Die App läuft über HTTPS und kann kein
   unverschlüsseltes Gerät im Heimnetz abfragen (Mixed Content).
 - Abnahme des Mockups durch Andi → erst danach geht der Handoff an Codex.
+
+## Sitzung 02.09.2026 — Angestellt und deployt
+
+**App live:** https://www.montolio.de/wein/ — PR #1 gemergt, Startdatensatz auf die echten
+vier Bottiche umgestellt.
+
+**Deploy-Falle (kostete zwei Anläufe):** Das Dokumenten-Wurzelverzeichnis von montolio.de ist
+`/MLP_MultiAccount_App/`, **nicht** `/`. Richtig ist `FTP_TARGET_DIR=/MLP_MultiAccount_App/`
+plus `FTP_SUBDIR=wein`. Ein Upload nach `/wein/` landet außerhalb des ausgelieferten Bereichs
+und liefert 404 bei erfolgreichem Upload. Referenz ist immer `Genogramm/.ftp-credentials`.
+
+**Zwei Defekte der Projekt-Anmeldung** (Meldung liegt im `_kanal` an Jarvis): Es werden keine
+Deploy-Zugangsdaten hinterlegt, und die ausgelieferte Vorlage benutzt andere Feldnamen als
+der `sftp-deploy`-Skill (`HOST=` statt `FTP_HOST=` usw.). Codex hat die Vorlage im PR korrigiert.
+
+**Handoff-Falle:** Der Prozessor läuft auf dem Mini, die Projekte liegen am MacBook. Ein neu
+angelegtes Projekt muss auf dem Mini **geklont** werden, sonst schlägt der Handoff mit
+„kein Git" fehl — zusätzlich zum Eintrag in `handoffs/repos.json`.
+
+**Jahrgang:** 48,5 kg auf vier Bottiche (13,13/12,28/12,53/10,58 kg netto, Tara 1,175 kg).
+Mostgewichte 56/54/54/50 °Oe, volumengewichtet 53,7. Auf 85 °Oe aufgezuckert (2,63 kg
+als gemeinsamer Ansatz, geviertelt). Startdatenpunkt 82 °Oe. Angestellt bei 21 °C.
+
+**Fachliche Entscheidungen:**
+- **Ziel 85 statt 80 °Oe** — Andi: „Wir wollen nicht professionell sein, wir wollen einen
+  leckeren, nicht zu trockenen Wein." Die 3-%-Anreicherungsgrenze ist Handelsrecht, kein
+  Qualitätsmaßstab. Mehr Alkohol gibt einem säurebetonten Wein Körper.
+- **Keine Süßreserve.** Restzucker in der Flasche bleibt für 2026 gesperrt. Weg: trocken
+  ausbauen, bei Bedarf im Glas süßen.
+- **Nicht nachgezuckert** von 82 auf 85: 0,35 % vol liegen unter der Wahrnehmungsschwelle,
+  und Zucker direkt nach dem Anstellen belastet die Hefe osmotisch in ihrer empfindlichsten
+  Phase. Option auf spätere Staffelgabe (~69 g je Bottich) bleibt offen.
+- **Beim Anstellen nicht geschwefelt**, obwohl 100 g geliefert waren: Freier SO₂ ist nicht
+  messbar, jede frühe Gabe bindet sich unsichtbar und verschlechtert das Modell für den Ausbau.
+- **Erntezeitpunkt ist der Befund des Jahres:** 30.08. statt 12.10. wie 2025, daher 20 °Oe
+  weniger. Merkposten 2027: später lesen. Folge: hohe Säure erwartet, biologischer Säureabbau
+  nach der Gärung wahrscheinlich richtig — dann nach Gärende **nicht sofort schwefeln**.
+
+**Offener Review-Punkt:** Bei rot gesperrter Charge ist „Weiter zur nächsten Phase" nicht
+deaktiviert. Formal vertretbar (kein Gate an der Stelle), aber ein Nachtrag für H2.
+
+**Werkzeuge:** Tauchspindel Notimin und Schlauchheber mit Gitterfilter vorhanden.
+pH-Meter mit Kalibrierlösungen 4/7/10 geliefert — kalibriert wird **nur mit 7,00 und 4,01**,
+die 10er verschlechtert die Gerade im Weinbereich.

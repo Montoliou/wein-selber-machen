@@ -158,10 +158,31 @@ Merkposten biologischer Säureabbau oben.
 | | Bottich 1 | Bottich 2 | Bottich 3 | Bottich 4 |
 |---|---|---|---|---|
 | Zucker (g) | 665 | 665 | 680 | 620 |
-| Kontrollmessung nach dem Zuckern (°Oe) | | | | |
-| Hefe (Steinberg) | | | | |
+| **Kontrollmessung nach dem Zuckern (°Oe)** | **82** | *offen* | *offen* | *offen* |
+| Hefe (Steinberg) | ja | ja | ja | ja |
 | Nährsalz Portion 1 (g) | 0,90 | 0,85 | 0,90 | 0,75 |
-| Uhrzeit Anstellen | | | | |
+| Uhrzeit Anstellen | *offen* | | | |
+
+Zucker in einem gemeinsamen Ansatz gelöst: aus allen vier Bottichen je ~0,5 L Most,
+auf 60–70 °C erwärmt, 2,63 kg Zucker portionsweise eingerührt, in vier gleichen Teilen
+zurückgegossen. Begründung für die gleiche Aufteilung statt der Einzeldosierung:
+Bei glattem Vierteln weicht das Ergebnis um höchstens 2 °Oe ab (Bottich 4), und das
+liegt innerhalb der ±7 % Unsicherheit der Ausbeuteschätzung. Der Aufwand von vier
+Einzelansätzen war nicht gerechtfertigt.
+
+Temperatur nach dem Einrühren: **21 °C**. Hefeansatz 28 °C — Differenz 7 K,
+also unkritisch, kein Angleichschritt nötig (kritisch wird es ab etwa 10 K).
+
+**Startdatenpunkt: 82 °Oe** statt der angestrebten 85. Abweichung 3,5 %, innerhalb
+der Ausbeuteunsicherheit; entspricht 10,25 statt 10,6 % vol. Auf Nachzuckern wurde
+bewusst verzichtet:
+
+1. Der Unterschied von 0,35 % vol liegt unter der Wahrnehmungsschwelle (spürbar ab
+   etwa 0,5–1 % vol).
+2. Zucker unmittelbar nach dem Anstellen erhöht den osmotischen Druck genau dann,
+   wenn die Hefe sich noch vermehren muss. Eine gestaffelte Zugabe wäre die bessere
+   Technik — die Option bleibt offen (rund 69 g je Bottich für die fehlenden 3 °Oe).
+3. Der Messwert könnte durch abgesunkenen Sirup geschichtet gewesen sein.
 
 Nährsalz je Bottich ist ein Drittel der Höchstmenge von 30 g je 100 L, gerechnet auf die
 Weinmenge. Portionen 2 und 3 sind gleich groß, fällig nach ca. 2 und 4 Tagen —

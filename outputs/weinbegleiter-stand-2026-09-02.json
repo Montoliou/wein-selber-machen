@@ -1,0 +1,761 @@
+{
+  "version": 1,
+  "jahrgang": 2026,
+  "chargen": [
+    {
+      "id": "charge-bottich-1",
+      "jahrgang": 2026,
+      "name": "Bottich 1",
+      "typ": "maische",
+      "phase": "AKTIVE_GAERUNG",
+      "startdatum": "2026-08-30T17:00:00+02:00",
+      "behaelterId": "bottich-1",
+      "fuellLiter": 9.2,
+      "gesperrt": false,
+      "isoliert": false,
+      "notiz": "13,13 kg entrappte Maische, angestellt am 02.09.2026. Erwartete Weinmenge 9,2 L."
+    },
+    {
+      "id": "charge-bottich-2",
+      "jahrgang": 2026,
+      "name": "Bottich 2",
+      "typ": "maische",
+      "phase": "AKTIVE_GAERUNG",
+      "startdatum": "2026-08-30T17:00:00+02:00",
+      "behaelterId": "bottich-2",
+      "fuellLiter": 8.6,
+      "gesperrt": false,
+      "isoliert": false,
+      "notiz": "12,28 kg entrappte Maische, angestellt am 02.09.2026. Erwartete Weinmenge 8,6 L."
+    },
+    {
+      "id": "charge-bottich-3",
+      "jahrgang": 2026,
+      "name": "Bottich 3",
+      "typ": "maische",
+      "phase": "AKTIVE_GAERUNG",
+      "startdatum": "2026-08-30T17:00:00+02:00",
+      "behaelterId": "bottich-3",
+      "fuellLiter": 8.8,
+      "gesperrt": false,
+      "isoliert": false,
+      "notiz": "12,53 kg entrappte Maische, angestellt am 02.09.2026. Erwartete Weinmenge 8,8 L."
+    },
+    {
+      "id": "charge-bottich-4",
+      "jahrgang": 2026,
+      "name": "Bottich 4",
+      "typ": "maische",
+      "phase": "AKTIVE_GAERUNG",
+      "startdatum": "2026-08-30T17:00:00+02:00",
+      "behaelterId": "bottich-4",
+      "fuellLiter": 7.4,
+      "gesperrt": false,
+      "isoliert": false,
+      "notiz": "10,58 kg entrappte Maische, angestellt am 02.09.2026. Erwartete Weinmenge 7,4 L."
+    }
+  ],
+  "behaelter": [
+    {
+      "id": "bottich-1",
+      "name": "Gärbottich 1",
+      "bruttoLiter": 20,
+      "material": "Kunststoff",
+      "verschluss": "Deckel mit Gärröhrchen und Ablaufhahn",
+      "notiz": "Tara 1,175 kg."
+    },
+    {
+      "id": "bottich-2",
+      "name": "Gärbottich 2",
+      "bruttoLiter": 20,
+      "material": "Kunststoff",
+      "verschluss": "Deckel mit Gärröhrchen und Ablaufhahn",
+      "notiz": "Tara 1,175 kg."
+    },
+    {
+      "id": "bottich-3",
+      "name": "Gärbottich 3",
+      "bruttoLiter": 20,
+      "material": "Kunststoff",
+      "verschluss": "Deckel mit Gärröhrchen und Ablaufhahn",
+      "notiz": "Tara 1,175 kg."
+    },
+    {
+      "id": "bottich-4",
+      "name": "Gärbottich 4",
+      "bruttoLiter": 20,
+      "material": "Kunststoff",
+      "verschluss": "Deckel mit Gärröhrchen und Ablaufhahn",
+      "notiz": "Tara 1,175 kg."
+    },
+    {
+      "id": "ballon-1",
+      "name": "Gärballon 1",
+      "bruttoLiter": 5,
+      "material": "Glas",
+      "verschluss": "Gummistopfen mit Gärröhrchen"
+    },
+    {
+      "id": "ballon-2",
+      "name": "Gärballon 2",
+      "bruttoLiter": 5,
+      "material": "Glas",
+      "verschluss": "Gummistopfen mit Gärröhrchen"
+    },
+    {
+      "id": "ballon-3",
+      "name": "Gärballon 3",
+      "bruttoLiter": 5,
+      "material": "Glas",
+      "verschluss": "Gummistopfen mit Gärröhrchen",
+      "vorhandenAb": "2026-09-04"
+    },
+    {
+      "id": "ballon-4",
+      "name": "Gärballon 4",
+      "bruttoLiter": 5,
+      "material": "Glas",
+      "verschluss": "Gummistopfen mit Gärröhrchen",
+      "vorhandenAb": "2026-09-04"
+    },
+    {
+      "id": "ballon-5",
+      "name": "Gärballon 5",
+      "bruttoLiter": 5,
+      "material": "Glas",
+      "verschluss": "Gummistopfen mit Gärröhrchen",
+      "vorhandenAb": "2026-09-04"
+    },
+    {
+      "id": "ballon-6",
+      "name": "Gärballon 6",
+      "bruttoLiter": 5,
+      "material": "Glas",
+      "verschluss": "Gummistopfen mit Gärröhrchen",
+      "vorhandenAb": "2026-09-04"
+    },
+    {
+      "id": "ballon-klein-1",
+      "name": "Gärballon klein 1",
+      "bruttoLiter": 3,
+      "material": "Glas",
+      "verschluss": "Gummistopfen mit Gärröhrchen",
+      "vorhandenAb": "2026-09-05",
+      "notiz": "Für den randvollen Abstich — Kopfraum ist Pflichtvariable."
+    },
+    {
+      "id": "ballon-klein-2",
+      "name": "Gärballon klein 2",
+      "bruttoLiter": 3,
+      "material": "Glas",
+      "verschluss": "Gummistopfen mit Gärröhrchen",
+      "vorhandenAb": "2026-09-05",
+      "notiz": "Für den randvollen Abstich — Kopfraum ist Pflichtvariable."
+    }
+  ],
+  "messungen": [
+    {
+      "id": "m-1",
+      "chargeId": "charge-bottich-1",
+      "zeit": "2026-09-02T09:03:00+02:00",
+      "typ": "temperatur",
+      "wert": 18.3,
+      "notiz": "Nach dem Einpendeln des Thermometers. Zielkorridor Anstellen 18–20 °C."
+    },
+    {
+      "id": "m-2",
+      "chargeId": "charge-bottich-1",
+      "zeit": "2026-09-02T09:03:00+02:00",
+      "typ": "geruch",
+      "wert": null,
+      "text": "hefig",
+      "notiz": "Alle vier gleich: fruchtig, traubig, leicht malzig. Beginnende Wildhefeaktivität, unkritisch bei Anstellen am selben Tag."
+    },
+    {
+      "id": "m-3",
+      "chargeId": "charge-bottich-1",
+      "zeit": "2026-09-02T09:03:00+02:00",
+      "typ": "gaeraktivitaet",
+      "wert": null,
+      "text": "keine"
+    },
+    {
+      "id": "m-4",
+      "chargeId": "charge-bottich-1",
+      "zeit": "2026-09-02T09:40:00+02:00",
+      "typ": "oechsle",
+      "wert": 56,
+      "methode": "spindel",
+      "notiz": "Ausgangsmostgewicht vor dem Aufzuckern. Bei 18 °C keine Temperaturkorrektur nötig."
+    },
+    {
+      "id": "m-5",
+      "chargeId": "charge-bottich-1",
+      "zeit": "2026-09-02T13:35:00+02:00",
+      "typ": "volumen",
+      "wert": 9.2,
+      "notiz": "Erwartete Weinmenge, gerechnet aus Nettogewicht × 0,70."
+    },
+    {
+      "id": "m-6",
+      "chargeId": "charge-bottich-2",
+      "zeit": "2026-09-02T09:03:00+02:00",
+      "typ": "temperatur",
+      "wert": 18.3,
+      "notiz": "Nach dem Einpendeln des Thermometers. Zielkorridor Anstellen 18–20 °C."
+    },
+    {
+      "id": "m-7",
+      "chargeId": "charge-bottich-2",
+      "zeit": "2026-09-02T09:03:00+02:00",
+      "typ": "geruch",
+      "wert": null,
+      "text": "hefig",
+      "notiz": "Alle vier gleich: fruchtig, traubig, leicht malzig. Beginnende Wildhefeaktivität, unkritisch bei Anstellen am selben Tag."
+    },
+    {
+      "id": "m-8",
+      "chargeId": "charge-bottich-2",
+      "zeit": "2026-09-02T09:03:00+02:00",
+      "typ": "gaeraktivitaet",
+      "wert": null,
+      "text": "keine"
+    },
+    {
+      "id": "m-9",
+      "chargeId": "charge-bottich-2",
+      "zeit": "2026-09-02T09:40:00+02:00",
+      "typ": "oechsle",
+      "wert": 54,
+      "methode": "spindel",
+      "notiz": "Ausgangsmostgewicht vor dem Aufzuckern. Bei 18 °C keine Temperaturkorrektur nötig."
+    },
+    {
+      "id": "m-10",
+      "chargeId": "charge-bottich-2",
+      "zeit": "2026-09-02T13:35:00+02:00",
+      "typ": "volumen",
+      "wert": 8.6,
+      "notiz": "Erwartete Weinmenge, gerechnet aus Nettogewicht × 0,70."
+    },
+    {
+      "id": "m-11",
+      "chargeId": "charge-bottich-3",
+      "zeit": "2026-09-02T09:03:00+02:00",
+      "typ": "temperatur",
+      "wert": 18.1,
+      "notiz": "Nach dem Einpendeln des Thermometers. Zielkorridor Anstellen 18–20 °C."
+    },
+    {
+      "id": "m-12",
+      "chargeId": "charge-bottich-3",
+      "zeit": "2026-09-02T09:03:00+02:00",
+      "typ": "geruch",
+      "wert": null,
+      "text": "hefig",
+      "notiz": "Alle vier gleich: fruchtig, traubig, leicht malzig. Beginnende Wildhefeaktivität, unkritisch bei Anstellen am selben Tag."
+    },
+    {
+      "id": "m-13",
+      "chargeId": "charge-bottich-3",
+      "zeit": "2026-09-02T09:03:00+02:00",
+      "typ": "gaeraktivitaet",
+      "wert": null,
+      "text": "keine"
+    },
+    {
+      "id": "m-14",
+      "chargeId": "charge-bottich-3",
+      "zeit": "2026-09-02T09:40:00+02:00",
+      "typ": "oechsle",
+      "wert": 54,
+      "methode": "spindel",
+      "notiz": "Ausgangsmostgewicht vor dem Aufzuckern. Bei 18 °C keine Temperaturkorrektur nötig."
+    },
+    {
+      "id": "m-15",
+      "chargeId": "charge-bottich-3",
+      "zeit": "2026-09-02T13:35:00+02:00",
+      "typ": "volumen",
+      "wert": 8.8,
+      "notiz": "Erwartete Weinmenge, gerechnet aus Nettogewicht × 0,70."
+    },
+    {
+      "id": "m-16",
+      "chargeId": "charge-bottich-4",
+      "zeit": "2026-09-02T09:03:00+02:00",
+      "typ": "temperatur",
+      "wert": 18.5,
+      "notiz": "Nach dem Einpendeln des Thermometers. Zielkorridor Anstellen 18–20 °C."
+    },
+    {
+      "id": "m-17",
+      "chargeId": "charge-bottich-4",
+      "zeit": "2026-09-02T09:03:00+02:00",
+      "typ": "geruch",
+      "wert": null,
+      "text": "hefig",
+      "notiz": "Alle vier gleich: fruchtig, traubig, leicht malzig. Beginnende Wildhefeaktivität, unkritisch bei Anstellen am selben Tag."
+    },
+    {
+      "id": "m-18",
+      "chargeId": "charge-bottich-4",
+      "zeit": "2026-09-02T09:03:00+02:00",
+      "typ": "gaeraktivitaet",
+      "wert": null,
+      "text": "keine"
+    },
+    {
+      "id": "m-19",
+      "chargeId": "charge-bottich-4",
+      "zeit": "2026-09-02T09:40:00+02:00",
+      "typ": "oechsle",
+      "wert": 50,
+      "methode": "spindel",
+      "notiz": "Ausgangsmostgewicht vor dem Aufzuckern. Bei 18 °C keine Temperaturkorrektur nötig."
+    },
+    {
+      "id": "m-20",
+      "chargeId": "charge-bottich-4",
+      "zeit": "2026-09-02T13:35:00+02:00",
+      "typ": "volumen",
+      "wert": 7.4,
+      "notiz": "Erwartete Weinmenge, gerechnet aus Nettogewicht × 0,70."
+    },
+    {
+      "id": "m-21",
+      "chargeId": "charge-bottich-1",
+      "zeit": "2026-09-02T13:35:00+02:00",
+      "typ": "oechsle",
+      "wert": 82,
+      "methode": "spindel",
+      "notiz": "Startdichte der Gärung — gemessen, nachdem Zucker, Hefe und Nährsalz vollständig drin waren. Ziel war 85 °Oe. Rund 1 °Oe der Differenz erklärt sich aus dem Anmachwasser der Hefe (0,5 L auf vier Bottiche, also 1,4 % Verdünnung), das in der Zuckerrechnung fehlte; der Rest ist Ablesestreuung und Ausbeuteunsicherheit. Bewusst nicht nachgezuckert."
+    },
+    {
+      "id": "m-22",
+      "chargeId": "charge-bottich-1",
+      "zeit": "2026-09-02T18:15:00+02:00",
+      "typ": "temperatur",
+      "wert": 21.6,
+      "notiz": "Nur +0,6 K gegenüber dem Anstellen trotz kräftiger Gärung. Die Aufteilung auf vier Bottiche à 11 L führt die Gärwärme gut ab. Stärkste Wärmeentwicklung steht noch bevor."
+    },
+    {
+      "id": "m-23",
+      "chargeId": "charge-bottich-1",
+      "zeit": "2026-09-02T18:15:00+02:00",
+      "typ": "gaeraktivitaet",
+      "wert": null,
+      "text": "stark"
+    },
+    {
+      "id": "m-24",
+      "chargeId": "charge-bottich-2",
+      "zeit": "2026-09-02T18:15:00+02:00",
+      "typ": "temperatur",
+      "wert": 21.7,
+      "notiz": "Nur +0,6 K gegenüber dem Anstellen trotz kräftiger Gärung. Die Aufteilung auf vier Bottiche à 11 L führt die Gärwärme gut ab. Stärkste Wärmeentwicklung steht noch bevor."
+    },
+    {
+      "id": "m-25",
+      "chargeId": "charge-bottich-2",
+      "zeit": "2026-09-02T18:15:00+02:00",
+      "typ": "gaeraktivitaet",
+      "wert": null,
+      "text": "stark"
+    },
+    {
+      "id": "m-26",
+      "chargeId": "charge-bottich-3",
+      "zeit": "2026-09-02T18:15:00+02:00",
+      "typ": "temperatur",
+      "wert": 21.5,
+      "notiz": "Nur +0,6 K gegenüber dem Anstellen trotz kräftiger Gärung. Die Aufteilung auf vier Bottiche à 11 L führt die Gärwärme gut ab. Stärkste Wärmeentwicklung steht noch bevor."
+    },
+    {
+      "id": "m-27",
+      "chargeId": "charge-bottich-3",
+      "zeit": "2026-09-02T18:15:00+02:00",
+      "typ": "gaeraktivitaet",
+      "wert": null,
+      "text": "stark"
+    },
+    {
+      "id": "m-28",
+      "chargeId": "charge-bottich-4",
+      "zeit": "2026-09-02T18:15:00+02:00",
+      "typ": "temperatur",
+      "wert": 21.6,
+      "notiz": "Nur +0,6 K gegenüber dem Anstellen trotz kräftiger Gärung. Die Aufteilung auf vier Bottiche à 11 L führt die Gärwärme gut ab. Stärkste Wärmeentwicklung steht noch bevor."
+    },
+    {
+      "id": "m-29",
+      "chargeId": "charge-bottich-4",
+      "zeit": "2026-09-02T18:15:00+02:00",
+      "typ": "gaeraktivitaet",
+      "wert": null,
+      "text": "stark"
+    },
+    {
+      "id": "m-30",
+      "chargeId": "charge-bottich-1",
+      "zeit": "2026-09-02T18:20:00+02:00",
+      "typ": "oechsle",
+      "wert": 82,
+      "methode": "spindel",
+      "notiz": "Unverändert gegenüber dem Anstellen — kein Stillstand. Für 1 °Oe müssen rund 23 g Zucker vergären; das reicht zum Blubbern, bewegt die Spindel aber noch nicht sichtbar. Ab jetzt Probe vor dem Ablesen entgasen: gelöstes CO₂ trägt die Spindel und lässt 1–3 °Oe zu hoch ablesen."
+    }
+  ],
+  "ereignisse": [
+    {
+      "id": "e-31",
+      "chargeId": "charge-bottich-1",
+      "zeit": "2026-09-02T18:15:00+02:00",
+      "art": "unterstossen",
+      "begruendung": "Erstes Unterstoßen nach Bildung des Tresterhuts. Ab jetzt zweimal täglich — ein trockener Hut über gärendem Most wird von Essigbakterien besiedelt. Deckel während der Hauptgärung lose aufgelegt, damit Schaum das Gärröhrchen nicht zusetzt."
+    },
+    {
+      "id": "e-32",
+      "chargeId": "charge-bottich-1",
+      "zeit": "2026-09-02T13:35:00+02:00",
+      "art": "aufzuckern",
+      "stoff": "Haushaltszucker (Saccharose)",
+      "mengeWert": 658,
+      "mengeEinheit": "g",
+      "begruendung": "Ausgangsmostgewicht 56 °Oe entspricht nur 7,0 % vol. Angehoben auf Ziel 85 °Oe (10,6 % vol), weil Alkohol dieses Jahr der wichtigere Schutzfaktor ist — freier SO₂ ist mangels Titrationsset nicht messbar. Zucker als gemeinsamer Ansatz in 2 L Most bei 60–70 °C gelöst und in vier gleichen Teilen zurückgegeben; die Abweichung zur Einzeldosierung beträgt höchstens 2 °Oe und liegt damit unter der Ausbeuteunsicherheit."
+    },
+    {
+      "id": "e-33",
+      "chargeId": "charge-bottich-1",
+      "zeit": "2026-09-02T13:35:00+02:00",
+      "art": "hefe",
+      "stoff": "Reinzuchthefe",
+      "produkt": "Kitzinger Steinberg",
+      "mengeWert": 0.5,
+      "mengeEinheit": "Beutel",
+      "begruendung": "Zwei Beutel für die Gesamtmenge in 0,5 L Wasser bei 35 °C rehydriert, 15–20 Minuten angesetzt, dann gleichmäßig auf vier Bottiche verteilt. Maische 21 °C, Hefeansatz 28 °C — Differenz 7 K und damit unkritisch, kein Angleichschritt nötig."
+    },
+    {
+      "id": "e-34",
+      "chargeId": "charge-bottich-1",
+      "zeit": "2026-09-02T13:35:00+02:00",
+      "art": "naehrsalz",
+      "stoff": "Diammoniumphosphat",
+      "produkt": "Kitzinger Hefenährsalz",
+      "mengeWert": 0.9,
+      "mengeEinheit": "g",
+      "begruendung": "Portion 1 von 3. Ein Drittel der Höchstmenge von 30 g je 100 L, gerechnet auf die Weinmenge. Höchstmenge dieses Jahr voll ausgeschöpft, weil der Presswein 2025 H₂S-Noten zeigte — die entstehen typischerweise aus Stickstoffmangel unter Hefestress. 2025 wurden dagegen 10 g auf einmal in einen 9-L-Ansatz gegeben, also das Vierfache des Zulässigen."
+    },
+    {
+      "id": "e-35",
+      "chargeId": "charge-bottich-1",
+      "zeit": "2026-09-02T13:35:00+02:00",
+      "art": "anstellen",
+      "begruendung": "Vier synchrone Chargen. Maische am 30.08. gelesen, bis 02.09. bei 5–8 °C kalt mazeriert, mit den Füßen in der Wanne angequetscht (breiter, niedriger Druck — die Kerne bleiben ganz), dann auf vier Gärbottiche verteilt. Bewusst nicht geschwefelt: freier SO₂ ist nicht messbar, jede frühe Gabe bindet sich unsichtbar und verschlechtert das SO₂-Modell für den Ausbau, der 2025 die eigentliche Schadensphase war."
+    },
+    {
+      "id": "e-36",
+      "chargeId": "charge-bottich-2",
+      "zeit": "2026-09-02T18:15:00+02:00",
+      "art": "unterstossen",
+      "begruendung": "Erstes Unterstoßen nach Bildung des Tresterhuts. Ab jetzt zweimal täglich — ein trockener Hut über gärendem Most wird von Essigbakterien besiedelt. Deckel während der Hauptgärung lose aufgelegt, damit Schaum das Gärröhrchen nicht zusetzt."
+    },
+    {
+      "id": "e-37",
+      "chargeId": "charge-bottich-2",
+      "zeit": "2026-09-02T13:35:00+02:00",
+      "art": "aufzuckern",
+      "stoff": "Haushaltszucker (Saccharose)",
+      "mengeWert": 658,
+      "mengeEinheit": "g",
+      "begruendung": "Ausgangsmostgewicht 54 °Oe entspricht nur 6,8 % vol. Angehoben auf Ziel 85 °Oe (10,6 % vol), weil Alkohol dieses Jahr der wichtigere Schutzfaktor ist — freier SO₂ ist mangels Titrationsset nicht messbar. Zucker als gemeinsamer Ansatz in 2 L Most bei 60–70 °C gelöst und in vier gleichen Teilen zurückgegeben; die Abweichung zur Einzeldosierung beträgt höchstens 2 °Oe und liegt damit unter der Ausbeuteunsicherheit."
+    },
+    {
+      "id": "e-38",
+      "chargeId": "charge-bottich-2",
+      "zeit": "2026-09-02T13:35:00+02:00",
+      "art": "hefe",
+      "stoff": "Reinzuchthefe",
+      "produkt": "Kitzinger Steinberg",
+      "mengeWert": 0.5,
+      "mengeEinheit": "Beutel",
+      "begruendung": "Zwei Beutel für die Gesamtmenge in 0,5 L Wasser bei 35 °C rehydriert, 15–20 Minuten angesetzt, dann gleichmäßig auf vier Bottiche verteilt. Maische 21 °C, Hefeansatz 28 °C — Differenz 7 K und damit unkritisch, kein Angleichschritt nötig."
+    },
+    {
+      "id": "e-39",
+      "chargeId": "charge-bottich-2",
+      "zeit": "2026-09-02T13:35:00+02:00",
+      "art": "naehrsalz",
+      "stoff": "Diammoniumphosphat",
+      "produkt": "Kitzinger Hefenährsalz",
+      "mengeWert": 0.85,
+      "mengeEinheit": "g",
+      "begruendung": "Portion 1 von 3. Ein Drittel der Höchstmenge von 30 g je 100 L, gerechnet auf die Weinmenge. Höchstmenge dieses Jahr voll ausgeschöpft, weil der Presswein 2025 H₂S-Noten zeigte — die entstehen typischerweise aus Stickstoffmangel unter Hefestress. 2025 wurden dagegen 10 g auf einmal in einen 9-L-Ansatz gegeben, also das Vierfache des Zulässigen."
+    },
+    {
+      "id": "e-40",
+      "chargeId": "charge-bottich-2",
+      "zeit": "2026-09-02T13:35:00+02:00",
+      "art": "anstellen",
+      "begruendung": "Vier synchrone Chargen. Maische am 30.08. gelesen, bis 02.09. bei 5–8 °C kalt mazeriert, mit den Füßen in der Wanne angequetscht (breiter, niedriger Druck — die Kerne bleiben ganz), dann auf vier Gärbottiche verteilt. Bewusst nicht geschwefelt: freier SO₂ ist nicht messbar, jede frühe Gabe bindet sich unsichtbar und verschlechtert das SO₂-Modell für den Ausbau, der 2025 die eigentliche Schadensphase war."
+    },
+    {
+      "id": "e-41",
+      "chargeId": "charge-bottich-3",
+      "zeit": "2026-09-02T18:15:00+02:00",
+      "art": "unterstossen",
+      "begruendung": "Erstes Unterstoßen nach Bildung des Tresterhuts. Ab jetzt zweimal täglich — ein trockener Hut über gärendem Most wird von Essigbakterien besiedelt. Deckel während der Hauptgärung lose aufgelegt, damit Schaum das Gärröhrchen nicht zusetzt."
+    },
+    {
+      "id": "e-42",
+      "chargeId": "charge-bottich-3",
+      "zeit": "2026-09-02T13:35:00+02:00",
+      "art": "aufzuckern",
+      "stoff": "Haushaltszucker (Saccharose)",
+      "mengeWert": 658,
+      "mengeEinheit": "g",
+      "begruendung": "Ausgangsmostgewicht 54 °Oe entspricht nur 6,8 % vol. Angehoben auf Ziel 85 °Oe (10,6 % vol), weil Alkohol dieses Jahr der wichtigere Schutzfaktor ist — freier SO₂ ist mangels Titrationsset nicht messbar. Zucker als gemeinsamer Ansatz in 2 L Most bei 60–70 °C gelöst und in vier gleichen Teilen zurückgegeben; die Abweichung zur Einzeldosierung beträgt höchstens 2 °Oe und liegt damit unter der Ausbeuteunsicherheit."
+    },
+    {
+      "id": "e-43",
+      "chargeId": "charge-bottich-3",
+      "zeit": "2026-09-02T13:35:00+02:00",
+      "art": "hefe",
+      "stoff": "Reinzuchthefe",
+      "produkt": "Kitzinger Steinberg",
+      "mengeWert": 0.5,
+      "mengeEinheit": "Beutel",
+      "begruendung": "Zwei Beutel für die Gesamtmenge in 0,5 L Wasser bei 35 °C rehydriert, 15–20 Minuten angesetzt, dann gleichmäßig auf vier Bottiche verteilt. Maische 21 °C, Hefeansatz 28 °C — Differenz 7 K und damit unkritisch, kein Angleichschritt nötig."
+    },
+    {
+      "id": "e-44",
+      "chargeId": "charge-bottich-3",
+      "zeit": "2026-09-02T13:35:00+02:00",
+      "art": "naehrsalz",
+      "stoff": "Diammoniumphosphat",
+      "produkt": "Kitzinger Hefenährsalz",
+      "mengeWert": 0.9,
+      "mengeEinheit": "g",
+      "begruendung": "Portion 1 von 3. Ein Drittel der Höchstmenge von 30 g je 100 L, gerechnet auf die Weinmenge. Höchstmenge dieses Jahr voll ausgeschöpft, weil der Presswein 2025 H₂S-Noten zeigte — die entstehen typischerweise aus Stickstoffmangel unter Hefestress. 2025 wurden dagegen 10 g auf einmal in einen 9-L-Ansatz gegeben, also das Vierfache des Zulässigen."
+    },
+    {
+      "id": "e-45",
+      "chargeId": "charge-bottich-3",
+      "zeit": "2026-09-02T13:35:00+02:00",
+      "art": "anstellen",
+      "begruendung": "Vier synchrone Chargen. Maische am 30.08. gelesen, bis 02.09. bei 5–8 °C kalt mazeriert, mit den Füßen in der Wanne angequetscht (breiter, niedriger Druck — die Kerne bleiben ganz), dann auf vier Gärbottiche verteilt. Bewusst nicht geschwefelt: freier SO₂ ist nicht messbar, jede frühe Gabe bindet sich unsichtbar und verschlechtert das SO₂-Modell für den Ausbau, der 2025 die eigentliche Schadensphase war."
+    },
+    {
+      "id": "e-46",
+      "chargeId": "charge-bottich-4",
+      "zeit": "2026-09-02T18:15:00+02:00",
+      "art": "unterstossen",
+      "begruendung": "Erstes Unterstoßen nach Bildung des Tresterhuts. Ab jetzt zweimal täglich — ein trockener Hut über gärendem Most wird von Essigbakterien besiedelt. Deckel während der Hauptgärung lose aufgelegt, damit Schaum das Gärröhrchen nicht zusetzt."
+    },
+    {
+      "id": "e-47",
+      "chargeId": "charge-bottich-4",
+      "zeit": "2026-09-02T13:35:00+02:00",
+      "art": "aufzuckern",
+      "stoff": "Haushaltszucker (Saccharose)",
+      "mengeWert": 658,
+      "mengeEinheit": "g",
+      "begruendung": "Ausgangsmostgewicht 50 °Oe entspricht nur 6,3 % vol. Angehoben auf Ziel 85 °Oe (10,6 % vol), weil Alkohol dieses Jahr der wichtigere Schutzfaktor ist — freier SO₂ ist mangels Titrationsset nicht messbar. Zucker als gemeinsamer Ansatz in 2 L Most bei 60–70 °C gelöst und in vier gleichen Teilen zurückgegeben; die Abweichung zur Einzeldosierung beträgt höchstens 2 °Oe und liegt damit unter der Ausbeuteunsicherheit."
+    },
+    {
+      "id": "e-48",
+      "chargeId": "charge-bottich-4",
+      "zeit": "2026-09-02T13:35:00+02:00",
+      "art": "hefe",
+      "stoff": "Reinzuchthefe",
+      "produkt": "Kitzinger Steinberg",
+      "mengeWert": 0.5,
+      "mengeEinheit": "Beutel",
+      "begruendung": "Zwei Beutel für die Gesamtmenge in 0,5 L Wasser bei 35 °C rehydriert, 15–20 Minuten angesetzt, dann gleichmäßig auf vier Bottiche verteilt. Maische 21 °C, Hefeansatz 28 °C — Differenz 7 K und damit unkritisch, kein Angleichschritt nötig."
+    },
+    {
+      "id": "e-49",
+      "chargeId": "charge-bottich-4",
+      "zeit": "2026-09-02T13:35:00+02:00",
+      "art": "naehrsalz",
+      "stoff": "Diammoniumphosphat",
+      "produkt": "Kitzinger Hefenährsalz",
+      "mengeWert": 0.75,
+      "mengeEinheit": "g",
+      "begruendung": "Portion 1 von 3. Ein Drittel der Höchstmenge von 30 g je 100 L, gerechnet auf die Weinmenge. Höchstmenge dieses Jahr voll ausgeschöpft, weil der Presswein 2025 H₂S-Noten zeigte — die entstehen typischerweise aus Stickstoffmangel unter Hefestress. 2025 wurden dagegen 10 g auf einmal in einen 9-L-Ansatz gegeben, also das Vierfache des Zulässigen."
+    },
+    {
+      "id": "e-50",
+      "chargeId": "charge-bottich-4",
+      "zeit": "2026-09-02T13:35:00+02:00",
+      "art": "anstellen",
+      "begruendung": "Vier synchrone Chargen. Maische am 30.08. gelesen, bis 02.09. bei 5–8 °C kalt mazeriert, mit den Füßen in der Wanne angequetscht (breiter, niedriger Druck — die Kerne bleiben ganz), dann auf vier Gärbottiche verteilt. Bewusst nicht geschwefelt: freier SO₂ ist nicht messbar, jede frühe Gabe bindet sich unsichtbar und verschlechtert das SO₂-Modell für den Ausbau, der 2025 die eigentliche Schadensphase war."
+    }
+  ],
+  "reminder": [
+    {
+      "id": "rem-unterstossen",
+      "faellig": "2026-09-03T08:00:00+02:00",
+      "wiederholungTage": 1,
+      "titel": "Tresterhut unterstoßen",
+      "erledigt": false,
+      "quelle": "manuell",
+      "beschreibung": "Zweimal täglich, morgens und abends. Der Tresterhut steigt nach oben und trocknet aus, wenn er liegen bleibt — ein trockener Hut über gärendem Most wird von Essigbakterien besiedelt. Sauberes Gerät verwenden. Dabei Temperatur ablesen und eintragen."
+    },
+    {
+      "id": "rem-naehrsalz-2",
+      "faellig": "2026-09-04T09:00:00+02:00",
+      "titel": "Hefenährsalz Portion 2 von 3",
+      "erledigt": false,
+      "quelle": "manuell",
+      "beschreibung": "Je Bottich: 0,90 / 0,85 / 0,90 / 0,75 g. Vorher in etwas Most auflösen."
+    },
+    {
+      "id": "rem-ballons",
+      "faellig": "2026-09-04T09:00:00+02:00",
+      "titel": "Gärballons prüfen",
+      "erledigt": false,
+      "quelle": "manuell",
+      "beschreibung": "Vier 5-L-Ballons erwartet. Zusammen mit den zwei vorhandenen sind das 30 L Ausbaukapazität. Am 05.09. kommen zwei 3-L-Ballons für den randvollen Abstich."
+    },
+    {
+      "id": "rem-naehrsalz-3",
+      "faellig": "2026-09-06T09:00:00+02:00",
+      "titel": "Hefenährsalz Portion 3 von 3",
+      "erledigt": false,
+      "quelle": "manuell",
+      "beschreibung": "Letzte Gabe, je Bottich 0,90 / 0,85 / 0,90 / 0,75 g. Spätestens bevor die Spindel unter 1,025 fällt — danach nimmt die Hefe keinen Stickstoff mehr auf und der Rest bleibt als Bakteriennahrung im Wein."
+    },
+    {
+      "id": "rem-pressgate",
+      "faellig": "2026-09-07T09:00:00+02:00",
+      "titel": "Press-Gate prüfen",
+      "erledigt": false,
+      "quelle": "regel",
+      "regelId": "PRESS_GATE",
+      "beschreibung": "Dichte mit der Spindel messen. Gepresst wird erst bei SG 1,010 oder darunter, nicht nach Gefühl. Beim Pressen zuerst den Vorlauf über den Ablaufhahn abtropfen lassen — das sind rund zwei Drittel des Weins, die gar nicht gepresst werden müssen. Nur den Trester in den Maischesack. Presswein getrennt führen."
+    }
+  ],
+  "wiki": [
+    {
+      "id": "wiki-kopfraum",
+      "slug": "kopfraum",
+      "titel": "Warum Kopfraum Wein gefährdet",
+      "tags": [
+        "Grundlagen",
+        "Ausbau",
+        "Fehlerbilder"
+      ],
+      "aktualisiert": "2026-08-30T17:00:00+02:00",
+      "inhalt": "# Warum Kopfraum Wein gefährdet\n\nKopfraum bringt Wein mit Sauerstoff in Kontakt. Im Ausbau begünstigt das Oxidation, Kahmhefen und Essigbakterien. Beim Hauptwein 2025 waren über Monate Kopfraum und ein Gärspund vorhanden; am 29.08.2026 fanden sich Fruchtfliegen und Schlieren beziehungsweise ein möglicher Oberflächenfilm.\n\n## Was dokumentiert wird\n\n- Füllvolumen des Gefäßes\n- Kopfraum in Litern\n- Zustand von Deckel, Stopfen und Gärspund\n- Oberfläche und Geruch bei jeder Kontrolle\n\nIm Weinbegleiter entscheidet die Regelengine anhand der erfassten Werte. Fehlende Werte bleiben als unbekannt sichtbar."
+    },
+    {
+      "id": "wiki-so2",
+      "slug": "so2",
+      "titel": "Freier, gebundener und molekularer SO₂",
+      "tags": [
+        "Schwefel",
+        "Ausbau",
+        "Grundlagen"
+      ],
+      "aktualisiert": "2026-08-30T17:00:00+02:00",
+      "inhalt": "# Freier, gebundener und molekularer SO₂\n\n**Freier SO₂** ist der messbare Anteil, der noch nicht an Zucker, Acetaldehyd oder Farbstoffe gebunden ist. **Gebundener SO₂** trägt nicht im selben Maß zum mikrobiologischen Schutz bei. **Molekularer SO₂** ist der wirksame Anteil; er hängt vom pH-Wert ab.\n\n## Konsequenz für 2026\n\n- pH und freier SO₂ müssen getrennt erfasst werden.\n- Ohne Titration bleibt freier SO₂ unbekannt.\n- Eine Rechenangabe ohne gemessenen Istwert ist als Schätzung gekennzeichnet.\n- Kaliumpyrosulfit vor der Zugabe in wenig Wein oder Wasser lösen.\n\nDer Schwefel-Rechner zeigt Formel, Sicherheitsgrad und den verbleibenden Vorrat."
+    },
+    {
+      "id": "wiki-gaerende",
+      "slug": "gaerende",
+      "titel": "Gärende richtig feststellen",
+      "tags": [
+        "Gärung",
+        "Grundlagen",
+        "Fehlerbilder"
+      ],
+      "aktualisiert": "2026-08-30T17:00:00+02:00",
+      "inhalt": "# Gärende richtig feststellen\n\nEin ruhender Gärspund beweist kein Gärende. Das Gefäß kann undicht sein oder die Gärung kann langsam weiterlaufen.\n\n## Belastbarer Nachweis\n\n- Dichte mit der Spindel messen.\n- Nach dem von der App vorgegebenen Mindestabstand erneut messen.\n- Beide Messwerte müssen konstant und im von der Regelengine geprüften Bereich liegen.\n\nRefraktometerwerte werden nach Gärbeginn nicht zur Gärende-Beurteilung herangezogen, weil Ethanol den Brechungsindex verändert. Der süße Weißwein 2025 refermentierte in der Flasche; deshalb blockiert das Gärende-Gate bei fehlender Evidenz."
+    },
+    {
+      "id": "wiki-naehrsalz",
+      "slug": "naehrsalz",
+      "titel": "Hefenährsalz richtig dosieren",
+      "tags": [
+        "Gärung",
+        "Grundlagen"
+      ],
+      "aktualisiert": "2026-08-30T17:00:00+02:00",
+      "inhalt": "# Hefenährsalz richtig dosieren\n\nDie vorhandene Herstellerangabe nennt höchstens 30 g je 100 L und drei Portionen in der ersten Gärwoche. Jede Portion wird vorher in etwa 100 ml Most oder Saft gelöst.\n\nNach ungefähr zwei Dritteln des Gärverlaufs nimmt die Hefe keinen Stickstoff mehr auf. Eine späte Gabe kann als Nährstoff für Bakterien im Wein bleiben.\n\n2025 wurden 10 g auf einmal in einen kleinen Ansatz gegeben. 2026 berechnet der Rechner die Portion je Charge aus dem erfassten Volumen; jede Zugabe braucht eine Begründung."
+    },
+    {
+      "id": "wiki-h2s",
+      "slug": "h2s",
+      "titel": "H₂S erkennen und behandeln",
+      "tags": [
+        "Gärung",
+        "Fehlerbilder"
+      ],
+      "aktualisiert": "2026-08-30T17:00:00+02:00",
+      "inhalt": "# H₂S erkennen und behandeln\n\nEin Geruch nach faulen Eiern weist auf Schwefelwasserstoff hin. Beim Presswein 2025 trat eine reduktive, faulige Note früh auf. Die endgültige Ursache ist nicht belegt.\n\n## Vorgehen\n\n- Charge isoliert führen.\n- Sofort belüftend abziehen.\n- Geruch erneut prüfen und dokumentieren.\n- Bleibt die Note bestehen, einen kontrollierten Bench Trial vorbereiten.\n\nEine Münze gehört nicht in den Wein. Ohne kontrollierte Dosierung wäre weder die Kupfermenge noch die Wirkung nachvollziehbar."
+    },
+    {
+      "id": "wiki-fraktionen",
+      "slug": "vorlauf-presswein",
+      "titel": "Vorlauf und Presswein getrennt führen",
+      "tags": [
+        "Gärung",
+        "Ausbau",
+        "Grundlagen"
+      ],
+      "aktualisiert": "2026-08-30T17:00:00+02:00",
+      "inhalt": "# Vorlauf und Presswein getrennt führen\n\nVorlauf fließt ohne Pressdruck ab. Presswein entsteht unter Druck und enthält gewöhnlich mehr Trub, Gerbstoffe und Hefebelastung. Diese Fraktionen können sich sensorisch und mikrobiologisch unterschiedlich entwickeln.\n\n2025 entwickelte der Presswein früh reduktive Noten. Deshalb führt der Weinbegleiter Presswein als eigene Charge. Eine Vermischung wird blockiert, solange die fachlichen Voraussetzungen nicht erfüllt sind."
+    },
+    {
+      "id": "wiki-postmortem-2025",
+      "slug": "2025-post-mortem",
+      "titel": "2025 Post-Mortem",
+      "tags": [
+        "Fehlerbilder",
+        "Jahrgang 2025"
+      ],
+      "aktualisiert": "2026-08-30T17:00:00+02:00",
+      "inhalt": "# GESICHERT\n\n- Der rote Hauptwein war nach der Gärung zunächst sensorisch brauchbar.\n- Der Presswein entwickelte früh reduktive oder faulige Noten.\n- Der Hauptwein lag lange in einem Ausbaugefäß mit Gärspund und Kopfraum.\n- pH und freier SO₂ wurden nicht systematisch kontrolliert.\n- Beim Öffnen am 29.08.2026 waren Fruchtfliegen und Schlieren beziehungsweise ein möglicher Oberflächenfilm vorhanden.\n- Der Hauptwein war sensorisch gekippt und wurde verworfen.\n- Der süße Weißwein hatte Restzucker, baute Druck und CO₂ in der Flasche auf und war danach nicht mehr süß.\n\n# WAHRSCHEINLICH\n\n- Beim Hauptwein waren langer Ausbau mit Kopfraum, fehlende pH- und SO₂-Kontrolle, eine lange Kontrollpause und der warme Sommer maßgebliche Risikofaktoren.\n- Fruchtfliegen sprechen für Undichtigkeit oder Kontamination.\n- Beim Weißwein ist Refermentation sehr wahrscheinlich. Restzucker und ein mikrobiologisch nicht gesicherter Gärstopp erklären den beobachteten Druck und den Verlust der Süße.\n\n# OFFEN\n\n- Die exakten kumulativen Kaliumpyrosulfitmengen je Charge und Zeitpunkt fehlen.\n- Kopfraumvolumen und Dichtigkeit der Verschlüsse wurden nicht gemessen.\n- Ein lückenloser Temperaturverlauf des Ausbaus fehlt.\n- Flüchtige Säure beziehungsweise Essigsäure wurden nicht bestimmt.\n- Oberflächenfilm, H₂S und Acetobacter wurden mikrobiologisch nicht bestätigt.\n- Für die frühe Entwicklung des Pressweins liegt keine endgültige Diagnose vor."
+    }
+  ],
+  "klima": [],
+  "sensor": {
+    "aktiv": false,
+    "adapter": "generisch-json",
+    "url": "",
+    "pfadTemperatur": "temperature",
+    "pfadFeuchte": "humidity"
+  },
+  "vorrat": [
+    {
+      "id": "vorrat-kps",
+      "name": "Kaliumpyrosulfit",
+      "mengeWert": 104,
+      "mengeEinheit": "g",
+      "notiz": "4 g Restbestand plus 100 g geliefert am 01.09. Jahresbedarf für ~34 L: 12–15 g."
+    },
+    {
+      "id": "vorrat-naehrsalz",
+      "name": "Hefenährsalz",
+      "mengeWert": 56.6,
+      "mengeEinheit": "g",
+      "notiz": "Sechs volle Beutel abzüglich 3,4 g für Portion 1. Zwei angebrochene Beutel mit unbekannter Restmenge nicht eingerechnet."
+    },
+    {
+      "id": "vorrat-hefe",
+      "name": "Reinzuchthefe Steinberg",
+      "mengeWert": 2,
+      "mengeEinheit": "Beutel",
+      "notiz": "Zwei von vier Beuteln beim Anstellen verbraucht."
+    }
+  ],
+  "appMeta": {
+    "chargenMengenKg": {
+      "charge-bottich-1": 13.13,
+      "charge-bottich-2": 12.28,
+      "charge-bottich-3": 12.53,
+      "charge-bottich-4": 10.58
+    },
+    "elternChargeIds": {}
+  }
+}

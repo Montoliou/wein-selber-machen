@@ -78,7 +78,35 @@ messungen.push({
     + 'der Rest ist Ablesestreuung und Ausbeuteunsicherheit. Bewusst nicht nachgezuckert.',
 })
 
+// ---------------------------------------------------------------------------
+// 02.09.2026, 18:15 — erste Kontrolle nach dem Gärstart.
+// Alle vier Bottiche haben nach 4,7 Stunden einen Tresterhut gebildet und blubbern.
+const KONTROLLE_1 = '2026-09-02T18:15:00+02:00'
+const ABENDTEMP: Record<number, number> = { 1: 21.6, 2: 21.7, 3: 21.5, 4: 21.6 }
+
+for (const b of BOTTICHE) {
+  messungen.push(
+    { id: id('m'), chargeId: chargenId(b.nr), zeit: KONTROLLE_1, typ: 'temperatur', wert: ABENDTEMP[b.nr]!,
+      notiz: 'Nur +0,6 K gegenüber dem Anstellen trotz kräftiger Gärung. Die Aufteilung auf vier Bottiche '
+        + 'à 11 L führt die Gärwärme gut ab. Stärkste Wärmeentwicklung steht noch bevor.' },
+    { id: id('m'), chargeId: chargenId(b.nr), zeit: KONTROLLE_1, typ: 'gaeraktivitaet', wert: null, text: 'stark' },
+  )
+}
+
+messungen.push({
+  id: id('m'), chargeId: chargenId(1), zeit: '2026-09-02T18:20:00+02:00', typ: 'oechsle', wert: 82, methode: 'spindel',
+  notiz: 'Unverändert gegenüber dem Anstellen — kein Stillstand. Für 1 °Oe müssen rund 23 g Zucker '
+    + 'vergären; das reicht zum Blubbern, bewegt die Spindel aber noch nicht sichtbar. '
+    + 'Ab jetzt Probe vor dem Ablesen entgasen: gelöstes CO₂ trägt die Spindel und lässt 1–3 °Oe zu hoch ablesen.',
+})
+
 const ereignisse: Ereignis[] = BOTTICHE.flatMap<Ereignis>(b => [
+  {
+    id: id('e'), chargeId: chargenId(b.nr), zeit: KONTROLLE_1, art: 'unterstossen',
+    begruendung: 'Erstes Unterstoßen nach Bildung des Tresterhuts. Ab jetzt zweimal täglich — '
+      + 'ein trockener Hut über gärendem Most wird von Essigbakterien besiedelt. '
+      + 'Deckel während der Hauptgärung lose aufgelegt, damit Schaum das Gärröhrchen nicht zusetzt.',
+  },
   {
     id: id('e'), chargeId: chargenId(b.nr), zeit: ANSTELLEN, art: 'aufzuckern',
     stoff: 'Haushaltszucker (Saccharose)', mengeWert: b.zuckerG, mengeEinheit: 'g',

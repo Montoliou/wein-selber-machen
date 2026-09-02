@@ -10,10 +10,10 @@ import { APP_DATEN_VERSION, type AppDatenstand } from './speicher/modell'
 const ERNTE = '2026-08-30T17:00:00+02:00'
 const MESSUNG_TEMP = '2026-09-02T09:03:00+02:00'
 const MESSUNG_OE = '2026-09-02T09:40:00+02:00'
-// Anstellzeit rekonstruiert: Andis Foto "Hefe angesetzt, Zucker aufgelöst" trägt den
-// Zeitstempel 12:57:38; zwei Nachrichten nach der 82-°Oe-Messung lief um 14:16 die
-// Codex-Abfrage. Zucker, Hefe und Nährsalz kamen laut Andi unmittelbar vor dieser Messung.
-const ANSTELLEN = '2026-09-02T13:45:00+02:00'
+// Anstellzeit rekonstruiert (±15 min): Foto "Hefe angesetzt, Zucker aufgelöst" um 12:57:38,
+// die Anleitungsnachricht danach laut Chat-Anzeige gegen 13:05–13:25, dann Hefe, Nährsalz
+// und Messung. Zucker, Hefe und Nährsalz waren bei der 82-°Oe-Messung bereits drin.
+const ANSTELLEN = '2026-09-02T13:35:00+02:00'
 
 interface BottichStart {
   nr: 1 | 2 | 3 | 4

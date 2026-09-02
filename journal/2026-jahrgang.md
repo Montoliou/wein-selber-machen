@@ -161,12 +161,17 @@ Merkposten biologischer Säureabbau oben.
 | **Startdichte nach allen Zugaben (°Oe)** | **82** | *offen* | *offen* | *offen* |
 | Hefe (Steinberg) | ja | ja | ja | ja |
 | Nährsalz Portion 1 (g) | 0,90 | 0,85 | 0,90 | 0,75 |
-| Uhrzeit Anstellen | **ca. 13:45** | ca. 13:45 | ca. 13:45 | ca. 13:45 |
+| Uhrzeit Anstellen | **ca. 13:35** | ca. 13:35 | ca. 13:35 | ca. 13:35 |
 
-Anstellzeit rekonstruiert, nicht protokolliert: Andis Foto „Hefe ist angesetzt und Zucker ist
-aufgelöst" trägt den Dateizeitstempel 12:57:38, die Codex-Abfrage zwei Nachrichten nach der
-82-°Oe-Messung lief um 14:16. Dazwischen liegen Einfüllen, Rühren, Temperaturmessung,
-Hefe- und Nährsalzgabe. Chat-Zeitstempel sind technisch nicht auslesbar.
+Anstellzeit rekonstruiert, nicht protokolliert (**±15 min**). Herleitung: Das Foto „Hefe ist
+angesetzt und Zucker ist aufgelöst" trägt den Dateizeitstempel 12:57:38. Die darauf folgende
+Anleitungsnachricht stand um 15:23 auf „vor 2 Stunden", also 12:54–13:53; da sie nach dem Foto
+und nach der 21/28-°C-Meldung kam, bleibt 13:05–13:25. Anschließend Hefe verteilen, Nährsalz
+einrühren und messen — 15 bis 25 Minuten.
+
+Genauer geht es nicht: Chat-Zeitstempel sind aus der Sitzung technisch nicht auslesbar, die
+Sitzungswerkzeuge geben nur fremde Sitzungen. Für die Gärverlaufsrechnung ist das ohne
+Bedeutung — eine Viertelstunde Unschärfe auf einer Gärung von mehreren Tagen ändert nichts.
 
 Zucker in einem gemeinsamen Ansatz gelöst: aus allen vier Bottichen je ~0,5 L Most,
 auf 60–70 °C erwärmt, 2,63 kg Zucker portionsweise eingerührt, in vier gleichen Teilen

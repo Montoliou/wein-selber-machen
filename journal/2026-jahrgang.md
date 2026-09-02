@@ -60,13 +60,57 @@ Einordnung: Die malzig-brotige Note ist beginnende Wildhefeaktivität nach einer
 bei 13–19 °C. Erwartbar und unkritisch, solange heute mit Reinzuchthefe angestellt wird.
 Kategorie: *hefig*.
 
-### Mostgewicht
+### Mostgewicht (09:25)
 
 | | Bottich 1 | Bottich 2 | Bottich 3 | Bottich 4 |
 |---|---|---|---|---|
-| Mostgewicht (°Oe) | | | | |
-| Messmethode | Spindel | Spindel | Spindel | Spindel |
-| pH | | | | |
+| Mostgewicht (°Oe) | **56** | *nicht gemessen* | *nicht gemessen* | offen |
+| entspricht SG | 1,056 | | | |
+| Messmethode | Spindel | | | Spindel |
+| Messtemperatur (°C) | 18,3 | | | |
+| pH | *pH-Meter noch nicht kalibriert* | | | |
+
+Ablesung von Andi am Zylinder, bestätigt durch Strichzählung auf dem Foto
+`inputs/Dichtemessung 2 Behälter 1 2026-02-09.png`: drei Striche à 2 °Oe unter der
+50er-Linie. Keine Temperaturkorrektur nötig (18,3 °C, Spindel auf 20 °C geeicht,
+Abweichung unter 0,5 °Oe).
+
+*Vorbehalt:* Kerne und Schaumring auf der Oberfläche, Probe trüb. Beides trägt die
+Spindel leicht zu hoch — der wahre Wert liegt eher bei 54–56 als darüber.
+
+**Entscheidung: nur zwei Bottiche messen statt vier.** Begründung: Die Ablesestreuung
+derselben Probe liegt bei etwa 1 °Oe und damit in derselben Größenordnung wie die
+erwartbare Differenz zwischen den Bottichen. Bottich 1 (zuerst befüllt) und Bottich 4
+(zuletzt befüllt) werden gemessen; liegen sie innerhalb von 2 °Oe, gilt der Mittelwert
+für alle vier.
+
+### Befund: früher Erntezeitpunkt
+
+56 °Oe ergeben ohne Zugabe **7,0 % vol** — zu wenig für einen Rotwein, der ein Jahr
+im Ausbau stehen soll. Alkohol ist dieses Jahr der wichtigere der beiden Schutzfaktoren,
+weil freier SO₂ mangels Titrationsset nicht messbar ist.
+
+Ursache ist der Erntezeitpunkt: 2025 wurde am **12.10.** gelesen (74 °Oe), 2026 am
+**30.08.** — sechs Wochen früher. Die Differenz von 18 °Oe entspricht etwa dieser Reifezeit.
+
+**Merkposten 2027: später lesen.**
+
+### Aufzuckern
+
+| | |
+|---|---|
+| Ist | 56 °Oe |
+| Ziel | 80 °Oe (10,0 % vol) |
+| Bezugsvolumen | 8,5 L erwartete Weinmenge je Bottich, **nicht** 11 L Maischevolumen |
+| Rechnung | 8,5 × 24 × 2,5 |
+| **Zucker je Bottich** | **510 g** |
+| Gesamt | 2,04 kg |
+
+Ziel bewusst 80 statt 85 °Oe: Von 56 auf 85 wären 3,6 % vol Anreicherung und damit mehr,
+als im gewerblichen Weinbau zulässig ist. Jenseits von 80 verdünnt die Zugabe den Wein
+stärker, als der zusätzliche Alkohol an Schutz zurückgibt.
+
+Zucker je Bottich in ~0,5 L auf 40 °C angewärmtem Most auflösen, zurückgeben, unterrühren.
 
 ### Zugaben
 

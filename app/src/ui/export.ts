@@ -24,7 +24,7 @@ export function alsMarkdown(stand: AppDatenstand): string {
   const abschnitte = stand.chargen.filter(charge => !charge.archiviert).map(charge => {
     const messungen = stand.messungen.filter(messung => messung.chargeId === charge.id).sort((a, b) => a.zeit.localeCompare(b.zeit))
     const ereignisse = stand.ereignisse.filter(ereignis => ereignis.chargeId === charge.id).sort((a, b) => a.zeit.localeCompare(b.zeit))
-    const kg = stand.appMeta.chargenMengenKg[charge.id]
+    const kg = charge.mengeKg
     return `## ${charge.name}\n\n- Phase: ${charge.phase}\n- Typ: ${charge.typ}\n- Menge: ${kg === undefined ? 'nicht erfasst' : `${deZahl.format(kg)} kg`}\n- Start: ${deDatum.format(new Date(charge.startdatum))}\n\n### Messungen\n\n${messungen.length ? messungen.map(m => `- ${deDatum.format(new Date(m.zeit))}: ${m.typ} ${messwert(m)}${m.methode ? ` (${m.methode})` : ''}`).join('\n') : '- Keine Messungen'}\n\n### Ereignisse\n\n${ereignisse.length ? ereignisse.map(e => `- ${deDatum.format(new Date(e.zeit))}: ${e.art}${e.stoff ? `, ${e.stoff}` : ''}${e.mengeWert === undefined ? '' : `, ${deZahl.format(e.mengeWert)} ${e.mengeEinheit ?? ''}`} — ${e.begruendung}`).join('\n') : '- Keine Ereignisse'}`
   })
   return `# Weinbegleiter – Jahrgang ${stand.jahrgang}\n\nExportiert am ${deDatum.format(new Date())}.\n\n${abschnitte.join('\n\n')}`
@@ -66,7 +66,10 @@ export async function alsSicherung(stand: AppDatenstand, fotos: Foto[]): Promise
 export function istSicherung(wert: unknown): wert is Sicherung {
   if (!wert || typeof wert !== 'object') return false
   const kandidat = wert as Partial<Sicherung>
-  return kandidat.schema === 'weinbegleiter-v1' && Boolean(kandidat.datenstand) && Array.isArray(kandidat.fotos)
+  return kandidat.schema === 'weinbegleiter-v1'
+    && typeof kandidat.exportiert === 'string'
+    && Boolean(kandidat.datenstand)
+    && Array.isArray(kandidat.fotos)
 }
 
 export function fotoAusSicherung(foto: Sicherung['fotos'][number]): Foto {

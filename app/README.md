@@ -44,9 +44,10 @@ Der Link enthält keine Zugangsdaten und liegt im ignorierten Build-Ordner. Ein 
 ## Datenstruktur
 
 - `Datenstand`: Jahrgang, Chargen, Behälter, Messungen, Ereignisse, Reminder, Wiki, Klima, Sensor und Vorrat.
-- `appMeta.chargenMengenKg`: kg-Mengen, ohne das unveränderliche Domänenmodell umzudeuten.
-- `appMeta.elternChargeIds`: vollständige Abstammung bei Umverteilungen mit mehreren Quellen. `elternChargeId` an der Charge bleibt für die direkte Domänenkompatibilität gesetzt.
-- IndexedDB-Store `datenstand`: aktiver, versionierter Datenstand.
+- `Charge.mengeKg` und `Charge.elternChargeId`: Menge und direkte Abstammung liegen im Chargenmodell.
+- `Charge.volumenHistorie`: Pressen, Abstiche und Gefäßwechsel hängen einen neuen Volumenpunkt an. `fuellLiter` und `kopfraumLiter` spiegeln den jüngsten Punkt.
+- `Ereignis.vorratId`: Verknüpfte Zugaben vermindern den Vorrat; beim Löschen bucht die Speicherschicht die Menge zurück.
+- IndexedDB-Store `datenstand`: aktiver Datenstand. Beim Laden migriert die App Version 1 auf Version 2 und schreibt die Migration zurück.
 - IndexedDB-Store `fotos`: getrennte `Foto`-Objekte mit Blob.
 
 Der erste Start legt drei Ausgangschargen, den Behälter- und Materialbestand, Termine sowie sieben Fachwiki-Seiten an. Danach wird der gespeicherte IndexedDB-Stand geladen; ein Seed überschreibt keine vorhandenen Daten.

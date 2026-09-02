@@ -110,6 +110,7 @@ export interface Ereignis {
   produkt?: string
   mengeWert?: number
   mengeEinheit?: string
+  vorratId?: string
   begruendung: string     // Audit-Regel 13: Pflicht
   fotoIds?: string[]
 }
@@ -124,16 +125,30 @@ export interface Behaelter {
   notiz?: string
 }
 
+export interface VolumenPunkt {
+  zeit: string
+  fuellLiter?: number
+  kopfraumLiter?: number
+  behaelterId?: string
+  anlass: string
+}
+
 export interface Charge {
   id: string
   jahrgang: number
   name: string
   typ: ChargenTyp
   phase: Phase
+  phaseSeit?: string
   elternChargeId?: string
   startdatum: string
+  mengeKg?: number
   behaelterId?: string
+  erwarteteWeinLiter?: number
+  volumenHistorie?: VolumenPunkt[]
+  /** Abgeleiteter Spiegel des jüngsten Punkts in volumenHistorie. */
   fuellLiter?: number
+  /** Abgeleiteter Spiegel des jüngsten Punkts in volumenHistorie. */
   kopfraumLiter?: number
   gesperrt: boolean       // RED: keine Vermischung/Abfüllung
   isoliert: boolean       // ORANGE

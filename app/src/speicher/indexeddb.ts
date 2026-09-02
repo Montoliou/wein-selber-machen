@@ -1,8 +1,8 @@
 import type { Foto } from '../domain/typen'
-import { APP_DATEN_VERSION, migriereDatenstand, type AppDatenstand } from './modell'
+import { APP_DATEN_VERSION, migriereDatenstand, synchronisiereVolumenspiegel, type AppDatenstand } from './modell'
 
 const DB_NAME = 'weinbegleiter-2026'
-const DB_VERSION = 1
+const DB_VERSION = 2
 const STAND_STORE = 'datenstand'
 const FOTO_STORE = 'fotos'
 const STAND_KEY = 'aktiv'
@@ -29,16 +29,21 @@ function anfrageAlsPromise<T>(anfrage: IDBRequest<T>): Promise<T> {
 
 export async function ladeDatenstand(): Promise<AppDatenstand | null> {
   const db = await oeffneDb()
+  let stand: AppDatenstand | undefined
   try {
     const tx = db.transaction(STAND_STORE, 'readonly')
-    const stand = await anfrageAlsPromise(tx.objectStore(STAND_STORE).get(STAND_KEY) as IDBRequest<AppDatenstand | undefined>)
-    return stand ? migriereDatenstand(stand) : null
+    stand = await anfrageAlsPromise(tx.objectStore(STAND_STORE).get(STAND_KEY) as IDBRequest<AppDatenstand | undefined>)
   } finally {
     db.close()
   }
+  if (!stand) return null
+  const migriert = migriereDatenstand(stand)
+  if (stand.version !== APP_DATEN_VERSION) await speichereDatenstand(migriert)
+  return migriert
 }
 
 export async function speichereDatenstand(stand: AppDatenstand): Promise<void> {
+  synchronisiereVolumenspiegel(stand)
   const db = await oeffneDb()
   try {
     const tx = db.transaction(STAND_STORE, 'readwrite')

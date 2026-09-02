@@ -4,7 +4,7 @@ import { APP_DATEN_VERSION, type AppDatenstand } from './speicher/modell'
 
 // Stand 02.09.2026. Der Jahrgang läuft bereits — die Maische wurde am 30.08. gelesen,
 // bis zum 02.09. kalt mazeriert und an diesem Tag auf vier Gärbottiche umverteilt
-// und angestellt. Alle Zahlen hier sind gemessen, nicht angenommen.
+// und angestellt. Messwerte und rechnerisch erwartete Weinausbeute bleiben getrennt.
 // Quelle und Begründungen: journal/2026-jahrgang.md
 
 const ERNTE = '2026-08-30T17:00:00+02:00'
@@ -28,7 +28,7 @@ interface BottichStart {
 /**
  * Brutto gewogen, Tara 1,175 kg je Eimer (abgeleitet: 53,20 kg brutto minus
  * 48,50 kg dokumentierte Erntemenge, geteilt durch vier).
- * Weinmenge = Netto × 0,70 (Erfahrungswert 65–75 L je 100 kg Maische).
+ * Erwartete Weinausbeute = Netto × 0,70 (Erfahrungswert 65–75 L je 100 kg Maische).
  */
 const BOTTICHE: BottichStart[] = [
   { nr: 1, nettoKg: 13.13, weinLiter: 9.2, temperatur: 18.3, oechsle: 56, zuckerG: 658, naehrsalzG: 0.90 },
@@ -45,9 +45,12 @@ const chargen: Charge[] = BOTTICHE.map(b => ({
   name: `Bottich ${b.nr}`,
   typ: 'maische',
   phase: 'AKTIVE_GAERUNG',
+  phaseSeit: ANSTELLEN,
   startdatum: ERNTE,
+  mengeKg: b.nettoKg,
   behaelterId: `bottich-${b.nr}`,
-  fuellLiter: b.weinLiter,
+  erwarteteWeinLiter: b.weinLiter,
+  volumenHistorie: [],
   gesperrt: false,
   isoliert: false,
   notiz: `${b.nettoKg.toFixed(2).replace('.', ',')} kg entrappte Maische, angestellt am 02.09.2026. `
@@ -65,8 +68,6 @@ const messungen: Messung[] = BOTTICHE.flatMap<Messung>(b => [
   { id: id('m'), chargeId: chargenId(b.nr), zeit: MESSUNG_TEMP, typ: 'gaeraktivitaet', wert: null, text: 'keine' },
   { id: id('m'), chargeId: chargenId(b.nr), zeit: MESSUNG_OE, typ: 'oechsle', wert: b.oechsle, methode: 'spindel',
     notiz: 'Ausgangsmostgewicht vor dem Aufzuckern. Bei 18 °C keine Temperaturkorrektur nötig.' },
-  { id: id('m'), chargeId: chargenId(b.nr), zeit: ANSTELLEN, typ: 'volumen', wert: b.weinLiter,
-    notiz: 'Erwartete Weinmenge, gerechnet aus Nettogewicht × 0,70.' },
 ])
 
 // Startdichte nach allen Zugaben — bisher nur Bottich 1 gemessen.
@@ -110,6 +111,7 @@ const ereignisse: Ereignis[] = BOTTICHE.flatMap<Ereignis>(b => [
   {
     id: id('e'), chargeId: chargenId(b.nr), zeit: ANSTELLEN, art: 'aufzuckern',
     stoff: 'Haushaltszucker (Saccharose)', mengeWert: b.zuckerG, mengeEinheit: 'g',
+    vorratId: 'vorrat-zucker',
     begruendung: `Ausgangsmostgewicht ${b.oechsle} °Oe entspricht nur ${(b.oechsle / 8).toFixed(1).replace('.', ',')} % vol. `
       + 'Angehoben auf Ziel 85 °Oe (10,6 % vol), weil Alkohol dieses Jahr der wichtigere Schutzfaktor ist — '
       + 'freier SO₂ ist mangels Titrationsset nicht messbar. Zucker als gemeinsamer Ansatz in 2 L Most bei '
@@ -119,6 +121,7 @@ const ereignisse: Ereignis[] = BOTTICHE.flatMap<Ereignis>(b => [
   {
     id: id('e'), chargeId: chargenId(b.nr), zeit: ANSTELLEN, art: 'hefe',
     stoff: 'Reinzuchthefe', produkt: 'Kitzinger Steinberg', mengeWert: 0.5, mengeEinheit: 'Beutel',
+    vorratId: 'vorrat-hefe',
     begruendung: 'Zwei Beutel für die Gesamtmenge in 0,5 L Wasser bei 35 °C rehydriert, '
       + '15–20 Minuten angesetzt, dann gleichmäßig auf vier Bottiche verteilt. '
       + 'Maische 21 °C, Hefeansatz 28 °C — Differenz 7 K und damit unkritisch, kein Angleichschritt nötig.',
@@ -126,6 +129,7 @@ const ereignisse: Ereignis[] = BOTTICHE.flatMap<Ereignis>(b => [
   {
     id: id('e'), chargeId: chargenId(b.nr), zeit: ANSTELLEN, art: 'naehrsalz',
     stoff: 'Diammoniumphosphat', produkt: 'Kitzinger Hefenährsalz', mengeWert: b.naehrsalzG, mengeEinheit: 'g',
+    vorratId: 'vorrat-naehrsalz',
     begruendung: 'Portion 1 von 3. Ein Drittel der Höchstmenge von 30 g je 100 L, gerechnet auf die Weinmenge. '
       + 'Höchstmenge dieses Jahr voll ausgeschöpft, weil der Presswein 2025 H₂S-Noten zeigte — '
       + 'die entstehen typischerweise aus Stickstoffmangel unter Hefestress. '
@@ -201,6 +205,8 @@ const reminder: Reminder[] = [
 ]
 
 const vorrat: Vorratsposten[] = [
+  { id: 'vorrat-zucker', name: 'Haushaltszucker', mengeWert: 0, mengeEinheit: 'g',
+    notiz: '2.632 g am 02.09.2026 zugegeben. Ein weiterer Restbestand ist nicht erfasst.' },
   { id: 'vorrat-kps', name: 'Kaliumpyrosulfit', mengeWert: 104, mengeEinheit: 'g',
     notiz: '4 g Restbestand plus 100 g geliefert am 01.09. Jahresbedarf für ~34 L: 12–15 g.' },
   { id: 'vorrat-naehrsalz', name: 'Hefenährsalz', mengeWert: 56.6, mengeEinheit: 'g',
@@ -222,9 +228,6 @@ export function erzeugeStartdaten(): AppDatenstand {
     klima: [],
     sensor: { aktiv: false, adapter: 'generisch-json', url: '', pfadTemperatur: 'temperature', pfadFeuchte: 'humidity' },
     vorrat,
-    appMeta: {
-      chargenMengenKg: Object.fromEntries(BOTTICHE.map(b => [chargenId(b.nr), b.nettoKg])),
-      elternChargeIds: {},
-    },
+    appMeta: { migrationen: [] },
   }
 }

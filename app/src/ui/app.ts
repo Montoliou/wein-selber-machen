@@ -217,7 +217,22 @@ export class WeinbegleiterApp {
     const ampelKurz: Record<Ampel, string> = { GREEN: 'grün', YELLOW: 'gelb', ORANGE: 'orange', RED: 'rot' }
     const leitCharge = chargen.sort((a, b) => PHASEN_REIHE.indexOf(b.phase) - PHASEN_REIHE.indexOf(a.phase))[0]
     const tag = leitCharge ? this.tagDerPhase(leitCharge) : null
-    return `<div class="statusband" aria-label="Jahrgangsstatus"><div class="statuswert"><strong>${chargen.length}</strong><span>Chargen</span></div><div class="statuswert status-${ampel.toLowerCase()}"><strong>${ampelKurz[ampel]}</strong><span>Ampel</span></div><div class="statuswert"><strong>${tag === null ? '–' : `Tag ${tag}`}</strong><span>${leitCharge ? html(PHASEN_LABEL[leitCharge.phase]) : 'Phase'}</span></div><div class="statuswert ${offeneAufgaben ? 'status-offen' : ''}"><strong>${offeneAufgaben}</strong><span>offen</span></div></div>`
+    return `<div class="statusband" aria-label="Jahrgangsstatus"><div class="statuswert"><strong>${chargen.length}</strong><span>Chargen</span></div><div class="statuswert status-${ampel.toLowerCase()}"><strong>${ampelKurz[ampel]}</strong><span>Ampel</span></div><div class="statuswert"><strong>${tag === null ? '–' : `Tag ${tag}`}</strong><span>${leitCharge ? html(this.phaseKurz(leitCharge.phase)) : 'Phase'}</span></div><div class="statuswert ${offeneAufgaben ? 'status-offen' : ''}"><strong>${offeneAufgaben}</strong><span>offen</span></div></div>`
+  }
+
+  /**
+   * Kurzform der Phasenbezeichnung fuer das Statusband. Die Spalte ist schmal,
+   * "Aktive Gärung" wurde dort zu "AKTIVE GÄR…" abgeschnitten. Im Zwei-Sekunden-Blick
+   * darf nichts abgeschnitten sein — er ist der Zweck des Bandes.
+   */
+  private phaseKurz(phase: Charge['phase']): string {
+    const kurzform: Partial<Record<Charge['phase'], string>> = {
+      MOSTANALYSE: 'Analyse', KALTMAZERATION: 'Mazeration', AKTIVE_GAERUNG: 'Gärung',
+      PRESS_GATE: 'Press-Gate', NACHGAERUNG: 'Nachgärung', GAERENDE_GATE: 'Gärende',
+      ERSTER_ABSTICH: 'Abstich', STABILITAETS_GATE: 'Stabilität',
+      SUESSE_GATE: 'Süße', ABFUELL_GATE: 'Abfüllen',
+    }
+    return kurzform[phase] ?? PHASEN_LABEL[phase]
   }
 
   private tagDerPhase(charge: Charge): number {

@@ -1,0 +1,17 @@
+{
+  "name": "Weinbegleiter 2026",
+  "short_name": "Weinbegleiter",
+  "description": "Offline-Begleitung für den Weinjahrgang 2026.",
+  "lang": "de-DE",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#14100f",
+  "theme_color": "#14100f",
+  "icons": [
+    { "src": "./icon-192.svg", "sizes": "192x192", "type": "image/svg+xml", "purpose": "any maskable" },
+    { "src": "./icon-512.svg", "sizes": "512x512", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

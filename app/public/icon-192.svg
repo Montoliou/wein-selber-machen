@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" role="img" aria-label="Weinbegleiter">
+  <rect width="192" height="192" rx="42" fill="#14100f"/>
+  <rect x="22" y="22" width="148" height="148" rx="36" fill="#8e1f36"/>
+  <g fill="none" stroke="#f5eeea" stroke-width="9" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="77" cy="68" r="17"/><circle cx="115" cy="68" r="17"/>
+    <circle cx="58" cy="101" r="17"/><circle cx="96" cy="101" r="17"/><circle cx="134" cy="101" r="17"/>
+    <circle cx="77" cy="134" r="17"/><circle cx="115" cy="134" r="17"/>
+    <path d="M96 48c5-16 16-25 32-27M98 47C83 38 70 40 58 47"/>
+  </g>
+</svg>

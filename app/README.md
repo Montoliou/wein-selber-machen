@@ -12,6 +12,14 @@ npm run dev
 
 Vite zeigt die lokale URL im Terminal. Für die Bedienung mit iPhone-Breite kann die Browseransicht auf 375 px gestellt werden.
 
+## Messungen erfassen
+
+Die Messerfassung öffnet im Modus „Ein Bottich / viele Werte“. Die App zeigt zuerst die Messgrößen, die zur aktuellen Phase der gewählten Charge gehören. „Weitere Messgrößen“ enthält die übrigen Felder. Jede ausgefüllte Messgröße erzeugt einen Datensatz; leere Felder werden ignoriert. Alle Datensätze einer Eingabe verwenden denselben sichtbaren und änderbaren Zeitpunkt.
+
+Nach dem Speichern nennt die App die erfassten Messgrößen. „Weiter zu Bottich N“ öffnet die nächste aktive Charge mit leeren Messwerten und demselben Zeitpunkt. Nach der letzten aktiven Charge bleibt „Runde beenden“ als Abschluss.
+
+Der Modus „Ein Wert / alle Bottiche“ erfasst eine Messgröße für mehrere ausgewählte Chargen. Die Chargenauswahl und bereits eingegebene Werte bleiben bei einem Wechsel der Messgröße erhalten. Jede ausgewählte Charge erhält weiterhin einen eigenen Messdatensatz.
+
 ## Prüfen und bauen
 
 ```bash

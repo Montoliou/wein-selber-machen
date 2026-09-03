@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Weinbegleiter — Erfassen v3</title>
+<style>
+:root{--bg:#14100f;--flaeche:#1e1917;--flaeche2:#272120;--rand:#392f2c;--text:#f0e9e5;
+ --text2:#a89a93;--text3:#7a6c65;--wein:#8e1f36;--wein-hell:#c4415c;--gold:#c8a55b;--gruen:#3f8a5a;
+ --r:14px;--schrift:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--text);font-family:var(--schrift);font-size:16px;line-height:1.5;padding-bottom:40px}
+.wrap{max-width:520px;margin:0 auto;padding:0 16px}
+header{position:sticky;top:0;z-index:9;background:rgba(20,16,15,.94);backdrop-filter:blur(12px);border-bottom:1px solid var(--rand)}
+.kopf{display:flex;align-items:center;gap:10px;padding:12px 16px;max-width:520px;margin:0 auto}
+.logo{width:28px;height:28px;border-radius:8px;background:linear-gradient(140deg,var(--wein),#5c1224);display:grid;place-items:center;font-size:14px}
+.kopf h1{font-size:15px;font-weight:650}.kopf .sub{font-size:11.5px;color:var(--text3);margin-top:-2px}
+
+/* Moduswahl */
+.modus{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:var(--flaeche2);
+ border:1px solid var(--rand);border-radius:12px;padding:4px;margin:14px 0 4px}
+.modus button{padding:10px 6px;border:0;border-radius:9px;background:none;color:var(--text2);
+ font-family:inherit;font-size:12.5px;font-weight:650;cursor:pointer;line-height:1.25}
+.modus button.an{background:var(--wein);color:#fff}
+.modus button small{display:block;font-size:10px;font-weight:500;opacity:.8;margin-top:1px}
+
+.karte{background:var(--flaeche);border:1px solid var(--rand);border-radius:var(--r);padding:14px;margin-bottom:10px}
+h2{font-size:11.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--text3);margin:18px 0 8px}
+
+/* Bottich-Umschalter */
+.bottiche{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.bottiche button{padding:11px 4px;border:1px solid var(--rand);border-radius:10px;background:var(--flaeche2);
+ color:var(--text);font-family:inherit;font-size:14px;font-weight:650;cursor:pointer}
+.bottiche button.an{background:var(--wein);border-color:var(--wein);color:#fff}
+.bottiche button .k{display:block;font-size:9.5px;font-weight:500;color:var(--text3);margin-top:1px}
+.bottiche button.an .k{color:rgba(255,255,255,.75)}
+
+/* Felder */
+.feld{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--rand)}
+.feld:last-child{border:0}
+.feld .lb{flex:1;min-width:0}
+.feld .lb b{display:block;font-size:14px;font-weight:600}
+.feld .lb small{color:var(--text3);font-size:11.5px}
+.feld input,.feld select{width:104px;flex:none;padding:9px 10px;border-radius:9px;border:1px solid var(--rand);
+ background:var(--flaeche2);color:var(--text);font-size:16px;font-family:inherit;text-align:right}
+.feld select{width:145px;text-align:left;font-size:13.5px}
+.feld.gefuellt input,.feld.gefuellt select{border-color:var(--wein-hell)}
+.einheit{font-size:12.5px;color:var(--text3);width:34px;flex:none}
+
+.btn{display:block;width:100%;padding:13px;border-radius:12px;border:1px solid var(--rand);
+ background:var(--flaeche2);color:var(--text);font-size:15px;font-weight:600;font-family:inherit;cursor:pointer;margin-top:8px}
+.btn.haupt{background:var(--wein);border-color:var(--wein);color:#fff}
+.hinweis{font-size:12.5px;color:var(--text3);margin-top:9px}
+.mock{background:rgba(200,165,91,.09);border:1px dashed rgba(200,165,91,.4);border-radius:11px;
+ padding:10px 12px;font-size:12.5px;color:var(--text2);margin:14px 0}
+.mock b{color:var(--gold)}
+details summary{list-style:none;cursor:pointer;font-size:12.5px;color:var(--gold);font-weight:600;padding-top:10px}
+details summary::-webkit-details-marker{display:none}
+.erfolg{background:rgba(63,138,90,.12);border:1px solid rgba(63,138,90,.4);border-radius:12px;
+ padding:12px;margin:12px 0;font-size:13.5px;display:flex;gap:10px;align-items:flex-start}
+.erfolg .zu{margin-left:auto;background:none;border:0;color:var(--text3);font-size:19px;cursor:pointer}
+.chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px}
+.chip{padding:9px 13px;border-radius:99px;border:1px solid var(--rand);background:var(--flaeche2);font-size:13.5px;cursor:pointer}
+.chip.an{background:var(--wein);border-color:var(--wein);color:#fff;font-weight:600}
+.seite{display:none}.seite.an{display:block}
+</style></head><body>
+
+<header><div class="kopf"><div class="logo">🍇</div>
+<div><h1>Messung erfassen</h1><div class="sub">03.09.2026 · Aktive Gärung, Tag 2</div></div></div></header>
+
+<div class="wrap">
+  <div class="modus">
+    <button class="an" onclick="modus('a',this)">Ein Bottich<small>viele Werte</small></button>
+    <button onclick="modus('b',this)">Ein Wert<small>alle Bottiche</small></button>
+  </div>
+
+  <!-- ═══ MODUS A: ein Bottich, viele Werte ═══ -->
+  <div class="seite an" id="m-a">
+    <div class="mock"><b>Neu.</b> Du stehst am Bottich und trägst dort alles ein.
+      Leere Felder werden nicht gespeichert.</div>
+
+    <h2>Welcher Bottich</h2>
+    <div class="bottiche">
+      <button onclick="waehle(this)">1<span class="k">13,1 kg</span></button>
+      <button class="an" onclick="waehle(this)">2<span class="k">12,3 kg</span></button>
+      <button onclick="waehle(this)">3<span class="k">12,5 kg</span></button>
+      <button onclick="waehle(this)">4<span class="k">10,6 kg</span></button>
+    </div>
+
+    <h2>Jetzt in der Gärung wichtig</h2>
+    <div class="karte">
+      <div class="feld gefuellt">
+        <div class="lb"><b>Temperatur</b><small>Zielbereich 18–28 °C</small></div>
+        <input value="24,1" inputmode="decimal"><span class="einheit">°C</span>
+      </div>
+      <div class="feld gefuellt">
+        <div class="lb"><b>Mostgewicht</b><small>Spindel, entgaste Probe</small></div>
+        <input value="68" inputmode="decimal"><span class="einheit">°Oe</span>
+      </div>
+      <div class="feld">
+        <div class="lb"><b>Messmethode</b><small>Refraktometer gilt ab Gärbeginn nicht</small></div>
+        <select><option>Spindel</option><option>Refraktometer</option><option>Sonstige</option></select>
+      </div>
+      <div class="feld gefuellt">
+        <div class="lb"><b>Geruch</b></div>
+        <select><option>sauber / fruchtig</option><option selected>hefig</option>
+          <option>faule Eier (H₂S)</option><option>essigstichig</option></select>
+      </div>
+      <div class="feld gefuellt">
+        <div class="lb"><b>Gäraktivität</b></div>
+        <select><option>keine</option><option>schwach</option><option>mittel</option>
+          <option selected>stark</option><option>sehr stark</option></select>
+      </div>
+
+      <details>
+        <summary>› Weitere Messgrößen (pH, Säure, SO₂, Kopfraum …)</summary>
+        <div class="feld"><div class="lb"><b>pH-Wert</b></div><input inputmode="decimal"><span class="einheit"></span></div>
+        <div class="feld"><div class="lb"><b>Kopfraum</b></div><input inputmode="decimal"><span class="einheit">L</span></div>
+        <div class="feld"><div class="lb"><b>Freier SO₂</b></div><input inputmode="decimal"><span class="einheit">mg/L</span></div>
+      </details>
+    </div>
+
+    <div class="hinweis">Zeitpunkt: 03.09.2026, 08:14 · gilt für alle Werte dieser Eingabe</div>
+    <button class="btn haupt" onclick="gespeichert()">4 Werte für Bottich 2 speichern</button>
+
+    <div id="danach" style="display:none">
+      <div class="erfolg">
+        <div><b>4 Messungen für Bottich 2 gespeichert.</b><br>
+          <span style="color:var(--text2)">Temperatur, Mostgewicht, Geruch, Gäraktivität</span></div>
+        <button class="zu" onclick="this.closest('.erfolg').remove()">×</button>
+      </div>
+      <button class="btn haupt">Weiter zu Bottich 3 →</button>
+      <button class="btn">Runde beenden</button>
+      <div class="mock" style="margin-top:10px"><b>Die Runde.</b> Nach dem Speichern geht es
+        direkt zum nächsten Bottich, ohne Umweg über das Menü.</div>
+    </div>
+  </div>
+
+  <!-- ═══ MODUS B: ein Wert, alle Bottiche ═══ -->
+  <div class="seite" id="m-b">
+    <div class="mock"><b>Wie bisher</b> — für Werte, die bei allen gleich sind.
+      Der Fehler ist behoben: <b>die Auswahl bleibt stehen</b>, wenn du die Messgröße wechselst.</div>
+
+    <h2>Messgröße</h2>
+    <div class="chips">
+      <div class="chip an">Temperatur</div><div class="chip">Mostgewicht</div>
+      <div class="chip">pH</div><div class="chip">Geruch</div><div class="chip">Gäraktivität</div>
+    </div>
+
+    <h2>Für welche Bottiche</h2>
+    <div class="bottiche">
+      <button class="an" onclick="this.classList.toggle('an')">1<span class="k">ausgewählt</span></button>
+      <button class="an" onclick="this.classList.toggle('an')">2<span class="k">ausgewählt</span></button>
+      <button class="an" onclick="this.classList.toggle('an')">3<span class="k">ausgewählt</span></button>
+      <button class="an" onclick="this.classList.toggle('an')">4<span class="k">ausgewählt</span></button>
+    </div>
+
+    <div class="karte" style="margin-top:10px">
+      <div class="feld gefuellt">
+        <div class="lb"><b>Temperatur</b><small>gilt für alle vier</small></div>
+        <input value="24,1" inputmode="decimal"><span class="einheit">°C</span>
+      </div>
+    </div>
+    <button class="btn haupt">Für 4 Bottiche speichern</button>
+    <div class="hinweis">Es entsteht je Bottich ein eigener Datensatz.</div>
+  </div>
+</div>
+
+<script>
+function modus(m,b){document.querySelectorAll('.modus button').forEach(x=>x.classList.remove('an'));
+ b.classList.add('an');
+ document.getElementById('m-a').classList.toggle('an',m==='a');
+ document.getElementById('m-b').classList.toggle('an',m==='b');}
+function waehle(b){b.parentElement.querySelectorAll('button').forEach(x=>x.classList.remove('an'));b.classList.add('an');}
+function gespeichert(){document.getElementById('danach').style.display='block';
+ document.getElementById('danach').scrollIntoView({behavior:'smooth'});}
+</script></body></html>

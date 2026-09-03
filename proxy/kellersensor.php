@@ -20,13 +20,14 @@
  * daneben (nicht im Repo, nicht im Web-Wurzelverzeichnis lesbar machen).
  */
 
-declare(strict_types=1);
+// Bewusst ohne strict_types und ohne PHP-8-Syntax (match, never), damit das Skript
+// auch auf aelteren Hostern mit PHP 7.4 laeuft.
 
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');   // App und Proxy liegen auf derselben Domain; hilft beim Testen.
 header('Cache-Control: no-store');
 
-function raus(int $code, array $daten): never
+function raus($code, array $daten)
 {
     http_response_code($code);
     echo json_encode($daten, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
@@ -60,12 +61,13 @@ if (is_file($cacheDatei) && (time() - filemtime($cacheDatei)) < $cacheSekunden) 
     }
 }
 
-$basis = match ($konfig['region']) {
+$endpunkte = [
+    'eu' => 'https://openapi.tuyaeu.com',
     'us' => 'https://openapi.tuyaus.com',
     'cn' => 'https://openapi.tuyacn.com',
     'in' => 'https://openapi.tuyain.com',
-    default => 'https://openapi.tuyaeu.com',
-};
+];
+$basis = isset($endpunkte[$konfig['region']]) ? $endpunkte[$konfig['region']] : $endpunkte['eu'];
 
 /**
  * Tuya-Signatur. Aufbau laut Tuya-Dokumentation:
@@ -73,16 +75,16 @@ $basis = match ($konfig['region']) {
  *   sign         = HMAC-SHA256(clientId [+ accessToken] + t + nonce + stringToSign, secret)
  * Ergebnis in GROSSBUCHSTABEN-Hex.
  */
-function signiere(string $clientId, string $secret, string $token, string $t, string $nonce, string $methode, string $pfad): string
+function signiere($clientId, $secret, $token, $t, $nonce, $methode, $pfad)
 {
     $stringToSign = $methode . "\n" . hash('sha256', '') . "\n" . "\n" . $pfad;
     $roh = $clientId . $token . $t . $nonce . $stringToSign;
     return strtoupper(hash_hmac('sha256', $roh, $secret));
 }
 
-function tuyaAnfrage(string $basis, array $konfig, string $pfad, string $token = ''): array
+function tuyaAnfrage($basis, array $konfig, $pfad, $token = '')
 {
-    $t = (string) (int) (microtime(true) * 1000);
+    $t = (string) round(microtime(true) * 1000);
     $nonce = bin2hex(random_bytes(8));
     $sign = signiere($konfig['access_id'], $konfig['access_secret'], $token, $t, $nonce, 'GET', $pfad);
 

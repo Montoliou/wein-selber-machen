@@ -102,7 +102,7 @@ const ZEITSTRAHL_MARKEN: Array<{ phase: Phase; label: string }> = [
   { phase: 'KALTMAZERATION', label: 'Mazer.' },
   { phase: 'ANSTELLEN', label: 'Anstellen' },
   { phase: 'AKTIVE_GAERUNG', label: 'Gärung' },
-  { phase: 'PRESS_GATE', label: 'Press-Gate' },
+  { phase: 'PRESS_GATE', label: 'Presse' },
   { phase: 'ERSTER_ABSTICH', label: 'Abstich' },
   { phase: 'AUSBAU', label: 'Ausbau' },
   { phase: 'FLASCHE', label: 'Flasche' },

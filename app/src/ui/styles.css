@@ -123,7 +123,7 @@ details.erklaer[open] .erklaer-pfeil { transform: rotate(90deg); }
 .zeitphase.gate.aktuell i { background: var(--gold); }
 @keyframes phase-puls { 50% { box-shadow: 0 0 0 7px rgba(216, 184, 110, .06); } }
 .zeitstrahl-legende { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 2px; }
-.zeitstrahl-legende span { color: var(--text-3); font-size: 8px; line-height: 1.15; text-align: center; white-space: nowrap; }
+.zeitstrahl-legende span { overflow: hidden; color: var(--text-3); font-size: 8px; line-height: 1.15; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
 .zeitstrahl-legende span.aktuell { color: var(--gold); font-weight: 750; }
 .phasen-satz { margin: 12px 0 0; font-size: 13.5px; }
 

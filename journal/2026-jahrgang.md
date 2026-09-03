@@ -290,7 +290,7 @@ Von Andi selbst in der App erfasst (erste eigenständige Erfassung).
 
 | | Bottich 1 | Bottich 2 | Bottich 3 | Bottich 4 |
 |---|---|---|---|---|
-| Temperatur (°C) | 21,5 | 21,4 | *nicht erfasst* | 21,5 |
+| Temperatur (°C) | 21,5 | 21,4 | **21,5** | 21,5 |
 | Mostgewicht (°Oe) | *nicht erfasst* | **70** | **70** | **74** |
 | Uhrzeit | 08:44 / 08:58 | 08:46 / 08:52 | 08:57 | 09:01 |
 
@@ -337,10 +337,19 @@ sind das, was ihm fehlen wird — nicht Gerbstoff. **Empfehlung: auf 23–24 °C
 Der harte Gerbstoffbereich beginnt deutlich höher; 24 °C holt Farbe, ohne den Wein
 kantig zu machen. Wer nichts tut, macht keinen Fehler, lässt aber Farbe liegen.
 
-### Zwei Lücken in der Erfassung
+### Korrektur: Bottich 3 war doch gemessen
 
-Bottich 1 hat heute keine Dichte, Bottich 3 keine Temperatur. Dazu Doppeleinträge
-(Bottich 1 zweimal 21,5 °C, Bottich 2 zweimal 70 °Oe).
+Andis Klarstellung: Die Messung um 08:58, die als zweite Temperatur bei Bottich 1 landete,
+war in Wahrheit **Bottich 3**. Passt zeitlich — Bottich 3s Mostgewicht steht auf 08:57.
+Beim Wechsel der Charge sprang die Auswahl auf Bottich 1 zurück, der Wert wurde
+dort abgelegt. Beide Werte sind 21,5 °C, die Zuordnung ändert also nichts an der Auswertung.
+
+**Damit ist nur eine echte Lücke offen: die Dichte von Bottich 1.**
+
+### Die Lücken sind das Symptom, nicht die Ursache
+
+Doppeleinträge (Bottich 1 zweimal 21,5 °C, Bottich 2 zweimal 70 °Oe) und die
+Fehlzuordnung entstanden im Kampf mit dem Formular.
 
 Das ist genau die Reibung, die Andi am selben Morgen gemeldet hat: Das Formular ist
 messgrößen-zentriert, er arbeitet chargen-zentriert, und beim Wechsel der Messgröße

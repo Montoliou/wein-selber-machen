@@ -8,3 +8,7 @@ app/dist/
 
 # macOS
 .DS_Store
+
+# Tuya-Zugangsdaten fuer den Kellersensor
+.tuya-credentials
+proxy/kellersensor-config.php

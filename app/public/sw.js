@@ -8,15 +8,18 @@
 //   · Übrige Anfragen (Icons, Manifest) bleiben Cache-First, sie ändern sich selten.
 //   · CACHE trägt eine Version. Beim Erhöhen werden alte Caches beim Aktivieren gelöscht.
 
-const CACHE = 'weinbegleiter-shell-v2'
+const CACHE = 'weinbegleiter-shell-v3'
 const APP_SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.svg', './icon-512.svg']
 
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE)
-      .then(cache => cache.addAll(APP_SHELL))
-      .then(() => self.skipWaiting()),
+      .then(cache => cache.addAll(APP_SHELL)),
   )
+})
+
+self.addEventListener('message', event => {
+  if (event.data?.type === 'SKIP_WAITING') self.skipWaiting()
 })
 
 self.addEventListener('activate', event => {

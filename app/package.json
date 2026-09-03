@@ -10,6 +10,7 @@
     "test": "vitest run"
   },
   "devDependencies": {
+    "happy-dom": "^20.13.2",
     "typescript": "^5.6.3",
     "vite": "^5.4.10",
     "vite-plugin-singlefile": "^2.0.3",

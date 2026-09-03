@@ -131,6 +131,10 @@ Claude-Arbeit (sie ist Spezifikation), UI und Persistenz gehören Codex.
 **App live:** https://www.montolio.de/wein/ — PR #1 gemergt, Startdatensatz auf die echten
 vier Bottiche umgestellt.
 
+**Serverumgebung montolio.de:** PHP **8.4**, SFTP auf Port 22, Dokumentenwurzel
+`/MLP_MultiAccount_App/`. Der Kellersensor-Proxy ist trotzdem 7.4-tauglich geschrieben —
+läuft auf 8.4 unverändert, spart aber Nacharbeit, falls er mal woanders liegt.
+
 **Deploy-Falle (kostete zwei Anläufe):** Das Dokumenten-Wurzelverzeichnis von montolio.de ist
 `/MLP_MultiAccount_App/`, **nicht** `/`. Richtig ist `FTP_TARGET_DIR=/MLP_MultiAccount_App/`
 plus `FTP_SUBDIR=wein`. Ein Upload nach `/wein/` landet außerhalb des ausgelieferten Bereichs

@@ -281,3 +281,68 @@ entstehende Alkohol löst die Anthocyane aus den Schalen — die Maischegärung 
 **Offene Rückfrage:** Unter dem Ablaufhahn von Bottich 2 liegt ein Tuch mit bräunlichen
 Flecken. Zu klären, ob Tropfen vom Probeziehen oder ein undichter Hahn. Ein undichter Hahn
 wäre Verlust, Sauerstoffeintritt und Keimweg.
+
+---
+
+## 03.09.2026, vormittags — erste Messrunde in der Gärung
+
+Von Andi selbst in der App erfasst (erste eigenständige Erfassung).
+
+| | Bottich 1 | Bottich 2 | Bottich 3 | Bottich 4 |
+|---|---|---|---|---|
+| Temperatur (°C) | 21,5 | 21,4 | *nicht erfasst* | 21,5 |
+| Mostgewicht (°Oe) | *nicht erfasst* | **70** | **70** | **74** |
+| Uhrzeit | 08:44 / 08:58 | 08:46 / 08:52 | 08:57 | 09:01 |
+
+### Bewertung des Gärfortschritts
+
+Startdichte war bei allen vier rund **82 °Oe** (bei Bottich 1 gemessen, bei 2–4 aus
+Ausgangswert plus Zuckergabe gerechnet: 84–86 abzüglich Anmachwasser und dem am
+Bottich 1 belegten Realitätsabschlag von rund 3 °Oe).
+
+19 Stunden nach dem Anstellen:
+
+| | Abbau seit Start | Rate |
+|---|---|---|
+| Bottich 2 | −12 °Oe | ~15 °Oe/Tag |
+| Bottich 3 | −11 °Oe | ~14 °Oe/Tag |
+| Bottich 4 | −9 °Oe | ~11 °Oe/Tag |
+
+**Die Gärung läuft eher etwas schneller als prognostiziert.** Erwartet waren ~70 °Oe
+zum Abend des 03.09.; erreicht sind sie bereits am Vormittag.
+
+Fortgeschrieben bis zum Pressfenster (SG 1,010 = 10 °Oe): 04.09. ~52 · 05.09. ~34 ·
+06.09. ~20 · **07.–08.09. Pressfenster**. Die Gärung verlangsamt sich zum Ende hin,
+deshalb der spätere Rand. Deckt sich mit der bisherigen Planung.
+
+Die Spreizung von 4 °Oe zwischen Bottich 4 und den übrigen liegt im Rahmen der
+Ablesestreuung und ist kein Handlungsanlass.
+
+### Befund Temperatur: konstant, aber am unteren Rand
+
+21,4–21,5 °C bei allen vieren, praktisch unverändert gegenüber dem Vorabend.
+Trotz kräftiger Gärung staut sich keine Wärme — die Aufteilung auf vier kleine
+Bottiche führt sie zuverlässig ab.
+
+**Das ist kein Fehler, sondern eine Weggabelung.** Klassische Rotwein-Maischegärung
+läuft bei 24–28 °C. Bei 21,5 °C gilt:
+
+| | |
+|---|---|
+| dafür | mehr Fruchtaroma, weniger Gerbstoff, sanfterer Wein |
+| dagegen | schwächere Farbextraktion, langsamere Gärung |
+
+Bei einem Ausgangsmost von 53,7 °Oe wird der Wein ohnehin schlank. Farbe und Körper
+sind das, was ihm fehlen wird — nicht Gerbstoff. **Empfehlung: auf 23–24 °C anheben.**
+Der harte Gerbstoffbereich beginnt deutlich höher; 24 °C holt Farbe, ohne den Wein
+kantig zu machen. Wer nichts tut, macht keinen Fehler, lässt aber Farbe liegen.
+
+### Zwei Lücken in der Erfassung
+
+Bottich 1 hat heute keine Dichte, Bottich 3 keine Temperatur. Dazu Doppeleinträge
+(Bottich 1 zweimal 21,5 °C, Bottich 2 zweimal 70 °Oe).
+
+Das ist genau die Reibung, die Andi am selben Morgen gemeldet hat: Das Formular ist
+messgrößen-zentriert, er arbeitet chargen-zentriert, und beim Wechsel der Messgröße
+springt die Auswahl zurück. **Die Lücken sind das Symptom, nicht Andis Nachlässigkeit** —
+und der beste Beleg dafür, dass Handoff H3 nötig ist.

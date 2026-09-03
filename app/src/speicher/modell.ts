@@ -97,6 +97,21 @@ export function speichereEreignisseMitVorrat(stand: AppDatenstand, ereignisse: E
   stand.ereignisse.push(...ereignisse)
 }
 
+export function aktualisiereEreignisMitVorrat(stand: AppDatenstand, ereignisId: string, ersatz: Ereignis): void {
+  const index = stand.ereignisse.findIndex(ereignis => ereignis.id === ereignisId)
+  if (index < 0) throw new Error('Das Ereignis wurde nicht gefunden.')
+  const aktualisiert = { ...ersatz, id: ereignisId }
+  const pruefstand: AppDatenstand = {
+    ...stand,
+    ereignisse: stand.ereignisse.map(ereignis => ({ ...ereignis })),
+    vorrat: stand.vorrat.map(posten => ({ ...posten })),
+  }
+  loescheEreignisMitVorrat(pruefstand, ereignisId)
+  speichereEreignisseMitVorrat(pruefstand, [aktualisiert])
+  stand.vorrat = pruefstand.vorrat
+  stand.ereignisse[index] = aktualisiert
+}
+
 export function loescheEreignisMitVorrat(stand: AppDatenstand, ereignisId: string): Ereignis {
   const index = stand.ereignisse.findIndex(ereignis => ereignis.id === ereignisId)
   if (index < 0) throw new Error('Das Ereignis wurde nicht gefunden.')

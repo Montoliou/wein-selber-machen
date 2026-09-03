@@ -72,6 +72,9 @@ h3 { margin: 0; font-size: 17px; }
 .info-box strong, .warnbox strong { color: var(--gold); }
 .fehlerbox strong { color: #ff8f98; }
 .statusmeldung { position: fixed; z-index: 100; left: 50%; bottom: calc(82px + env(safe-area-inset-bottom)); width: min(calc(100% - 32px), 520px); transform: translateX(-50%); box-shadow: 0 16px 40px rgba(0, 0, 0, .4); }
+.update-hinweis { position: fixed; z-index: 90; left: 50%; bottom: calc(82px + env(safe-area-inset-bottom)); display: flex; width: min(calc(100% - 24px), 520px); min-height: 62px; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid rgba(216, 184, 110, .62); border-radius: 13px; background: #2d251b; transform: translateX(-50%); box-shadow: 0 16px 40px rgba(0, 0, 0, .45); }
+.update-hinweis strong { min-width: 0; flex: 1; color: var(--gold); font-size: 13.5px; }
+.update-hinweis .btn { width: auto; flex: none; margin: 0; }
 
 .statusband { display: flex; align-items: stretch; margin: 14px 0 10px; overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); }
 .statuswert { min-width: 0; flex: 1; padding: 11px 5px; border-right: 1px solid var(--border); text-align: center; }
@@ -97,6 +100,10 @@ h3 { margin: 0; font-size: 17px; }
 .kurve-erwartet { fill: none; stroke: var(--text-3); stroke-width: 2; stroke-dasharray: 4 4; animation: kurve-einblenden 280ms 180ms ease-out both; }
 .kurve-ist { fill: none; stroke: var(--wine-bright); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 1; animation: kurve-zeichnen 480ms 60ms ease-out forwards; }
 .kurvenpunkt { fill: var(--wine-bright); animation: kurve-einblenden 180ms 380ms ease-out both; }
+.klima-kurve { margin-top: 10px; }
+.klima-raster { stroke: var(--border); stroke-width: .75; stroke-dasharray: 2 4; }
+.klima-linie { stroke: var(--gold); }
+.klima-punkt { fill: var(--gold); }
 .achstext { fill: var(--text-3); font: 9.5px var(--font); }
 .achstext-rechts { text-anchor: end; }
 @keyframes kurve-zeichnen { to { stroke-dashoffset: 0; } }
@@ -149,8 +156,16 @@ details.erklaer[open] .erklaer-pfeil { transform: rotate(90deg); }
 .volumenpunkt { display: grid; gap: 2px; padding: 8px 0; border-bottom: 1px solid var(--border); }
 .volumenpunkt:last-child { border-bottom: 0; }
 .volumenpunkt span { color: var(--text-3); }
-.ereignis .text-knopf { margin-top: 4px; }
 .text-gefahr { color: #ff9ca4; }
+.protokoll-liste { padding-top: 0; padding-bottom: 0; }
+.protokoll-eintrag { display: grid; width: 100%; min-height: 64px; gap: 2px; padding: 11px 0; border: 0; border-bottom: 1px solid var(--border); background: transparent; color: var(--text); text-align: left; }
+.protokoll-eintrag:last-child { border-bottom: 0; }
+.protokoll-eintrag > span { color: var(--text-2); font-size: 12.5px; }
+.protokoll-eintrag > b { font-size: 13.5px; font-weight: 650; overflow-wrap: anywhere; }
+.protokoll-eintrag > small { color: var(--gold); font-size: 11px; }
+.protokoll-eintrag:active { opacity: .72; }
+.ereignis-eintrag { border-left: 3px solid var(--green); padding-left: 10px; }
+.gefahr-zone { margin-top: 20px; padding-top: 12px; border-top: 1px solid var(--border); }
 
 .meldung.statusmeldung { display: flex; align-items: flex-start; gap: 10px; margin: 0; padding: 12px; border: 1px solid rgba(227, 84, 96, .5); border-radius: 12px; background: #331b1d; animation: meldung-eintritt 260ms ease-out; }
 .meldung.statusmeldung.erfolg { border-color: rgba(95, 168, 118, .5); background: #183024; }
@@ -315,6 +330,8 @@ button.tag { min-height: 44px; cursor: pointer; }
 .klima-wert { padding: 12px; border: 1px solid var(--border); border-radius: 11px; background: var(--surface-2); }
 .klima-wert strong { display: block; font-size: 26px; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
 .klima-wert small { color: var(--text-3); font-size: 11px; letter-spacing: .05em; text-transform: uppercase; }
+.batteriewarnung { margin-bottom: 0; }
+.fassung { margin: 24px 0 8px; color: var(--text-3); font-size: 12px; text-align: center; font-variant-numeric: tabular-nums; }
 .foto-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
 .foto-grid img { width: 100%; aspect-ratio: 1; object-fit: cover; border: 1px solid var(--border); border-radius: 10px; }
 .ziel-zeile { display: grid; grid-template-columns: minmax(0, 1.3fr) 76px minmax(0, 1fr); gap: 8px; align-items: end; margin-bottom: 8px; }
@@ -342,6 +359,8 @@ button.tag { min-height: 44px; cursor: pointer; }
   .ziel-zeile > :last-child { grid-column: 1 / -1; }
   .mess-feld { grid-template-columns: minmax(0, 1fr) 112px 32px; gap: 6px; }
   .mess-runde-aktionen { grid-template-columns: 1fr; }
+  .update-hinweis { align-items: stretch; flex-direction: column; gap: 8px; }
+  .update-hinweis .btn { width: 100%; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -3,6 +3,14 @@ import type { Klimapunkt, SensorKonfig } from './domain/typen'
 export interface SensorMesswert {
   temperatur: number
   feuchte?: number
+  batterie?: number
+}
+
+export interface SensorVerlaufPunkt {
+  zeit: string
+  temperatur: number
+  feuchte?: number
+  batterie?: number
 }
 
 function liesPfad(objekt: unknown, pfad: string | undefined): unknown {
@@ -70,13 +78,58 @@ export async function ladeSensorwert(konfig: SensorKonfig): Promise<SensorMesswe
   const feuchte = alsZahl(liesPfad(json, konfig.pfadFeuchte))
     ?? (konfig.adapter === 'shelly-cloud' ? findeZahl(json, ['rh', 'humidity']) : undefined)
     ?? (konfig.adapter === 'govee' ? findeZahl(json, ['humidity']) : undefined)
+  const batterie = findeZahl(json, ['battery', 'bat', 'battery_percentage'])
 
   if (temperatur === undefined) {
     throw new Error('Die Antwort enthält am konfigurierten Pfad keinen numerischen Temperaturwert. Passe den JSON-Pfad an.')
   }
-  return { temperatur, ...(feuchte === undefined ? {} : { feuchte }) }
+  return {
+    temperatur,
+    ...(feuchte === undefined ? {} : { feuchte }),
+    ...(batterie === undefined ? {} : { batterie }),
+  }
+}
+
+export async function ladeSensorverlauf(konfig: SensorKonfig): Promise<SensorVerlaufPunkt[]> {
+  const fehler = pruefeSensorKonfiguration(konfig)
+  if (fehler) throw new Error(fehler)
+
+  const url = new URL(konfig.url)
+  url.searchParams.set('verlauf', '1')
+  url.searchParams.set('n', '500')
+  const headers = new Headers({ Accept: 'application/json' })
+  if (konfig.token) headers.set('Authorization', `Bearer ${konfig.token}`)
+  if (konfig.geraeteId) headers.set('X-Device-Id', konfig.geraeteId)
+  const antwort = await fetch(url, { headers, cache: 'no-store' })
+  if (!antwort.ok) throw new Error(`Sensorverlauf antwortet mit HTTP ${antwort.status}.`)
+  const json: unknown = await antwort.json()
+  if (!json || typeof json !== 'object' || !Array.isArray((json as { punkte?: unknown }).punkte)) {
+    throw new Error('Die Antwort enthält keine Liste unter „punkte“.')
+  }
+
+  return (json as { punkte: unknown[] }).punkte.flatMap(punkt => {
+    if (!punkt || typeof punkt !== 'object') return []
+    const roh = punkt as Record<string, unknown>
+    const zeit = typeof roh.t === 'string' ? roh.t : ''
+    const temperatur = alsZahl(roh.temp)
+    const feuchte = alsZahl(roh.hum)
+    const batterie = alsZahl(roh.bat)
+    if (!zeit || !Number.isFinite(new Date(zeit).getTime()) || temperatur === undefined) return []
+    return [{
+      zeit,
+      temperatur,
+      ...(feuchte === undefined ? {} : { feuchte }),
+      ...(batterie === undefined ? {} : { batterie }),
+    }]
+  }).sort((a, b) => a.zeit.localeCompare(b.zeit))
 }
 
 export function alsKlimapunkt(wert: SensorMesswert, quelle: Klimapunkt['quelle']): Klimapunkt {
-  return { zeit: new Date().toISOString(), temperatur: wert.temperatur, feuchte: wert.feuchte, quelle }
+  return {
+    zeit: new Date().toISOString(),
+    temperatur: wert.temperatur,
+    feuchte: wert.feuchte,
+    batterie: wert.batterie,
+    quelle,
+  }
 }

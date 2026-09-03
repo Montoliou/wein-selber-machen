@@ -22,9 +22,10 @@ import {
 import { alkoholPotenzial, naehrsalzPlan, NAEHRSALZ_MAX_G_PRO_100L, NAEHRSALZ_PORTIONEN, oechsleAusSg, sgAusOechsle, schwefelDosierung, zuckerFuerOechsle } from '../domain/oenologie'
 import { ampelFuerCharge, befundeFuerCharge, gateFuerPhase, GRENZEN, pressGate, vermischungErlaubt } from '../domain/regeln'
 import { kalenderAlsIcs, reminderAlsIcs } from '../ics'
-import { alsKlimapunkt, ladeSensorwert, pruefeSensorKonfiguration } from '../sensor'
+import { alsKlimapunkt, ladeSensorverlauf, ladeSensorwert, pruefeSensorKonfiguration, type SensorVerlaufPunkt } from '../sensor'
 import { ersetzeFotos, speichereDatenstand, speichereFoto } from '../speicher/indexeddb'
 import {
+  aktualisiereEreignisMitVorrat,
   fuegeVolumenPunktHinzu,
   istAppDatenstand,
   loescheEreignisMitVorrat,
@@ -38,7 +39,10 @@ import { alsCsv, alsMarkdown, alsSicherung, baueZip, fotoAusSicherung, istSicher
 import { dateiname, datetimeLocalWert, datumFormat, datumZeitFormat, formatiereZahl, html, id, isoAusDatetimeLocal, kurzDatumFormat, parseDeZahl, zahlFormat } from './format'
 import { icon } from './icons'
 
-type Ansicht = 'heute' | 'charge' | 'erfassen' | 'rechner' | 'gate' | 'termine' | 'wiki' | 'wiki-seite' | 'wiki-editor' | 'mehr' | 'umverteilen'
+declare const __BUILD_TIMESTAMP__: string
+declare const __BUILD_COMMIT__: string
+
+type Ansicht = 'heute' | 'charge' | 'erfassen' | 'messung-bearbeiten' | 'ereignis-bearbeiten' | 'rechner' | 'gate' | 'termine' | 'wiki' | 'wiki-seite' | 'wiki-editor' | 'mehr' | 'umverteilen'
 type ChargeTab = 'befunde' | 'messungen' | 'ereignisse' | 'gefaess' | 'fotos'
 type RechnerTyp = 'schwefeln' | 'aufzuckern' | 'naehrsalz'
 type ErfassenModus = 'messung' | 'ereignis'
@@ -62,6 +66,9 @@ const VORRAT_NACH_ART: Partial<Record<EreignisArt, string>> = {
   schwefeln: 'vorrat-kps', aufzuckern: 'vorrat-zucker', naehrsalz: 'vorrat-naehrsalz', hefe: 'vorrat-hefe',
 }
 const MONATE = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez']
+const BUILD_ZEIT_FORMAT = new Intl.DateTimeFormat('de-DE', {
+  day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
+})
 
 const PHASEN_MESS_TYPEN: Partial<Record<Phase, MessTyp[]>> = {
   KALTMAZERATION: ['temperatur', 'geruch', 'gaeraktivitaet'],
@@ -120,10 +127,13 @@ interface UiZustand {
   messZeit: string
   messNotiz: string
   messRundeErfolg: MessRundeErfolg | null
+  editMessungId: string | null
+  editEreignisId: string | null
   rechnerTyp: RechnerTyp
   wikiId: string | null
   wikiFilter: string
   wikiTag: string | null
+  updateVerfuegbar: boolean
   status: { art: 'erfolg' | 'fehler'; text: string } | null
 }
 
@@ -133,6 +143,7 @@ export class WeinbegleiterApp {
   private fotos: Foto[]
   private ui: UiZustand
   private fotoUrls: string[] = []
+  private sensorVerlauf: SensorVerlaufPunkt[] = []
 
   constructor(root: HTMLElement, stand: AppDatenstand, fotos: Foto[]) {
     this.root = root
@@ -151,10 +162,13 @@ export class WeinbegleiterApp {
       messZeit: datetimeLocalWert(),
       messNotiz: '',
       messRundeErfolg: null,
+      editMessungId: null,
+      editEreignisId: null,
       rechnerTyp: 'schwefeln',
       wikiId: null,
       wikiFilter: '',
       wikiTag: null,
+      updateVerfuegbar: false,
       status: null,
     }
     this.root.addEventListener('click', event => void this.behandleKlick(event))
@@ -174,6 +188,31 @@ export class WeinbegleiterApp {
     this.render()
   }
 
+  zeigeUpdateHinweis(): void {
+    if (this.ui.updateVerfuegbar) return
+    this.ui.updateVerfuegbar = true
+    this.render()
+  }
+
+  async aktualisiereSensorBeimStart(): Promise<void> {
+    const konfig = this.stand.sensor
+    if (!konfig.aktiv || navigator.onLine === false || pruefeSensorKonfiguration(konfig)) return
+    const [messwert, verlauf] = await Promise.allSettled([
+      ladeSensorwert(konfig),
+      ladeSensorverlauf(konfig),
+    ])
+    if (messwert.status === 'fulfilled') {
+      this.stand.klima.push(alsKlimapunkt(messwert.value, 'sensor'))
+      try {
+        await speichereDatenstand(this.stand)
+      } catch (fehler) {
+        console.warn('Automatischer Sensorwert konnte nicht gespeichert werden.', fehler)
+      }
+    }
+    if (verlauf.status === 'fulfilled') this.sensorVerlauf = verlauf.value
+    if (messwert.status === 'fulfilled' || verlauf.status === 'fulfilled') this.render()
+  }
+
   private aktiveChargen(): Charge[] {
     return this.stand.chargen.filter(charge => !charge.archiviert)
   }
@@ -185,7 +224,7 @@ export class WeinbegleiterApp {
   private render(): void {
     this.fotoUrls.forEach(url => URL.revokeObjectURL(url))
     this.fotoUrls = []
-    this.root.innerHTML = `${this.renderHeader()}<main id="hauptinhalt" tabindex="-1">${this.renderSeite()}</main>${this.renderNavigation()}${this.renderStatus()}`
+    this.root.innerHTML = `${this.renderHeader()}<main id="hauptinhalt" tabindex="-1">${this.renderSeite()}</main>${this.renderNavigation()}${this.renderUpdateHinweis()}${this.renderStatus()}`
     if (this.ui.ansicht === 'rechner') this.aktualisiereRechner()
     if (this.ui.ansicht === 'erfassen') this.aktualisiereErfassenFormular()
     if (this.ui.ansicht === 'umverteilen') this.aktualisiereZielzeilen()
@@ -207,7 +246,7 @@ export class WeinbegleiterApp {
   }
 
   private hauptAnsicht(): Ansicht {
-    if (['charge', 'erfassen', 'rechner', 'gate', 'umverteilen'].includes(this.ui.ansicht)) return 'heute'
+    if (['charge', 'erfassen', 'messung-bearbeiten', 'ereignis-bearbeiten', 'rechner', 'gate', 'umverteilen'].includes(this.ui.ansicht)) return 'heute'
     if (['wiki-seite', 'wiki-editor'].includes(this.ui.ansicht)) return 'wiki'
     return this.ui.ansicht
   }
@@ -218,11 +257,18 @@ export class WeinbegleiterApp {
     return `<div class="statusmeldung meldung ${this.ui.status.art === 'erfolg' ? 'erfolg' : 'fehler'}" role="${this.ui.status.art === 'erfolg' ? 'status' : 'alert'}" aria-live="${this.ui.status.art === 'erfolg' ? 'polite' : 'assertive'}"><div class="meldung-text"><strong>${titel}</strong><span>${html(this.ui.status.text)}</span></div><button class="meldung-schliessen" type="button" data-action="status-schliessen" aria-label="Meldung schließen">×</button></div>`
   }
 
+  private renderUpdateHinweis(): string {
+    if (!this.ui.updateVerfuegbar) return ''
+    return `<div class="update-hinweis" role="status" aria-live="polite"><strong>Neue Fassung verfügbar</strong><button class="btn btn-haupt btn-klein" type="button" data-action="update-laden">Jetzt aktualisieren</button></div>`
+  }
+
   private renderSeite(): string {
     switch (this.ui.ansicht) {
       case 'heute': return this.renderHeute()
       case 'charge': return this.renderCharge()
       case 'erfassen': return this.renderErfassen()
+      case 'messung-bearbeiten': return this.renderMessungBearbeiten()
+      case 'ereignis-bearbeiten': return this.renderEreignisBearbeiten()
       case 'rechner': return this.renderRechner()
       case 'gate': return this.renderGate()
       case 'termine': return this.renderTermine()
@@ -246,7 +292,7 @@ export class WeinbegleiterApp {
       <div class="balken-actions"><button class="btn btn-haupt" type="button" data-action="erfassen">${icon('messung', 'icon-klein')} Messung erfassen</button><button class="btn" type="button" data-action="nav" data-view="umverteilen">Umverteilen</button></div>
       ${leitCharge ? `<h2>Wo der Jahrgang steht</h2><div class="karte">${this.renderZeitstrahl(leitCharge)}</div>` : ''}
       <h2>Chargen</h2>${this.aktiveChargen().map(charge => this.renderChargenKarte(charge)).join('') || '<div class="karte leer">Keine aktive Charge.</div>'}
-      <h2>Kellerklima</h2><div class="klima-grid"><div class="klima-wert"><small>Letzte Temperatur</small><strong>${klima ? `${formatiereZahl(klima.temperatur)} °C` : '–'}</strong></div><div class="klima-wert"><small>Feuchte</small><strong>${klima?.feuchte === undefined ? '–' : `${formatiereZahl(klima.feuchte, 0)} %`}</strong></div></div><div class="hint">${klima ? `${klima.quelle === 'sensor' ? 'Sensor' : 'Manuell'} · ${datumZeitFormat.format(new Date(klima.zeit))}` : 'Noch kein Klimawert. Manuelle Eingabe ist unter Mehr jederzeit verfügbar.'}</div>
+      <h2>Kellerklima</h2><div class="klima-grid"><div class="klima-wert"><small>Letzte Temperatur</small><strong>${klima ? `${formatiereZahl(klima.temperatur)} °C` : '–'}</strong></div><div class="klima-wert"><small>Feuchte</small><strong>${klima?.feuchte === undefined ? '–' : `${formatiereZahl(klima.feuchte, 0)} %`}</strong></div></div><div class="hint">${klima ? `${klima.quelle === 'sensor' ? 'Sensor' : 'Manuell'} · ${datumZeitFormat.format(new Date(klima.zeit))}` : 'Noch kein Klimawert. Manuelle Eingabe ist unter Mehr jederzeit verfügbar.'}</div>${this.renderBatteriewarnung()}${this.renderKellerkurve()}
       <h2>Vorrat</h2><div class="karte">${this.stand.vorrat.map(posten => `<div class="vorratsposten"><div class="zeile"><span>${html(posten.name)}</span><b>${zahlFormat.format(posten.mengeWert)} ${html(posten.mengeEinheit)}</b></div><div class="hint">Abgänge: ${zahlFormat.format(summeVorratsabgaenge(this.stand, posten.id))} ${html(posten.mengeEinheit)}</div>${posten.notiz ? `<div class="hint">${html(posten.notiz)}</div>` : ''}</div>`).join('')}</div>
     </section>`
   }
@@ -338,6 +384,37 @@ export class WeinbegleiterApp {
     return `<div class="kurve-karte"><div class="kurve-kopf"><h3>${html(titel)}</h3><div class="kurve-jetzt">jetzt <strong>SG ${formatiereZahl(letzte.sg, 4)}</strong></div></div><svg class="gaerkurve" viewBox="0 0 320 132" role="img" aria-label="${html(titel)}. ${html(tabellenText)}"><rect class="pressband" x="0" y="${pressY.toFixed(1)}" width="320" height="${Math.max(0, unten - pressY).toFixed(1)}"></rect><text class="presslabel" x="5" y="${Math.min(unten - 3, pressY + 12).toFixed(1)}">PRESSFENSTER · SG ≤ ${pressGrenzeText}</text><line class="kurvenachse" x1="0" y1="112" x2="320" y2="112"></line><path class="kurve-erwartet" d="${erwartetPfad}"></path><path class="kurve-ist" pathLength="1" d="${istPfad}"></path>${punkte.map(punkt => `<circle class="kurvenpunkt" cx="${x(punkt.zeit).toFixed(1)}" cy="${y(punkt.sg).toFixed(1)}" r="3.5"><title>${datumZeitFormat.format(new Date(punkt.zeit))}: SG ${formatiereZahl(punkt.sg, 4)} (${formatiereZahl(oechsleAusSg(punkt.sg), 0)} °Oe)</title></circle>`).join('')}<text class="achstext" x="4" y="128">${kurzDatumFormat.format(new Date(startMs))}</text><text class="achstext achstext-rechts" x="316" y="128">${kurzDatumFormat.format(new Date(endeMs))}</text></svg>${this.renderErklaerschublade('Worauf du bei der Kurve achtest', `${erklaerung} Messwerte: ${tabellenText}`)}</div>`
   }
 
+  private renderBatteriewarnung(): string {
+    const batterie = this.sensorVerlauf.at(-1)?.batterie
+      ?? [...this.stand.klima].filter(punkt => punkt.quelle === 'sensor' && punkt.batterie !== undefined).sort((a, b) => a.zeit.localeCompare(b.zeit)).at(-1)?.batterie
+    if (batterie === undefined || batterie >= 20) return ''
+    return `<div class="warnbox batteriewarnung"><strong>Sensorbatterie niedrig:</strong> ${formatiereZahl(batterie, 0)} %. Batterie wechseln, damit die Kellerkurve nicht unbemerkt abbricht.</div>`
+  }
+
+  private renderKellerkurve(): string {
+    const punkte = this.sensorVerlauf
+    if (!punkte.length) return ''
+    const breite = 320
+    const oben = 12
+    const unten = 106
+    const startMs = new Date(punkte[0]!.zeit).getTime()
+    const letzterMs = new Date(punkte.at(-1)!.zeit).getTime()
+    const endeMs = Math.max(letzterMs, startMs + 60 * 60 * 1000)
+    const minRoh = Math.min(...punkte.map(punkt => punkt.temperatur))
+    const maxRoh = Math.max(...punkte.map(punkt => punkt.temperatur))
+    const abstand = Math.max(0.5, (maxRoh - minRoh) * 0.18)
+    const minTemperatur = minRoh - abstand
+    const maxTemperatur = maxRoh + abstand
+    const x = (zeit: string) => 6 + ((new Date(zeit).getTime() - startMs) / Math.max(1, endeMs - startMs)) * (breite - 12)
+    const y = (temperatur: number) => oben + ((maxTemperatur - temperatur) / Math.max(0.1, maxTemperatur - minTemperatur)) * (unten - oben)
+    const pfad = punkte.map((punkt, index) => `${index ? 'L' : 'M'}${x(punkt.zeit).toFixed(1)},${y(punkt.temperatur).toFixed(1)}`).join(' ')
+    const letzte = punkte.at(-1)!
+    const punktSchritt = Math.max(1, Math.ceil(punkte.length / 80))
+    const sichtbarePunkte = punkte.filter((_punkt, index) => index % punktSchritt === 0 || index === punkte.length - 1)
+    const zusammenfassung = `${punkte.length} Sensorwerte von ${datumZeitFormat.format(new Date(startMs))} bis ${datumZeitFormat.format(new Date(letzterMs))}. Minimum ${formatiereZahl(minRoh)} °C, Maximum ${formatiereZahl(maxRoh)} °C, zuletzt ${formatiereZahl(letzte.temperatur)} °C.`
+    return `<div class="kurve-karte klima-kurve"><div class="kurve-kopf"><h3>Kellerklima</h3><div class="kurve-jetzt">zuletzt <strong>${formatiereZahl(letzte.temperatur)} °C</strong></div></div><svg class="gaerkurve" viewBox="0 0 320 132" role="img" aria-label="${html(zusammenfassung)}"><line class="klima-raster" x1="0" y1="12" x2="320" y2="12"></line><line class="klima-raster" x1="0" y1="59" x2="320" y2="59"></line><line class="kurvenachse" x1="0" y1="106" x2="320" y2="106"></line><text class="achstext" x="4" y="9">${formatiereZahl(maxRoh)} °C</text><text class="achstext" x="4" y="103">${formatiereZahl(minRoh)} °C</text><path class="kurve-ist klima-linie" pathLength="1" d="${pfad}"></path>${sichtbarePunkte.map(punkt => `<circle class="kurvenpunkt klima-punkt" cx="${x(punkt.zeit).toFixed(1)}" cy="${y(punkt.temperatur).toFixed(1)}" r="3"><title>${datumZeitFormat.format(new Date(punkt.zeit))}: ${formatiereZahl(punkt.temperatur)} °C${punkt.feuchte === undefined ? '' : ` · ${formatiereZahl(punkt.feuchte, 0)} %`}</title></circle>`).join('')}<text class="achstext" x="4" y="128">${kurzDatumFormat.format(new Date(startMs))}</text><text class="achstext achstext-rechts" x="316" y="128">${kurzDatumFormat.format(new Date(letzterMs))}</text></svg><div class="sr-only">${html(zusammenfassung)}</div></div>`
+  }
+
   private renderChargenKarte(charge: Charge): string {
     const ampel = ampelFuerCharge(this.stand, charge)
     const letzteTemp = this.letzteMessung(charge.id, 'temperatur')
@@ -385,11 +462,11 @@ export class WeinbegleiterApp {
     }
     if (this.ui.chargeTab === 'messungen') {
       const messungen = this.stand.messungen.filter(m => m.chargeId === charge.id).sort((a, b) => b.zeit.localeCompare(a.zeit))
-      return `<div class="karte">${messungen.length ? messungen.map(m => `<div class="zeile"><span>${datumZeitFormat.format(new Date(m.zeit))} · ${html(this.messLabel(m.typ))}</span><b>${m.wert === null ? html(m.text ?? '–') : `${zahlFormat.format(m.wert)} ${html(this.messEinheit(m.typ))}`}${m.methode ? ` · ${html(m.methode)}` : ''}</b></div>`).join('') : '<div class="leer">Noch keine Messungen.</div>'}</div>`
+      return `<div class="karte protokoll-liste">${messungen.length ? messungen.map(m => `<button class="protokoll-eintrag" type="button" data-action="messung-bearbeiten" data-id="${html(m.id)}"><span>${datumZeitFormat.format(new Date(m.zeit))} · ${html(this.messLabel(m.typ))}</span><b>${m.wert === null ? html(m.text ?? '–') : `${zahlFormat.format(m.wert)} ${html(this.messEinheit(m.typ))}`}${m.methode ? ` · ${html(m.methode)}` : ''}</b><small>Antippen zum Bearbeiten</small></button>`).join('') : '<div class="leer">Noch keine Messungen.</div>'}</div>`
     }
     if (this.ui.chargeTab === 'ereignisse') {
       const ereignisse = this.stand.ereignisse.filter(e => e.chargeId === charge.id).sort((a, b) => b.zeit.localeCompare(a.zeit))
-      return `<div class="karte">${ereignisse.length ? ereignisse.map(e => `<div class="befund befund-green ereignis"><div class="befund-titel">${html(EREIGNIS_LABEL[e.art])} · ${datumZeitFormat.format(new Date(e.zeit))}</div><div class="befund-text">${e.stoff ? `${html(e.stoff)} · ` : ''}${e.mengeWert === undefined ? '' : `${zahlFormat.format(e.mengeWert)} ${html(e.mengeEinheit)} · `}${e.vorratId ? 'Vorrat abgezogen · ' : ''}${html(e.begruendung)}</div><button class="text-knopf text-gefahr" type="button" data-action="ereignis-loeschen" data-id="${html(e.id)}">Ereignis löschen</button></div>`).join('') : '<div class="leer">Noch keine Ereignisse.</div>'}</div>`
+      return `<div class="karte protokoll-liste">${ereignisse.length ? ereignisse.map(e => `<button class="protokoll-eintrag ereignis-eintrag" type="button" data-action="ereignis-bearbeiten" data-id="${html(e.id)}"><span>${html(EREIGNIS_LABEL[e.art])} · ${datumZeitFormat.format(new Date(e.zeit))}</span><b>${e.stoff ? `${html(e.stoff)} · ` : ''}${e.mengeWert === undefined ? '' : `${zahlFormat.format(e.mengeWert)} ${html(e.mengeEinheit)} · `}${e.vorratId ? 'Vorrat abgezogen · ' : ''}${html(e.begruendung)}</b><small>Antippen zum Bearbeiten</small></button>`).join('') : '<div class="leer">Noch keine Ereignisse.</div>'}</div>`
     }
     if (this.ui.chargeTab === 'gefaess') {
       if (charge.archiviert) {
@@ -499,6 +576,26 @@ export class WeinbegleiterApp {
     return `<form class="karte" id="ereignis-form">${this.renderChargenAuswahl()}<label for="ereignis-art">Art</label><select id="ereignis-art" name="art" data-action="ereignis-art">${Object.entries(EREIGNIS_LABEL).map(([wert, label]) => `<option value="${wert}">${html(label)}</option>`).join('')}</select><div id="zugabe-felder"></div><label for="ereignis-zeit">Zeitpunkt</label><input id="ereignis-zeit" name="zeit" type="datetime-local" value="${datetimeLocalWert()}" required><label for="ereignis-grund">Begründung *</label><textarea id="ereignis-grund" name="begruendung" required placeholder="Warum wird dieser Schritt jetzt ausgeführt?"></textarea><label for="ereignis-fotos">Fotos (freiwillig)</label><input id="ereignis-fotos" name="fotos" type="file" accept="image/*" multiple><div class="hint">Fotos werden als Blob getrennt vom Datenstand in IndexedDB gespeichert.</div><div id="erfassen-fehler" role="alert"></div><button class="btn btn-haupt" type="submit">Für ausgewählte Chargen speichern</button><div class="hint">Jede ausgewählte Charge erhält einen eigenen Ereignisdatensatz. Zugabemengen werden aus ihrem jeweiligen Volumen berechnet.</div></form>`
   }
 
+  private renderMessungBearbeiten(): string {
+    const messung = this.stand.messungen.find(eintrag => eintrag.id === this.ui.editMessungId)
+    if (!messung) return `<section class="seite"><button class="zurueck" type="button" data-action="nav" data-view="charge">${icon('pfeil')}Zur Charge</button><div class="fehlerbox">Messung nicht gefunden.</div></section>`
+    const definition = MESS_DEFINITIONEN.find(eintrag => eintrag.typ === messung.typ)
+    if (!definition) return `<section class="seite"><button class="zurueck" type="button" data-action="nav" data-view="charge">${icon('pfeil')}Zur Charge</button><div class="fehlerbox">Unbekannte Messgröße.</div></section>`
+    const wertFeld = definition.art === 'zahl'
+      ? `<label for="messung-edit-wert">Wert in ${html(definition.einheit || 'Zahlen')}</label><input id="messung-edit-wert" name="wert" inputmode="decimal" value="${messung.wert === null ? '' : html(zahlFormat.format(messung.wert))}" required>`
+      : `<label for="messung-edit-text">Wert</label><select id="messung-edit-text" name="text" required>${(definition.optionen ?? []).map(option => `<option value="${html(option)}" ${option === messung.text ? 'selected' : ''}>${html(option)}</option>`).join('')}</select>`
+    const methodeFeld = DICHTE_TYPEN.includes(messung.typ)
+      ? `<label for="messung-edit-methode">Messmethode</label><select id="messung-edit-methode" name="methode"><option value="spindel" ${messung.methode === 'spindel' ? 'selected' : ''}>Spindel</option><option value="refraktometer" ${messung.methode === 'refraktometer' ? 'selected' : ''}>Refraktometer</option><option value="sonstige" ${messung.methode === 'sonstige' ? 'selected' : ''}>Sonstige</option></select>`
+      : ''
+    return `<section class="seite" aria-labelledby="messung-edit-titel"><button class="zurueck" type="button" data-action="nav" data-view="charge">${icon('pfeil')}${html(this.stand.chargen.find(charge => charge.id === messung.chargeId)?.name ?? 'Charge')}</button><h1 class="seiten-titel" id="messung-edit-titel">Messung bearbeiten</h1><form class="karte" id="messung-bearbeiten-form"><div class="zeile"><span>Messgröße</span><b>${html(definition.label)}</b></div><label for="messung-edit-charge">Charge</label><select id="messung-edit-charge" name="chargeId" required>${this.stand.chargen.map(charge => `<option value="${html(charge.id)}" ${charge.id === messung.chargeId ? 'selected' : ''}>${html(charge.name)}${charge.archiviert ? ' · archiviert' : ''}</option>`).join('')}</select>${wertFeld}${methodeFeld}<label for="messung-edit-zeit">Zeitpunkt</label><input id="messung-edit-zeit" name="zeit" type="datetime-local" value="${html(datetimeLocalWert(messung.zeit))}" required><label for="messung-edit-notiz">Notiz</label><textarea id="messung-edit-notiz" name="notiz">${html(messung.notiz ?? '')}</textarea><div id="erfassen-fehler" role="alert"></div><button class="btn btn-haupt" type="submit">Änderungen speichern</button><div class="gefahr-zone"><button class="btn btn-gefahr" type="button" data-action="messung-loeschen" data-id="${html(messung.id)}">Messung löschen</button></div></form></section>`
+  }
+
+  private renderEreignisBearbeiten(): string {
+    const ereignis = this.stand.ereignisse.find(eintrag => eintrag.id === this.ui.editEreignisId)
+    if (!ereignis) return `<section class="seite"><button class="zurueck" type="button" data-action="nav" data-view="charge">${icon('pfeil')}Zur Charge</button><div class="fehlerbox">Ereignis nicht gefunden.</div></section>`
+    return `<section class="seite" aria-labelledby="ereignis-edit-titel"><button class="zurueck" type="button" data-action="nav" data-view="charge">${icon('pfeil')}${html(this.stand.chargen.find(charge => charge.id === ereignis.chargeId)?.name ?? 'Charge')}</button><h1 class="seiten-titel" id="ereignis-edit-titel">Ereignis bearbeiten</h1><form class="karte" id="ereignis-bearbeiten-form"><label for="ereignis-edit-charge">Charge</label><select id="ereignis-edit-charge" name="chargeId" required>${this.stand.chargen.map(charge => `<option value="${html(charge.id)}" ${charge.id === ereignis.chargeId ? 'selected' : ''}>${html(charge.name)}${charge.archiviert ? ' · archiviert' : ''}</option>`).join('')}</select><label for="ereignis-edit-art">Art</label><select id="ereignis-edit-art" name="art">${Object.entries(EREIGNIS_LABEL).map(([wert, label]) => `<option value="${wert}" ${wert === ereignis.art ? 'selected' : ''}>${html(label)}</option>`).join('')}</select><label for="ereignis-edit-zeit">Zeitpunkt</label><input id="ereignis-edit-zeit" name="zeit" type="datetime-local" value="${html(datetimeLocalWert(ereignis.zeit))}" required><label for="ereignis-edit-stoff">Stoff</label><input id="ereignis-edit-stoff" name="stoff" value="${html(ereignis.stoff ?? '')}"><label for="ereignis-edit-produkt">Produkt</label><input id="ereignis-edit-produkt" name="produkt" value="${html(ereignis.produkt ?? '')}"><div class="formular-grid zwei"><div><label for="ereignis-edit-menge">Menge</label><input id="ereignis-edit-menge" name="mengeWert" inputmode="decimal" value="${ereignis.mengeWert === undefined ? '' : html(zahlFormat.format(ereignis.mengeWert))}"></div><div><label for="ereignis-edit-einheit">Einheit</label><select id="ereignis-edit-einheit" name="mengeEinheit"><option value="">Keine</option>${['g', 'kg', 'ml', 'L', 'Beutel'].map(option => `<option value="${option}" ${option === ereignis.mengeEinheit ? 'selected' : ''}>${option}</option>`).join('')}</select></div></div><label for="ereignis-edit-vorrat">Vorratsposten</label><select id="ereignis-edit-vorrat" name="vorratId"><option value="">Ohne Vorratsbuchung</option>${this.stand.vorrat.map(posten => `<option value="${html(posten.id)}" ${posten.id === ereignis.vorratId ? 'selected' : ''}>${html(posten.name)} · ${zahlFormat.format(posten.mengeWert)} ${html(posten.mengeEinheit)}</option>`).join('')}</select><label for="ereignis-edit-grund">Begründung *</label><textarea id="ereignis-edit-grund" name="begruendung" required>${html(ereignis.begruendung)}</textarea><div id="erfassen-fehler" role="alert"></div><button class="btn btn-haupt" type="submit">Änderungen speichern</button><div class="gefahr-zone"><button class="btn btn-gefahr" type="button" data-action="ereignis-loeschen" data-id="${html(ereignis.id)}">Ereignis löschen</button></div></form></section>`
+  }
+
   private renderZugabeFelder(art: EreignisArt): string {
     if (VOLUMEN_EREIGNIS_ARTEN.includes(art)) {
       const charge = this.aktuelleCharge()
@@ -574,6 +671,7 @@ export class WeinbegleiterApp {
       <h2>Kellersensor</h2><form class="karte" id="sensor-form"><label for="sensor-adapter">Adapter</label><select id="sensor-adapter" name="adapter"><option value="shelly-cloud" ${sensor.adapter === 'shelly-cloud' ? 'selected' : ''}>Shelly Cloud</option><option value="govee" ${sensor.adapter === 'govee' ? 'selected' : ''}>Govee</option><option value="generisch-json" ${sensor.adapter === 'generisch-json' ? 'selected' : ''}>Generisches JSON</option></select><label for="sensor-url">HTTPS-Endpunkt</label><input id="sensor-url" name="url" type="url" value="${html(sensor.url)}" placeholder="https://…"><div class="hint">HTTP wird mit einer klaren Mixed-Content-Meldung blockiert.</div><div class="formular-grid zwei"><div><label for="sensor-token">Token</label><input id="sensor-token" name="token" type="password" value="${html(sensor.token ?? '')}" autocomplete="off"></div><div><label for="sensor-id">Geräte-ID</label><input id="sensor-id" name="geraeteId" value="${html(sensor.geraeteId ?? '')}"></div><div><label for="sensor-temp-pfad">JSON-Pfad Temperatur</label><input id="sensor-temp-pfad" name="pfadTemperatur" value="${html(sensor.pfadTemperatur ?? '')}" placeholder="data.temp"></div><div><label for="sensor-feuchte-pfad">JSON-Pfad Feuchte</label><input id="sensor-feuchte-pfad" name="pfadFeuchte" value="${html(sensor.pfadFeuchte ?? '')}" placeholder="data.humidity"></div></div><div id="sensor-fehler" role="alert"></div><div class="balken-actions"><button class="btn" type="submit" name="sensorAktion" value="speichern">Konfiguration speichern</button><button class="btn btn-haupt" type="submit" name="sensorAktion" value="testen">Verbindung testen</button></div></form>
       <h2>Manueller Klimawert</h2><form class="karte" id="klima-form"><div class="formular-grid zwei"><div><label for="klima-temp">Temperatur in °C</label><input id="klima-temp" name="temperatur" inputmode="decimal" required></div><div><label for="klima-feuchte">Feuchte in %</label><input id="klima-feuchte" name="feuchte" inputmode="decimal"></div></div><button class="btn btn-haupt" type="submit">Manuell speichern</button><div class="hint">Funktioniert immer und bleibt der Standardweg.</div></form>
       <h2>Behälter</h2><div class="karte">${this.stand.behaelter.map(behaelter => { const charge = this.stand.chargen.find(c => c.behaelterId === behaelter.id && !c.archiviert); return `<div class="zeile"><span>${html(behaelter.name)} · ${zahlFormat.format(behaelter.bruttoLiter)} L</span><b>${charge ? `belegt: ${html(charge.name)}` : behaelter.vorhandenAb ? `ab ${datumFormat.format(new Date(`${behaelter.vorhandenAb}T12:00:00`))}` : 'frei'}</b></div>` }).join('')}</div>
+      <div class="fassung">Fassung vom ${BUILD_ZEIT_FORMAT.format(new Date(__BUILD_TIMESTAMP__))} (${html(__BUILD_COMMIT__)})</div>
     </section>`
   }
 
@@ -599,6 +697,8 @@ export class WeinbegleiterApp {
     }
     if (action === 'charge') { this.ui.chargeId = ziel.dataset.id ?? ''; this.ui.ansicht = 'charge'; this.ui.chargeTab = 'befunde'; this.schreibeHistory(); return this.render() }
     if (action === 'charge-tab') { this.ui.chargeTab = ziel.dataset.tab as ChargeTab; return this.render() }
+    if (action === 'messung-bearbeiten') { this.ui.editMessungId = ziel.dataset.id ?? null; this.ui.ansicht = 'messung-bearbeiten'; this.schreibeHistory(); return this.render() }
+    if (action === 'ereignis-bearbeiten') { this.ui.editEreignisId = ziel.dataset.id ?? null; this.ui.ansicht = 'ereignis-bearbeiten'; this.schreibeHistory(); return this.render() }
     if (action === 'erfassen') {
       this.ui.ansicht = 'erfassen'
       this.ui.erfassenModus = 'messung'
@@ -653,7 +753,9 @@ export class WeinbegleiterApp {
     if (action === 'wiki-neu') { this.ui.wikiId = null; this.ui.ansicht = 'wiki-editor'; this.schreibeHistory(); return this.render() }
     if (action === 'wiki-bearbeiten') { this.ui.wikiId = ziel.dataset.id ?? null; this.ui.ansicht = 'wiki-editor'; this.schreibeHistory(); return this.render() }
     if (action === 'status-schliessen') { this.ui.status = null; return this.render() }
+    if (action === 'messung-loeschen') return this.loescheMessung(ziel.dataset.id ?? '')
     if (action === 'ereignis-loeschen') return this.loescheEreignis(ziel.dataset.id ?? '')
+    if (action === 'update-laden') { window.dispatchEvent(new CustomEvent('weinbegleiter:update-anwenden')); return }
     if (action === 'export-md') return this.exportiereMarkdown()
     if (action === 'export-csv') return this.exportiereCsv()
     if (action === 'export-json') return this.exportiereJson()
@@ -664,7 +766,9 @@ export class WeinbegleiterApp {
     event.preventDefault()
     const formular = event.target as HTMLFormElement
     if (formular.id === 'mess-form') return this.speichereMessungen(formular)
+    if (formular.id === 'messung-bearbeiten-form') return this.aktualisiereMessung(formular)
     if (formular.id === 'ereignis-form') return this.speichereEreignisse(formular)
+    if (formular.id === 'ereignis-bearbeiten-form') return this.aktualisiereEreignis(formular)
     if (formular.id === 'gefaess-form') return this.speichereGefaess(formular)
     if (formular.id === 'reminder-form') return this.speichereReminder(formular)
     if (formular.id === 'wiki-form') return this.speichereWiki(formular)
@@ -1005,13 +1109,105 @@ export class WeinbegleiterApp {
     await this.persistieren('Volumenpunkt gespeichert.')
   }
 
+  private async aktualisiereMessung(formular: HTMLFormElement): Promise<void> {
+    const messung = this.stand.messungen.find(eintrag => eintrag.id === this.ui.editMessungId)
+    if (!messung) return this.formularFehler('Die Messung wurde nicht gefunden.')
+    const definition = MESS_DEFINITIONEN.find(eintrag => eintrag.typ === messung.typ)
+    if (!definition) return this.formularFehler('Unbekannte Messgröße.')
+    const daten = new FormData(formular)
+    const chargeId = String(daten.get('chargeId') ?? '')
+    if (!this.stand.chargen.some(charge => charge.id === chargeId)) return this.formularFehler('Wähle eine gültige Charge aus.')
+    const wert = definition.art === 'zahl' ? parseDeZahl(daten.get('wert')) : null
+    const text = definition.art === 'auswahl' ? String(daten.get('text') ?? '') : undefined
+    if (definition.art === 'zahl' && wert === null) return this.formularFehler('Trage einen gültigen Zahlenwert ein.')
+    if ((messung.typ === 'volumen' || messung.typ === 'kopfraum') && wert !== null && wert < 0) return this.formularFehler('Volumenwerte müssen mindestens 0 L betragen.')
+    if (definition.art === 'auswahl' && !text) return this.formularFehler('Wähle einen Wert aus.')
+    Object.assign(messung, {
+      chargeId,
+      zeit: isoAusDatetimeLocal(daten.get('zeit')),
+      wert,
+      text,
+      methode: DICHTE_TYPEN.includes(messung.typ) ? String(daten.get('methode') ?? 'spindel') as MessMethode : undefined,
+      notiz: String(daten.get('notiz') ?? '').trim() || undefined,
+    })
+    await speichereDatenstand(this.stand)
+    this.ui.chargeId = chargeId
+    this.ui.chargeTab = 'messungen'
+    this.ui.ansicht = 'charge'
+    this.ui.editMessungId = null
+    this.ui.status = { art: 'erfolg', text: 'Messung aktualisiert.' }
+    this.schreibeHistory(true)
+    this.render()
+  }
+
+  private async loescheMessung(messungId: string): Promise<void> {
+    const index = this.stand.messungen.findIndex(eintrag => eintrag.id === messungId)
+    if (index < 0) return this.zeigeStatus('fehler', 'Die Messung wurde nicht gefunden.')
+    const messung = this.stand.messungen[index]!
+    if (!window.confirm(`${this.messLabel(messung.typ)} vom ${datumZeitFormat.format(new Date(messung.zeit))} löschen?`)) return
+    this.stand.messungen.splice(index, 1)
+    await speichereDatenstand(this.stand)
+    this.ui.chargeId = messung.chargeId
+    this.ui.chargeTab = 'messungen'
+    this.ui.ansicht = 'charge'
+    this.ui.editMessungId = null
+    this.ui.status = { art: 'erfolg', text: 'Messung gelöscht.' }
+    this.schreibeHistory(true)
+    this.render()
+  }
+
+  private async aktualisiereEreignis(formular: HTMLFormElement): Promise<void> {
+    const ereignis = this.stand.ereignisse.find(eintrag => eintrag.id === this.ui.editEreignisId)
+    if (!ereignis) return this.formularFehler('Das Ereignis wurde nicht gefunden.')
+    const daten = new FormData(formular)
+    const chargeId = String(daten.get('chargeId') ?? '')
+    if (!this.stand.chargen.some(charge => charge.id === chargeId)) return this.formularFehler('Wähle eine gültige Charge aus.')
+    const begruendung = String(daten.get('begruendung') ?? '').trim()
+    if (!begruendung) return this.formularFehler('Die Begründung ist Pflicht.')
+    const mengeRoh = String(daten.get('mengeWert') ?? '').trim()
+    const mengeWert = mengeRoh ? parseDeZahl(mengeRoh) : null
+    if (mengeRoh && (mengeWert === null || mengeWert < 0)) return this.formularFehler('Trage eine gültige Menge ab 0 ein.')
+    const aktualisiert: Ereignis = {
+      ...ereignis,
+      chargeId,
+      zeit: isoAusDatetimeLocal(daten.get('zeit')),
+      art: String(daten.get('art')) as EreignisArt,
+      stoff: String(daten.get('stoff') ?? '').trim() || undefined,
+      produkt: String(daten.get('produkt') ?? '').trim() || undefined,
+      mengeWert: mengeWert ?? undefined,
+      mengeEinheit: String(daten.get('mengeEinheit') ?? '').trim() || undefined,
+      vorratId: String(daten.get('vorratId') ?? '').trim() || undefined,
+      begruendung,
+    }
+    try {
+      aktualisiereEreignisMitVorrat(this.stand, ereignis.id, aktualisiert)
+      await speichereDatenstand(this.stand)
+    } catch (error) {
+      return this.formularFehler(error instanceof Error ? error.message : 'Ereignis konnte nicht aktualisiert werden.')
+    }
+    this.ui.chargeId = chargeId
+    this.ui.chargeTab = 'ereignisse'
+    this.ui.ansicht = 'charge'
+    this.ui.editEreignisId = null
+    this.ui.status = { art: 'erfolg', text: 'Ereignis aktualisiert; die Vorratsbuchung wurde angeglichen.' }
+    this.schreibeHistory(true)
+    this.render()
+  }
+
   private async loescheEreignis(ereignisId: string): Promise<void> {
     const ereignis = this.stand.ereignisse.find(eintrag => eintrag.id === ereignisId)
     if (!ereignis) return this.zeigeStatus('fehler', 'Das Ereignis wurde nicht gefunden.')
     if (!window.confirm(`${EREIGNIS_LABEL[ereignis.art]} vom ${datumZeitFormat.format(new Date(ereignis.zeit))} löschen? Eine Vorratsbuchung wird zurückgebucht.`)) return
     try {
       loescheEreignisMitVorrat(this.stand, ereignisId)
-      await this.persistieren('Ereignis gelöscht. Eine verknüpfte Vorratsmenge wurde zurückgebucht.')
+      await speichereDatenstand(this.stand)
+      this.ui.chargeId = ereignis.chargeId
+      this.ui.chargeTab = 'ereignisse'
+      this.ui.ansicht = 'charge'
+      this.ui.editEreignisId = null
+      this.ui.status = { art: 'erfolg', text: 'Ereignis gelöscht. Eine verknüpfte Vorratsmenge wurde zurückgebucht.' }
+      this.schreibeHistory(true)
+      this.render()
     } catch (error) {
       this.zeigeStatus('fehler', error instanceof Error ? error.message : 'Ereignis konnte nicht gelöscht werden.')
     }

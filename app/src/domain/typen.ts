@@ -181,6 +181,7 @@ export interface Klimapunkt {
   zeit: string
   temperatur: number
   feuchte?: number
+  batterie?: number
   quelle: 'manuell' | 'sensor'
 }
 

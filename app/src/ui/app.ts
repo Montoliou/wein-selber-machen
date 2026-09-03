@@ -29,12 +29,15 @@ import {
   fuegeVolumenPunktHinzu,
   istAppDatenstand,
   loescheEreignisMitVorrat,
+  markiereGeaendert,
+  merkeLoeschung,
   migriereDatenstand,
   pruefeEreignisseMitVorrat,
   speichereEreignisseMitVorrat,
   summeVorratsabgaenge,
   type AppDatenstand,
 } from '../speicher/modell'
+import { gleicheMitServerAb } from '../sync'
 import { alsCsv, alsMarkdown, alsSicherung, baueZip, fotoAusSicherung, istSicherung, ladeDatei } from './export'
 import { dateiname, datetimeLocalWert, datumFormat, datumZeitFormat, formatiereZahl, html, id, isoAusDatetimeLocal, kurzDatumFormat, parseDeZahl, zahlFormat } from './format'
 import { icon } from './icons'
@@ -144,6 +147,9 @@ export class WeinbegleiterApp {
   private ui: UiZustand
   private fotoUrls: string[] = []
   private sensorVerlauf: SensorVerlaufPunkt[] = []
+  private syncLaeuft = false
+  private syncErneut = false
+  private syncFehler = navigator.onLine === false
 
   constructor(root: HTMLElement, stand: AppDatenstand, fotos: Foto[]) {
     this.root = root
@@ -181,6 +187,8 @@ export class WeinbegleiterApp {
       this.ui = { ...this.ui, ...route.ui, status: this.ui.status }
       this.render()
     })
+    window.addEventListener('online', () => { this.syncFehler = false; void this.aktualisiereAbgleichBeimStart() })
+    window.addEventListener('offline', () => { this.syncFehler = true; if (this.ui.ansicht === 'mehr') this.render() })
   }
 
   start(): void {
@@ -194,6 +202,10 @@ export class WeinbegleiterApp {
     this.render()
   }
 
+  async aktualisiereAbgleichBeimStart(): Promise<void> {
+    await this.starteAbgleich()
+  }
+
   async aktualisiereSensorBeimStart(): Promise<void> {
     const konfig = this.stand.sensor
     if (!konfig.aktiv || navigator.onLine === false || pruefeSensorKonfiguration(konfig)) return
@@ -204,7 +216,7 @@ export class WeinbegleiterApp {
     if (messwert.status === 'fulfilled') {
       this.stand.klima.push(alsKlimapunkt(messwert.value, 'sensor'))
       try {
-        await speichereDatenstand(this.stand)
+        await this.speichereLokalUndStarteAbgleich()
       } catch (fehler) {
         console.warn('Automatischer Sensorwert konnte nicht gespeichert werden.', fehler)
       }
@@ -667,11 +679,22 @@ export class WeinbegleiterApp {
 
   private renderMehr(): string {
     const sensor = this.stand.sensor
+    const letzterAbgleich = typeof this.stand.appMeta.letzterAbgleich === 'string'
+      ? this.stand.appMeta.letzterAbgleich
+      : null
+    const abgleichZeit = letzterAbgleich && Number.isFinite(new Date(letzterAbgleich).getTime())
+      ? datumZeitFormat.format(new Date(letzterAbgleich))
+      : 'noch nie'
+    const abgleichHinweis = this.syncLaeuft
+      ? 'Abgleich läuft …'
+      : navigator.onLine === false || this.syncFehler
+        ? 'Nicht abgeglichen'
+        : letzterAbgleich ? `Zuletzt abgeglichen: ${abgleichZeit}` : 'Nicht abgeglichen'
     return `<section class="seite" aria-labelledby="mehr-titel"><h1 class="seiten-titel" id="mehr-titel">Mehr</h1><h2>Export & Sicherung</h2><div class="karte button-grid"><button class="btn" type="button" data-action="export-md">Jahrgang als Markdown</button><button class="btn" type="button" data-action="export-csv">Messreihen als CSV</button><button class="btn" type="button" data-action="export-json">Vollsicherung als JSON</button><button class="btn" type="button" data-action="export-zip">ZIP inklusive Fotos</button><label class="btn" for="import-json">JSON-Sicherung importieren</label><input class="sr-only" id="import-json" type="file" accept="application/json,.json" data-action="import-json"></div>
       <h2>Kellersensor</h2><form class="karte" id="sensor-form"><label for="sensor-adapter">Adapter</label><select id="sensor-adapter" name="adapter"><option value="shelly-cloud" ${sensor.adapter === 'shelly-cloud' ? 'selected' : ''}>Shelly Cloud</option><option value="govee" ${sensor.adapter === 'govee' ? 'selected' : ''}>Govee</option><option value="generisch-json" ${sensor.adapter === 'generisch-json' ? 'selected' : ''}>Generisches JSON</option></select><label for="sensor-url">HTTPS-Endpunkt</label><input id="sensor-url" name="url" type="url" value="${html(sensor.url)}" placeholder="https://…"><div class="hint">HTTP wird mit einer klaren Mixed-Content-Meldung blockiert.</div><div class="formular-grid zwei"><div><label for="sensor-token">Token</label><input id="sensor-token" name="token" type="password" value="${html(sensor.token ?? '')}" autocomplete="off"></div><div><label for="sensor-id">Geräte-ID</label><input id="sensor-id" name="geraeteId" value="${html(sensor.geraeteId ?? '')}"></div><div><label for="sensor-temp-pfad">JSON-Pfad Temperatur</label><input id="sensor-temp-pfad" name="pfadTemperatur" value="${html(sensor.pfadTemperatur ?? '')}" placeholder="data.temp"></div><div><label for="sensor-feuchte-pfad">JSON-Pfad Feuchte</label><input id="sensor-feuchte-pfad" name="pfadFeuchte" value="${html(sensor.pfadFeuchte ?? '')}" placeholder="data.humidity"></div></div><div id="sensor-fehler" role="alert"></div><div class="balken-actions"><button class="btn" type="submit" name="sensorAktion" value="speichern">Konfiguration speichern</button><button class="btn btn-haupt" type="submit" name="sensorAktion" value="testen">Verbindung testen</button></div></form>
       <h2>Manueller Klimawert</h2><form class="karte" id="klima-form"><div class="formular-grid zwei"><div><label for="klima-temp">Temperatur in °C</label><input id="klima-temp" name="temperatur" inputmode="decimal" required></div><div><label for="klima-feuchte">Feuchte in %</label><input id="klima-feuchte" name="feuchte" inputmode="decimal"></div></div><button class="btn btn-haupt" type="submit">Manuell speichern</button><div class="hint">Funktioniert immer und bleibt der Standardweg.</div></form>
       <h2>Behälter</h2><div class="karte">${this.stand.behaelter.map(behaelter => { const charge = this.stand.chargen.find(c => c.behaelterId === behaelter.id && !c.archiviert); return `<div class="zeile"><span>${html(behaelter.name)} · ${zahlFormat.format(behaelter.bruttoLiter)} L</span><b>${charge ? `belegt: ${html(charge.name)}` : behaelter.vorhandenAb ? `ab ${datumFormat.format(new Date(`${behaelter.vorhandenAb}T12:00:00`))}` : 'frei'}</b></div>` }).join('')}</div>
-      <div class="fassung">Fassung vom ${BUILD_ZEIT_FORMAT.format(new Date(__BUILD_TIMESTAMP__))} (${html(__BUILD_COMMIT__)})</div>
+      <div class="fassung"><div>Fassung vom ${BUILD_ZEIT_FORMAT.format(new Date(__BUILD_TIMESTAMP__))} (${html(__BUILD_COMMIT__)})</div><div class="abgleich-zeile"><span>Abgleich: ${html(abgleichZeit)}</span><button class="btn btn-klein" type="button" data-action="sync-jetzt" ${this.syncLaeuft ? 'disabled' : ''}>Jetzt abgleichen</button></div><small class="abgleich-hinweis" aria-live="polite">${html(abgleichHinweis)}</small></div>
     </section>`
   }
 
@@ -755,6 +778,7 @@ export class WeinbegleiterApp {
     if (action === 'status-schliessen') { this.ui.status = null; return this.render() }
     if (action === 'messung-loeschen') return this.loescheMessung(ziel.dataset.id ?? '')
     if (action === 'ereignis-loeschen') return this.loescheEreignis(ziel.dataset.id ?? '')
+    if (action === 'sync-jetzt') return this.starteAbgleich()
     if (action === 'update-laden') { window.dispatchEvent(new CustomEvent('weinbegleiter:update-anwenden')); return }
     if (action === 'export-md') return this.exportiereMarkdown()
     if (action === 'export-csv') return this.exportiereCsv()
@@ -822,8 +846,45 @@ export class WeinbegleiterApp {
   }
 
   private async persistieren(meldung?: string): Promise<void> {
-    await speichereDatenstand(this.stand)
+    await this.speichereLokalUndStarteAbgleich()
     if (meldung) this.zeigeStatus('erfolg', meldung)
+  }
+
+  private async speichereLokalUndStarteAbgleich(): Promise<void> {
+    await speichereDatenstand(this.stand)
+    void this.starteAbgleich()
+  }
+
+  private async starteAbgleich(): Promise<void> {
+    if (navigator.onLine === false) {
+      this.syncFehler = true
+      if (this.ui.ansicht === 'mehr') this.render()
+      return
+    }
+    if (this.syncLaeuft) {
+      this.syncErneut = true
+      return
+    }
+    this.syncLaeuft = true
+    this.syncFehler = false
+    if (this.ui.ansicht === 'mehr') this.render()
+    try {
+      const zusammengefuehrt = await gleicheMitServerAb(this.stand)
+      zusammengefuehrt.appMeta.letzterAbgleich = new Date().toISOString()
+      this.stand = zusammengefuehrt
+      await speichereDatenstand(this.stand)
+      this.syncFehler = false
+    } catch (fehler) {
+      this.syncFehler = true
+      console.warn('Datenabgleich fehlgeschlagen; der lokale Stand bleibt erhalten.', fehler)
+    } finally {
+      this.syncLaeuft = false
+      if (this.ui.ansicht === 'mehr' || this.ui.ansicht === 'heute') this.render()
+      if (this.syncErneut) {
+        this.syncErneut = false
+        void this.starteAbgleich()
+      }
+    }
   }
 
   private zeigeStatus(art: 'erfolg' | 'fehler', text: string): void {
@@ -897,6 +958,7 @@ export class WeinbegleiterApp {
       const methode = DICHTE_TYPEN.includes(definition.typ) ? String(daten.get(`methode-${definition.typ}`) ?? 'spindel') as MessMethode : undefined
       neu.push({
         id: id('messung'),
+        zuletztGeaendert: new Date().toISOString(),
         chargeId: charge.id,
         zeit,
         typ: definition.typ,
@@ -909,7 +971,7 @@ export class WeinbegleiterApp {
     if (!neu.length) return this.formularFehler('Trage mindestens einen Messwert ein. Leere Felder werden nicht gespeichert.')
     this.stand.messungen.push(...neu)
     this.aktualisiereVolumenAusMessungen(neu)
-    await speichereDatenstand(this.stand)
+    await this.speichereLokalUndStarteAbgleich()
     this.ui.messRundeErfolg = { chargeId: charge.id, typen: neu.map(messung => messung.typ) }
     this.render()
     this.root.querySelector<HTMLElement>('.mess-runde-erfolg')?.focus({ preventScroll: true })
@@ -931,10 +993,11 @@ export class WeinbegleiterApp {
     const zeit = isoAusDatetimeLocal(daten.get('zeit'))
     const methode = DICHTE_TYPEN.includes(typ) ? String(daten.get(`methode-${typ}`) ?? 'spindel') as MessMethode : undefined
     const notiz = String(daten.get('notiz') ?? '').trim() || undefined
-    const neu: Messung[] = chargen.map(charge => ({ id: id('messung'), chargeId: charge.id, zeit, typ, wert, text, methode, notiz }))
+    const geaendert = new Date().toISOString()
+    const neu: Messung[] = chargen.map(charge => ({ id: id('messung'), zuletztGeaendert: geaendert, chargeId: charge.id, zeit, typ, wert, text, methode, notiz }))
     this.stand.messungen.push(...neu)
     this.aktualisiereVolumenAusMessungen(neu)
-    await speichereDatenstand(this.stand)
+    await this.speichereLokalUndStarteAbgleich()
     this.ui.status = { art: 'erfolg', text: `${neu.length} Messdatensätze gespeichert.` }
     this.ui.ansicht = 'charge'
     this.ui.chargeTab = 'messungen'
@@ -1130,7 +1193,8 @@ export class WeinbegleiterApp {
       methode: DICHTE_TYPEN.includes(messung.typ) ? String(daten.get('methode') ?? 'spindel') as MessMethode : undefined,
       notiz: String(daten.get('notiz') ?? '').trim() || undefined,
     })
-    await speichereDatenstand(this.stand)
+    markiereGeaendert(messung)
+    await this.speichereLokalUndStarteAbgleich()
     this.ui.chargeId = chargeId
     this.ui.chargeTab = 'messungen'
     this.ui.ansicht = 'charge'
@@ -1146,7 +1210,8 @@ export class WeinbegleiterApp {
     const messung = this.stand.messungen[index]!
     if (!window.confirm(`${this.messLabel(messung.typ)} vom ${datumZeitFormat.format(new Date(messung.zeit))} löschen?`)) return
     this.stand.messungen.splice(index, 1)
-    await speichereDatenstand(this.stand)
+    merkeLoeschung(this.stand, 'messungen', messungId)
+    await this.speichereLokalUndStarteAbgleich()
     this.ui.chargeId = messung.chargeId
     this.ui.chargeTab = 'messungen'
     this.ui.ansicht = 'charge'
@@ -1181,7 +1246,7 @@ export class WeinbegleiterApp {
     }
     try {
       aktualisiereEreignisMitVorrat(this.stand, ereignis.id, aktualisiert)
-      await speichereDatenstand(this.stand)
+      await this.speichereLokalUndStarteAbgleich()
     } catch (error) {
       return this.formularFehler(error instanceof Error ? error.message : 'Ereignis konnte nicht aktualisiert werden.')
     }
@@ -1200,7 +1265,7 @@ export class WeinbegleiterApp {
     if (!window.confirm(`${EREIGNIS_LABEL[ereignis.art]} vom ${datumZeitFormat.format(new Date(ereignis.zeit))} löschen? Eine Vorratsbuchung wird zurückgebucht.`)) return
     try {
       loescheEreignisMitVorrat(this.stand, ereignisId)
-      await speichereDatenstand(this.stand)
+      await this.speichereLokalUndStarteAbgleich()
       this.ui.chargeId = ereignis.chargeId
       this.ui.chargeTab = 'ereignisse'
       this.ui.ansicht = 'charge'
@@ -1221,6 +1286,7 @@ export class WeinbegleiterApp {
     if (ziel > aktuell) return this.zeigeStatus('fehler', 'Vorwärtswechsel sind nur über den Weiter-Knopf möglich.')
     charge.phase = phase
     charge.phaseSeit = new Date().toISOString()
+    markiereGeaendert(charge)
     await this.persistieren('Phase gespeichert.')
   }
 
@@ -1234,6 +1300,7 @@ export class WeinbegleiterApp {
     if (!naechste) return
     charge.phase = naechste
     charge.phaseSeit = new Date().toISOString()
+    markiereGeaendert(charge)
     await this.persistieren(`Phase auf ${PHASEN_LABEL[naechste]} gesetzt.`)
   }
 
@@ -1242,7 +1309,7 @@ export class WeinbegleiterApp {
     const gate = charge ? gateFuerPhase(this.stand, charge) : null
     if (!charge || !gate) return
     const faellig = new Date(Date.now() + 24 * 60 * 60 * 1000)
-    this.stand.reminder.push({ id: id('reminder'), chargeId: charge.id, faellig: faellig.toISOString(), titel: `${gate.titel} erneut prüfen`, beschreibung: gate.blocker.join(' · ') || `Gate für ${charge.name} prüfen.`, erledigt: false, quelle: 'regel', regelId: gate.gate })
+    this.stand.reminder.push({ id: id('reminder'), zuletztGeaendert: new Date().toISOString(), chargeId: charge.id, faellig: faellig.toISOString(), titel: `${gate.titel} erneut prüfen`, beschreibung: gate.blocker.join(' · ') || `Gate für ${charge.name} prüfen.`, erledigt: false, quelle: 'regel', regelId: gate.gate })
     await this.persistieren('Erinnerung für morgen angelegt.')
   }
 
@@ -1307,7 +1374,7 @@ export class WeinbegleiterApp {
 
   private async speichereReminder(formular: HTMLFormElement): Promise<void> {
     const daten = new FormData(formular)
-    const reminder: Reminder = { id: id('reminder'), titel: String(daten.get('titel')), beschreibung: String(daten.get('beschreibung')), faellig: isoAusDatetimeLocal(daten.get('faellig')), erledigt: false, quelle: 'manuell' }
+    const reminder: Reminder = { id: id('reminder'), zuletztGeaendert: new Date().toISOString(), titel: String(daten.get('titel')), beschreibung: String(daten.get('beschreibung')), faellig: isoAusDatetimeLocal(daten.get('faellig')), erledigt: false, quelle: 'manuell' }
     this.stand.reminder.push(reminder)
     await this.persistieren('Termin gespeichert.')
   }
@@ -1316,6 +1383,7 @@ export class WeinbegleiterApp {
     const reminder = this.stand.reminder.find(eintrag => eintrag.id === reminderId)
     if (!reminder) return
     reminder.erledigt = !reminder.erledigt
+    markiereGeaendert(reminder)
     await this.persistieren('Terminstatus gespeichert.')
   }
 
@@ -1336,9 +1404,13 @@ export class WeinbegleiterApp {
     const inhalt = String(daten.get('inhalt') ?? '').trim()
     const tags = String(daten.get('tags') ?? '').split(',').map(tag => tag.trim()).filter(Boolean)
     const vorhanden = this.stand.wiki.find(seite => seite.id === seiteId)
-    if (vorhanden) Object.assign(vorhanden, { titel, inhalt, tags, aktualisiert: new Date().toISOString() })
+    if (vorhanden) {
+      Object.assign(vorhanden, { titel, inhalt, tags, aktualisiert: new Date().toISOString() })
+      markiereGeaendert(vorhanden)
+    }
     else {
-      const neu: WikiSeite = { id: id('wiki'), slug: dateiname(titel), titel, inhalt, tags, aktualisiert: new Date().toISOString() }
+      const zeit = new Date().toISOString()
+      const neu: WikiSeite = { id: id('wiki'), zuletztGeaendert: zeit, slug: dateiname(titel), titel, inhalt, tags, aktualisiert: zeit }
       this.stand.wiki.push(neu)
       this.ui.wikiId = neu.id
     }
@@ -1351,6 +1423,7 @@ export class WeinbegleiterApp {
   private async speichereSensor(formular: HTMLFormElement, submitter: HTMLButtonElement | null): Promise<void> {
     const daten = new FormData(formular)
     const konfig: SensorKonfig = {
+      zuletztGeaendert: new Date().toISOString(),
       aktiv: true,
       adapter: String(daten.get('adapter')) as SensorKonfig['adapter'],
       url: String(daten.get('url') ?? '').trim(),
@@ -1382,7 +1455,8 @@ export class WeinbegleiterApp {
     const temperatur = parseDeZahl(daten.get('temperatur'))
     const feuchte = parseDeZahl(daten.get('feuchte'))
     if (temperatur === null) return this.zeigeStatus('fehler', 'Gültige Temperatur eintragen.')
-    this.stand.klima.push({ zeit: new Date().toISOString(), temperatur, feuchte: feuchte ?? undefined, quelle: 'manuell' })
+    const zeit = new Date().toISOString()
+    this.stand.klima.push({ id: id('klima'), zuletztGeaendert: zeit, zeit, temperatur, feuchte: feuchte ?? undefined, quelle: 'manuell' })
     await this.persistieren('Manueller Klimawert gespeichert.')
   }
 
@@ -1430,12 +1504,12 @@ export class WeinbegleiterApp {
     if (!begruendung) return this.zeigeStatus('fehler', 'Begründung ist Pflicht.')
     const zeit = new Date().toISOString()
     const neueChargen: Charge[] = namen.map((name, index) => ({
-      id: id('charge'), jahrgang: this.stand.jahrgang, name, typ: quellen[0]?.typ ?? 'maische', phase: 'ANSTELLEN', phaseSeit: zeit, startdatum: zeit,
+      id: id('charge'), zuletztGeaendert: zeit, jahrgang: this.stand.jahrgang, name, typ: quellen[0]?.typ ?? 'maische', phase: 'ANSTELLEN', phaseSeit: zeit, startdatum: zeit,
       elternChargeId: quellen[0]?.id, mengeKg: mengen[index] ?? 0, behaelterId: behaelter[index] || undefined,
       volumenHistorie: [], gesperrt: false, isoliert: false,
       notiz: `Umverteilt aus ${quellen.map(charge => charge.name).join(', ')}. Begründung: ${begruendung}`,
     }))
-    quellen.forEach(charge => { charge.archiviert = true })
+    quellen.forEach(charge => { charge.archiviert = true; markiereGeaendert(charge, zeit) })
     this.stand.chargen.push(...neueChargen)
     this.ui.chargeId = neueChargen[0]?.id ?? this.ui.chargeId
     await this.persistieren(`${neueChargen.length} Zielchargen angelegt; Ausgangschargen archiviert.`)
@@ -1483,6 +1557,7 @@ export class WeinbegleiterApp {
       await ersetzeFotos(fotos)
       this.stand = stand
       this.fotos = fotos
+      void this.starteAbgleich()
       this.ui.chargeId = this.aktiveChargen()[0]?.id ?? ''
       this.zeigeStatus('erfolg', `Die App hat die Vollsicherung importiert: ${stand.chargen.length} Chargen, ${stand.messungen.length} Messungen und ${stand.ereignisse.length} Ereignisse.`)
     } catch (error) {

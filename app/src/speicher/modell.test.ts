@@ -71,9 +71,13 @@ describe('Datenstand-Migration v1 auf v2', () => {
     const neu = migriereDatenstand(alt)
 
     expect(neu.version).toBe(APP_DATEN_VERSION)
-    expect(neu.messungen).toEqual(messungenVorher)
+    expect(neu.messungen.map(({ zuletztGeaendert: _zeit, ...messung }) => messung)).toEqual(messungenVorher)
+    expect(neu.messungen.map(messung => messung.zuletztGeaendert)).toEqual([
+      '2026-09-02T07:00:00.000Z',
+      '2026-09-02T07:30:00.000Z',
+    ])
     expect(neu.ereignisse.map(ereignis => ereignis.id)).toEqual(ereignisIdsVorher)
-    expect(neu.reminder).toEqual(alt.reminder)
+    expect(neu.reminder.map(({ zuletztGeaendert: _zeit, ...reminder }) => reminder)).toEqual(alt.reminder)
     expect(neu.chargen[0]).toMatchObject({
       mengeKg: 13.13,
       elternChargeId: 'ernte-1',
@@ -85,6 +89,8 @@ describe('Datenstand-Migration v1 auf v2', () => {
     expect(neu.appMeta).not.toHaveProperty('chargenMengenKg')
     expect(neu.appMeta).not.toHaveProperty('elternChargeIds')
     expect(neu.appMeta.migrationen).toContain('datenstand-v1-zu-v2')
+    expect(neu.appMeta.migrationen).toContain('datenstand-v2-zu-v3-sync')
+    expect(neu.geloescht).toEqual([])
     expect(summeVorratsabgaenge(neu, 'vorrat-zucker')).toBe(2632)
     expect(summeVorratsabgaenge(neu, 'vorrat-naehrsalz')).toBe(3.4)
     expect(summeVorratsabgaenge(neu, 'vorrat-hefe')).toBe(2)
@@ -134,6 +140,7 @@ describe('Speicherschicht v2', () => {
     loescheEreignisMitVorrat(stand, ereignis.id)
     expect(stand.vorrat.find(posten => posten.id === 'vorrat-naehrsalz')?.mengeWert).toBe(56.6)
     expect(stand.ereignisse.some(eintrag => eintrag.id === ereignis.id)).toBe(false)
+    expect(stand.geloescht).toContainEqual(expect.objectContaining({ id: ereignis.id, sammlung: 'ereignisse' }))
   })
 
   it('verändert bei einer falschen Einheit weder Vorrat noch Ereignisse', () => {

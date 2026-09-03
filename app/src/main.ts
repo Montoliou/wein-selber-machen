@@ -1,19 +1,23 @@
 import { erzeugeStartdaten } from './startdaten'
 import { ladeDatenstand, ladeFotos, speichereDatenstand } from './speicher/indexeddb'
+import { migriereDatenstand } from './speicher/modell'
+import { uebernehmeSyncTokenAusUrl } from './sync'
 import { WeinbegleiterApp } from './ui/app'
 import './ui/styles.css'
 
 async function starteApp(): Promise<void> {
+  uebernehmeSyncTokenAusUrl()
   const root = document.querySelector<HTMLElement>('#app')
   if (!root) throw new Error('App-Container fehlt.')
   let stand = await ladeDatenstand()
   if (!stand) {
-    stand = erzeugeStartdaten()
+    stand = migriereDatenstand(erzeugeStartdaten())
     await speichereDatenstand(stand)
   }
   const fotos = await ladeFotos()
   const app = new WeinbegleiterApp(root, stand, fotos)
   app.start()
+  void app.aktualisiereAbgleichBeimStart()
   void app.aktualisiereSensorBeimStart()
 
   if ('serviceWorker' in navigator) {

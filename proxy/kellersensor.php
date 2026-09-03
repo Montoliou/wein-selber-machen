@@ -47,6 +47,31 @@ if (($_GET['token'] ?? '') !== $konfig['proxy_token']) {
     raus(403, ['fehler' => 'Token fehlt oder stimmt nicht.']);
 }
 
+$logDatei = __DIR__ . '/kellerklima.jsonl';
+$logMaxZeilen = 40000;   // rund ein Jahr bei einem Wert alle 15 Minuten
+
+// ---------------------------------------------------------------------------
+// Verlaufsabfrage: ?verlauf=1&n=200 liefert die letzten n Messpunkte.
+// Damit kann die App (oder ich beim Review) die Kellerkurve zeichnen, ohne
+// dass jemand die Rohdatei direkt lesen muss.
+// ---------------------------------------------------------------------------
+if (isset($_GET['verlauf'])) {
+    $anzahl = isset($_GET['n']) ? max(1, min(5000, (int) $_GET['n'])) : 200;
+    if (!is_file($logDatei)) {
+        raus(200, ['punkte' => [], 'hinweis' => 'Noch keine Aufzeichnung vorhanden.']);
+    }
+    $zeilen = file($logDatei, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    $zeilen = array_slice($zeilen ?: [], -$anzahl);
+    $punkte = [];
+    foreach ($zeilen as $zeile) {
+        $eintrag = json_decode($zeile, true);
+        if (is_array($eintrag)) {
+            $punkte[] = $eintrag;
+        }
+    }
+    raus(200, ['punkte' => $punkte, 'anzahl' => count($punkte)]);
+}
+
 // ---------------------------------------------------------------------------
 // Zwischenspeicher: Der Sensor misst alle paar Minuten, die App fragt womöglich
 // häufiger. 60 Sekunden Cache schonen das Tuya-Kontingent der kostenlosen Stufe.
@@ -173,4 +198,29 @@ $ergebnis = [
 
 $json = json_encode($ergebnis, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 @file_put_contents($cacheDatei, $json);
+
+// ---------------------------------------------------------------------------
+// Mitschreiben — nur bei einem echten Abruf, nicht bei Cache-Treffern.
+// Dadurch entsteht die lückenlose Kellerkurve, unabhängig davon, ob die App
+// geöffnet ist: Ein Cronjob auf dem Mac Mini ruft diesen Endpunkt alle
+// 15 Minuten auf und loest damit genau einen Eintrag aus.
+// ---------------------------------------------------------------------------
+if ($temperatur !== null) {
+    $zeile = json_encode([
+        't' => $ergebnis['zeit'],
+        'temp' => $temperatur,
+        'hum' => $feuchte,
+        'bat' => $batterie,
+    ], JSON_UNESCAPED_SLASHES);
+    @file_put_contents($logDatei, $zeile . "\n", FILE_APPEND | LOCK_EX);
+
+    // Selten und billig: nur alle ~500 Schreibvorgänge kürzen.
+    if (random_int(1, 500) === 1 && is_file($logDatei)) {
+        $alle = file($logDatei, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        if ($alle !== false && count($alle) > $logMaxZeilen) {
+            @file_put_contents($logDatei, implode("\n", array_slice($alle, -$logMaxZeilen)) . "\n", LOCK_EX);
+        }
+    }
+}
+
 echo $json;

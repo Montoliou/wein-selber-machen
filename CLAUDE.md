@@ -171,3 +171,32 @@ deaktiviert. Formal vertretbar (kein Gate an der Stelle), aber ein Nachtrag für
 **Werkzeuge:** Tauchspindel Notimin und Schlauchheber mit Gitterfilter vorhanden.
 pH-Meter mit Kalibrierlösungen 4/7/10 geliefert — kalibriert wird **nur mit 7,00 und 4,01**,
 die 10er verschlechtert die Gerade im Weinbereich.
+
+## Kellersensor (03.09.2026)
+
+**Gerät:** Tuya T&H, Smart-Life-App, ID `bfae48a133806de206k5a7`, EU-Rechenzentrum.
+Feldnamen bestätigt: `va_temperature` liefert 212 für 21,2 °C (Zehnerskalierung),
+`va_humidity` direkt in %, `battery_percentage` in %.
+
+**Warum ein Proxy:** Die Tuya-Signatur braucht das Access Secret, und das gibt Zugriff
+auf ALLE Geräte des Kontos. In einer Browser-App wäre es öffentlich lesbar. Deshalb
+`proxy/kellersensor.php` auf montolio.de — Secret bleibt serverseitig, die App bekommt
+nur `temperature`, `humidity`, `battery`. Konfiguration in `proxy/kellersensor-config.php`
+(gitignoriert), Endpunkt mit Token in `proxy/ENDPUNKT.txt` (gitignoriert).
+
+**Kein App-Eingriff nötig:** Der seit H1 vorhandene Adapter „Generisches JSON" liest das direkt.
+
+**Die App fragt NICHT von selbst ab.** Eine PWA läuft nur im geöffneten Zustand — es gibt
+kein Hintergrund-Polling. Deshalb der Job `com.montolio.wein-kellerklima` auf dem Mini
+(alle 15 Min): Er ruft den Endpunkt auf, und **der Aufruf ist die Aufzeichnung** — der
+Proxy schreibt serverseitig nach `kellerklima.jsonl` fort. Verlauf abrufen mit
+`&verlauf=1&n=500`. Arbeitsteilung: Smart-Life-App überwacht und alarmiert durchgehend,
+der Weinbegleiter zeigt und protokolliert.
+
+**Deploy des Proxys:** `DEPLOY_FILES` in `.ftp-credentials` vorübergehend umstellen, aus
+`proxy/` deployen, danach **zwingend zurücksetzen** — sonst lädt der nächste App-Deploy
+die falschen Dateien.
+
+**Alarmschwellen im Gerät** (nicht in der App): Obergrenze Temperatur steht auf 28 °C für
+die Gärung. **Am Presstag auf 18 °C senken** — im Ausbau ist 28 °C keine Warnung mehr,
+sondern längst zu spät. Genau daran ist der 2025er im warmen Keller gestorben.

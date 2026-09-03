@@ -137,9 +137,11 @@ $roh = $statusAntwort['result'] ?? [];
  */
 $tempCodes = ['va_temperature', 'temp_current', 'temperature'];
 $feuchteCodes = ['va_humidity', 'humidity_value', 'humidity'];
+$batterieCodes = ['battery_percentage', 'battery_state', 'va_battery'];
 
 $temperatur = null;
 $feuchte = null;
+$batterie = null;
 foreach ($roh as $eintrag) {
     $code = (string) ($eintrag['code'] ?? '');
     $wert = $eintrag['value'] ?? null;
@@ -153,16 +155,20 @@ foreach ($roh as $eintrag) {
     if ($feuchte === null && in_array($code, $feuchteCodes, true)) {
         $feuchte = (float) $wert;
     }
+    if ($batterie === null && in_array($code, $batterieCodes, true)) {
+        $batterie = (float) $wert;
+    }
 }
 
+// Feldnamen dieses Geräts am 03.09.2026 am echten Sensor bestätigt:
+// va_temperature = 212 für 21,2 °C, va_humidity = 62, battery_percentage = 100.
+// Die Rohdaten sind deshalb nicht mehr Teil der Antwort.
 $ergebnis = [
     'temperature' => $temperatur,
     'humidity' => $feuchte,
+    'battery' => $batterie,
     'zeit' => date('c'),
     'quelle' => 'tuya',
-    // Rohdaten bleiben drin, solange die Feldnamen dieses Geräts nicht bestätigt sind.
-    // Sobald die Zuordnung stimmt, kann dieser Schlüssel entfallen.
-    'roh' => $roh,
 ];
 
 $json = json_encode($ergebnis, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);

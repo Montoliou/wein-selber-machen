@@ -12,3 +12,6 @@ app/dist/
 # Tuya-Zugangsdaten fuer den Kellersensor
 .tuya-credentials
 proxy/kellersensor-config.php
+
+# Endpunkt-Notiz mit Proxy-Token
+proxy/ENDPUNKT.txt

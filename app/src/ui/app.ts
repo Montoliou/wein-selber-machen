@@ -10,6 +10,7 @@ import {
   type Ereignis,
   type EreignisArt,
   type Foto,
+  type MessDefinition,
   type MessMethode,
   type MessTyp,
   type Messung,
@@ -41,6 +42,17 @@ type Ansicht = 'heute' | 'charge' | 'erfassen' | 'rechner' | 'gate' | 'termine' 
 type ChargeTab = 'befunde' | 'messungen' | 'ereignisse' | 'gefaess' | 'fotos'
 type RechnerTyp = 'schwefeln' | 'aufzuckern' | 'naehrsalz'
 type ErfassenModus = 'messung' | 'ereignis'
+type MessErfassungModus = 'charge' | 'messgroesse'
+
+interface MessEntwurf {
+  eingabe: string
+  methode: MessMethode
+}
+
+interface MessRundeErfolg {
+  chargeId: string
+  typen: MessTyp[]
+}
 
 const DICHTE_TYPEN: MessTyp[] = ['oechsle', 'sg', 'brix']
 const DICHTE_KURVEN_TYPEN: MessTyp[] = ['oechsle', 'sg']
@@ -50,6 +62,21 @@ const VORRAT_NACH_ART: Partial<Record<EreignisArt, string>> = {
   schwefeln: 'vorrat-kps', aufzuckern: 'vorrat-zucker', naehrsalz: 'vorrat-naehrsalz', hefe: 'vorrat-hefe',
 }
 const MONATE = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez']
+
+const PHASEN_MESS_TYPEN: Partial<Record<Phase, MessTyp[]>> = {
+  KALTMAZERATION: ['temperatur', 'geruch', 'gaeraktivitaet'],
+  AKTIVE_GAERUNG: ['temperatur', 'oechsle', 'geruch', 'gaeraktivitaet'],
+  NACHGAERUNG: ['temperatur', 'oechsle', 'geruch', 'gaeraktivitaet'],
+  AUSBAU: ['ph', 'so2_frei', 'kopfraum', 'oberflaeche', 'geruch', 'geschmack'],
+  STABILITAETS_GATE: ['ph', 'so2_frei', 'kopfraum', 'oberflaeche', 'geruch', 'geschmack'],
+  SUESSE_GATE: ['ph', 'so2_frei', 'kopfraum', 'oberflaeche', 'geruch', 'geschmack'],
+  ABFUELL_GATE: ['ph', 'so2_frei', 'kopfraum', 'oberflaeche', 'geruch', 'geschmack'],
+}
+
+export function erhalteMessChargenAuswahl(ausgewaehlt: string[], aktiveChargeIds: string[]): string[] {
+  const aktiv = new Set(aktiveChargeIds)
+  return [...new Set(ausgewaehlt)].filter(chargeId => aktiv.has(chargeId))
+}
 
 const PHASEN_FUEHRUNG: Record<Phase, { beschreibung: string; aufgabe: string }> = {
   ERNTE: { beschreibung: 'Die Trauben kommen aus dem Weinberg.', aufgabe: 'Gewicht und Lesezeit dokumentieren.' },
@@ -72,7 +99,7 @@ const PHASEN_FUEHRUNG: Record<Phase, { beschreibung: string; aufgabe: string }> 
 
 const ZEITSTRAHL_MARKEN: Array<{ phase: Phase; label: string }> = [
   { phase: 'ERNTE', label: 'Ernte' },
-  { phase: 'KALTMAZERATION', label: 'Mazeration' },
+  { phase: 'KALTMAZERATION', label: 'Mazer.' },
   { phase: 'ANSTELLEN', label: 'Anstellen' },
   { phase: 'AKTIVE_GAERUNG', label: 'Gärung' },
   { phase: 'PRESS_GATE', label: 'Press-Gate' },
@@ -86,7 +113,13 @@ interface UiZustand {
   chargeId: string
   chargeTab: ChargeTab
   erfassenModus: ErfassenModus
+  messErfassungModus: MessErfassungModus
   messTyp: MessTyp
+  messChargeIds: string[]
+  messEntwuerfe: Partial<Record<MessTyp, MessEntwurf>>
+  messZeit: string
+  messNotiz: string
+  messRundeErfolg: MessRundeErfolg | null
   rechnerTyp: RechnerTyp
   wikiId: string | null
   wikiFilter: string
@@ -105,12 +138,19 @@ export class WeinbegleiterApp {
     this.root = root
     this.stand = stand
     this.fotos = fotos
+    const ersteAktiveChargeId = stand.chargen.find(charge => !charge.archiviert)?.id ?? ''
     this.ui = {
       ansicht: 'heute',
-      chargeId: stand.chargen.find(charge => !charge.archiviert)?.id ?? '',
+      chargeId: ersteAktiveChargeId,
       chargeTab: 'befunde',
       erfassenModus: 'messung',
+      messErfassungModus: 'charge',
       messTyp: 'temperatur',
+      messChargeIds: ersteAktiveChargeId ? [ersteAktiveChargeId] : [],
+      messEntwuerfe: {},
+      messZeit: datetimeLocalWert(),
+      messNotiz: '',
+      messRundeErfolg: null,
       rechnerTyp: 'schwefeln',
       wikiId: null,
       wikiFilter: '',
@@ -203,7 +243,7 @@ export class WeinbegleiterApp {
       ${this.renderGaerkurve(this.aktiveChargen(), 'Gärverlauf aller Chargen')}
       <h2>Jetzt dran</h2>
       ${naechster ? `<div class="karte karte-akzent"><div class="aktion">${naechster.titel.toLocaleLowerCase('de').includes('tresterhut') ? this.renderTresterhut() : icon('kalender')}<div><strong class="aktion-titel">${html(naechster.titel)}</strong><div class="aktion-text">Fällig: ${datumZeitFormat.format(new Date(naechster.faellig))}</div></div></div>${this.renderErklaerschublade('Warum das wichtig ist', naechster.beschreibung)}<button class="btn btn-haupt" type="button" data-action="nav" data-view="termine">Aufgabe öffnen</button></div>` : '<div class="karte leer">Keine offenen Aufgaben.</div>'}
-      <div class="balken-actions"><button class="btn btn-haupt" type="button" data-action="erfassen">${icon('messung', 'icon-klein')} Sammelaktion</button><button class="btn" type="button" data-action="nav" data-view="umverteilen">Umverteilen</button></div>
+      <div class="balken-actions"><button class="btn btn-haupt" type="button" data-action="erfassen">${icon('messung', 'icon-klein')} Messung erfassen</button><button class="btn" type="button" data-action="nav" data-view="umverteilen">Umverteilen</button></div>
       ${leitCharge ? `<h2>Wo der Jahrgang steht</h2><div class="karte">${this.renderZeitstrahl(leitCharge)}</div>` : ''}
       <h2>Chargen</h2>${this.aktiveChargen().map(charge => this.renderChargenKarte(charge)).join('') || '<div class="karte leer">Keine aktive Charge.</div>'}
       <h2>Kellerklima</h2><div class="klima-grid"><div class="klima-wert"><small>Letzte Temperatur</small><strong>${klima ? `${formatiereZahl(klima.temperatur)} °C` : '–'}</strong></div><div class="klima-wert"><small>Feuchte</small><strong>${klima?.feuchte === undefined ? '–' : `${formatiereZahl(klima.feuchte, 0)} %`}</strong></div></div><div class="hint">${klima ? `${klima.quelle === 'sensor' ? 'Sensor' : 'Manuell'} · ${datumZeitFormat.format(new Date(klima.zeit))}` : 'Noch kein Klimawert. Manuelle Eingabe ist unter Mehr jederzeit verfügbar.'}</div>
@@ -386,7 +426,7 @@ export class WeinbegleiterApp {
   private renderErfassen(): string {
     const charge = this.aktuelleCharge()
     const tabs: Array<[ErfassenModus, string]> = [['messung', 'Messung'], ['ereignis', 'Ereignis / Zugabe']]
-    return `<section class="seite" aria-labelledby="erfassen-titel"><button class="zurueck" type="button" data-action="nav" data-view="${charge ? 'charge' : 'heute'}">${icon('pfeil')}${charge ? html(charge.name) : 'Heute'}</button><h1 class="seiten-titel" id="erfassen-titel">Sammelaktion erfassen</h1><div class="tabs">${tabs.map(([id, label]) => `<button class="tab ${this.ui.erfassenModus === id ? 'aktiv' : ''}" type="button" data-action="erfassen-modus" data-mode="${id}">${label}</button>`).join('')}</div>${this.ui.erfassenModus === 'messung' ? this.renderMessForm() : this.renderEreignisForm()}</section>`
+    return `<section class="seite" aria-labelledby="erfassen-titel"><button class="zurueck" type="button" data-action="nav" data-view="${charge ? 'charge' : 'heute'}">${icon('pfeil')}${charge ? html(charge.name) : 'Heute'}</button><h1 class="seiten-titel" id="erfassen-titel">Erfassen</h1><div class="tabs">${tabs.map(([id, label]) => `<button class="tab ${this.ui.erfassenModus === id ? 'aktiv' : ''}" type="button" data-action="erfassen-modus" data-mode="${id}">${label}</button>`).join('')}</div>${this.ui.erfassenModus === 'messung' ? this.renderMessForm() : this.renderEreignisForm()}</section>`
   }
 
   private renderChargenAuswahl(name = 'chargeIds'): string {
@@ -394,8 +434,65 @@ export class WeinbegleiterApp {
   }
 
   private renderMessForm(): string {
+    return `${this.renderMessModusUmschalter()}${this.ui.messErfassungModus === 'charge' ? this.renderChargeMessForm() : this.renderMessgroesseForm()}`
+  }
+
+  private renderMessModusUmschalter(): string {
+    const modi: Array<[MessErfassungModus, string]> = [
+      ['charge', 'Ein Bottich / viele Werte'],
+      ['messgroesse', 'Ein Wert / alle Bottiche'],
+    ]
+    return `<div class="mess-modus" role="group" aria-label="Art der Messerfassung">${modi.map(([modus, label]) => `<button class="mess-modus-knopf ${this.ui.messErfassungModus === modus ? 'aktiv' : ''}" type="button" data-action="mess-erfassungsmodus" data-mode="${modus}" aria-pressed="${this.ui.messErfassungModus === modus}">${label}</button>`).join('')}</div>`
+  }
+
+  private renderChargeMessForm(): string {
+    const charge = this.aktuelleCharge() ?? this.aktiveChargen()[0]
+    if (!charge) return '<div class="karte leer">Keine aktive Charge.</div>'
+    const relevanteTypen = PHASEN_MESS_TYPEN[charge.phase] ?? []
+    const relevanteDefinitionen = relevanteTypen.map(typ => MESS_DEFINITIONEN.find(definition => definition.typ === typ)).filter((definition): definition is MessDefinition => Boolean(definition))
+    const weitereDefinitionen = MESS_DEFINITIONEN.filter(definition => !relevanteTypen.includes(definition.typ))
+    const gruppenTitel = charge.phase === 'KALTMAZERATION'
+      ? 'Jetzt in der Kaltmazeration wichtig'
+      : charge.phase === 'AKTIVE_GAERUNG' || charge.phase === 'NACHGAERUNG'
+        ? 'Jetzt in der Gärung wichtig'
+        : relevanteTypen.length ? 'Jetzt im Ausbau wichtig' : 'Messgrößen'
+    const erfolg = this.ui.messRundeErfolg?.chargeId === charge.id ? this.ui.messRundeErfolg : null
+    return `<form id="mess-form"><fieldset class="mess-bottich-auswahl" ${erfolg ? 'disabled' : ''}><legend>Welcher Bottich</legend><div class="mess-bottiche">${this.aktiveChargen().map(eintrag => `<button class="mess-bottich ${eintrag.id === charge.id ? 'aktiv' : ''}" type="button" data-action="mess-charge" data-id="${html(eintrag.id)}" aria-pressed="${eintrag.id === charge.id}"><span>${html(eintrag.name)}</span><small>${eintrag.mengeKg === undefined ? 'Menge offen' : `${formatiereZahl(eintrag.mengeKg)} kg`}</small></button>`).join('')}</div></fieldset><input type="hidden" name="chargeId" value="${html(charge.id)}"><h2>${html(gruppenTitel)}</h2><div class="karte messfelder">${relevanteDefinitionen.map(definition => this.renderMessFeld(definition)).join('')}${weitereDefinitionen.length ? `<details class="mess-weitere"><summary><span class="erklaer-pfeil" aria-hidden="true">›</span>Weitere Messgrößen</summary><div>${weitereDefinitionen.map(definition => this.renderMessFeld(definition)).join('')}</div></details>` : ''}</div>${this.renderMessZeitfelder()}<div id="erfassen-fehler" role="alert"></div><button class="btn btn-haupt" type="submit" ${erfolg ? 'disabled' : ''}>Ausgefüllte Werte speichern</button><div class="hint">Leere Felder erzeugen keinen Datensatz. Alle ausgefüllten Werte erhalten denselben Zeitpunkt.</div>${erfolg ? this.renderMessRundeErfolg(erfolg) : ''}</form>`
+  }
+
+  private renderMessgroesseForm(): string {
     const definition = MESS_DEFINITIONEN.find(eintrag => eintrag.typ === this.ui.messTyp) ?? MESS_DEFINITIONEN[0]!
-    return `<form class="karte" id="mess-form">${this.renderChargenAuswahl()}<label for="mess-typ">Messgröße</label><select id="mess-typ" name="typ" data-action="mess-typ">${MESS_DEFINITIONEN.map(eintrag => `<option value="${eintrag.typ}" ${eintrag.typ === definition.typ ? 'selected' : ''}>${html(eintrag.label)}</option>`).join('')}</select>${definition.art === 'zahl' ? `<label for="mess-wert">${html(definition.label)}</label><input id="mess-wert" name="wert" inputmode="decimal" required><div class="hint">${html(definition.einheit)}${definition.hinweis ? ` · ${html(definition.hinweis)}` : ''}</div>` : `<label for="mess-text">Befund</label><select id="mess-text" name="text" required><option value="">Bitte wählen</option>${(definition.optionen ?? []).map(option => `<option>${html(option)}</option>`).join('')}</select>`}${DICHTE_TYPEN.includes(definition.typ) ? `<label for="mess-methode">Messmethode</label><select id="mess-methode" name="methode" data-action="mess-methode"><option value="spindel">Spindel</option><option value="refraktometer">Refraktometer</option><option value="sonstige">Sonstige</option></select><div id="refraktometer-hinweis"></div>` : ''}<label for="mess-zeit">Zeitpunkt</label><input id="mess-zeit" name="zeit" type="datetime-local" value="${datetimeLocalWert()}" required><label for="mess-notiz">Notiz (freiwillig)</label><textarea id="mess-notiz" name="notiz"></textarea><div id="erfassen-fehler" role="alert"></div><button class="btn btn-haupt" type="submit">Für ausgewählte Chargen speichern</button><div class="hint">Pro Charge wird ein eigener Messdatensatz gespeichert.</div></form>`
+    const ausgewaehlt = new Set(erhalteMessChargenAuswahl(this.ui.messChargeIds, this.aktiveChargen().map(charge => charge.id)))
+    return `<form class="karte" id="mess-form"><fieldset><legend>Chargen auswählen</legend><div class="checkbox-liste">${this.aktiveChargen().map(charge => `<div class="checkbox-zeile"><input id="mess-auswahl-${html(charge.id)}" name="chargeIds" value="${html(charge.id)}" type="checkbox" ${ausgewaehlt.has(charge.id) ? 'checked' : ''}><label for="mess-auswahl-${html(charge.id)}">${html(charge.name)} · ${html(PHASEN_LABEL[charge.phase])}</label></div>`).join('')}</div></fieldset><label for="mess-typ">Messgröße</label><select id="mess-typ" name="typ" data-action="mess-typ">${MESS_DEFINITIONEN.map(eintrag => `<option value="${eintrag.typ}" ${eintrag.typ === definition.typ ? 'selected' : ''}>${html(eintrag.label)}</option>`).join('')}</select><div class="mess-einzel-feld">${this.renderMessFeld(definition, true)}</div>${this.renderMessZeitfelder()}<div id="erfassen-fehler" role="alert"></div><button class="btn btn-haupt" type="submit">Für ausgewählte Chargen speichern</button><div class="hint">Pro Charge wird ein eigener Messdatensatz gespeichert.</div></form>`
+  }
+
+  private renderMessFeld(definition: MessDefinition, erforderlich = false): string {
+    const entwurf = this.ui.messEntwuerfe[definition.typ] ?? { eingabe: '', methode: 'spindel' as const }
+    const feldId = `mess-${definition.typ}`
+    const eingabe = definition.art === 'zahl'
+      ? `<input id="${feldId}" name="${feldId}" data-mess-eingabe data-mess-typ="${definition.typ}" inputmode="decimal" value="${html(entwurf.eingabe)}" ${erforderlich ? 'required' : ''}>`
+      : `<select id="${feldId}" name="${feldId}" data-mess-eingabe data-mess-typ="${definition.typ}" ${erforderlich ? 'required' : ''}><option value="">${erforderlich ? 'Bitte wählen' : 'Nicht erfasst'}</option>${(definition.optionen ?? []).map(option => `<option value="${html(option)}" ${entwurf.eingabe === option ? 'selected' : ''}>${html(option)}</option>`).join('')}</select>`
+    const methode = DICHTE_TYPEN.includes(definition.typ) ? `<div class="mess-methode"><label for="methode-${definition.typ}">Messmethode</label><select id="methode-${definition.typ}" name="methode-${definition.typ}" data-action="mess-methode" data-mess-typ="${definition.typ}"><option value="spindel" ${entwurf.methode === 'spindel' ? 'selected' : ''}>Spindel</option><option value="refraktometer" ${entwurf.methode === 'refraktometer' ? 'selected' : ''}>Refraktometer</option><option value="sonstige" ${entwurf.methode === 'sonstige' ? 'selected' : ''}>Sonstige</option></select><div class="mess-methode-hinweis" data-refraktometer-hinweis data-mess-typ="${definition.typ}"></div></div>` : ''
+    return `<div class="mess-feld"><div class="mess-feld-label"><label for="${feldId}">${html(definition.label)}</label>${definition.hinweis ? `<small>${html(definition.hinweis)}</small>` : ''}</div>${eingabe}<span class="mess-einheit">${html(definition.einheit)}</span>${methode}</div>`
+  }
+
+  private renderMessZeitfelder(): string {
+    return `<div class="karte mess-zeit"><label for="mess-zeit">Zeitpunkt für alle Werte</label><input id="mess-zeit" name="zeit" type="datetime-local" value="${html(this.ui.messZeit)}" required><label for="mess-notiz">Notiz für alle Werte (freiwillig)</label><textarea id="mess-notiz" name="notiz">${html(this.ui.messNotiz)}</textarea></div>`
+  }
+
+  private renderMessRundeErfolg(erfolg: MessRundeErfolg): string {
+    const charge = this.stand.chargen.find(eintrag => eintrag.id === erfolg.chargeId)
+    if (!charge) return ''
+    const naechsteCharge = this.naechsteAktiveCharge(charge.id)
+    const anzahlText = erfolg.typen.length === 1 ? '1 Messung' : `${erfolg.typen.length} Messungen`
+    const labels = erfolg.typen.map(typ => this.messLabel(typ)).join(', ')
+    return `<div class="mess-runde-erfolg" role="status" aria-live="polite" tabindex="-1"><strong>${anzahlText} für ${html(charge.name)} gespeichert.</strong><span>${html(labels)}</span></div><div class="mess-runde-aktionen">${naechsteCharge ? `<button class="btn btn-haupt" type="button" data-action="mess-runde-weiter" data-id="${html(naechsteCharge.id)}">Weiter zu ${html(naechsteCharge.name)}</button>` : ''}<button class="btn" type="button" data-action="mess-runde-beenden">Runde beenden</button></div>`
+  }
+
+  private naechsteAktiveCharge(chargeId: string): Charge | undefined {
+    const aktiveChargen = this.aktiveChargen()
+    const index = aktiveChargen.findIndex(charge => charge.id === chargeId)
+    return index < 0 ? undefined : aktiveChargen[index + 1]
   }
 
   private renderEreignisForm(): string {
@@ -502,8 +599,49 @@ export class WeinbegleiterApp {
     }
     if (action === 'charge') { this.ui.chargeId = ziel.dataset.id ?? ''; this.ui.ansicht = 'charge'; this.ui.chargeTab = 'befunde'; this.schreibeHistory(); return this.render() }
     if (action === 'charge-tab') { this.ui.chargeTab = ziel.dataset.tab as ChargeTab; return this.render() }
-    if (action === 'erfassen') { this.ui.ansicht = 'erfassen'; this.schreibeHistory(); return this.render() }
-    if (action === 'erfassen-modus') { this.ui.erfassenModus = ziel.dataset.mode as ErfassenModus; return this.render() }
+    if (action === 'erfassen') {
+      this.ui.ansicht = 'erfassen'
+      this.ui.erfassenModus = 'messung'
+      this.ui.messErfassungModus = 'charge'
+      this.ui.messChargeIds = this.ui.chargeId ? [this.ui.chargeId] : []
+      this.ui.messEntwuerfe = {}
+      this.ui.messZeit = datetimeLocalWert()
+      this.ui.messNotiz = ''
+      this.ui.messRundeErfolg = null
+      this.schreibeHistory()
+      return this.render()
+    }
+    if (action === 'erfassen-modus') {
+      this.sichereMessFormularEntwurf()
+      this.ui.erfassenModus = ziel.dataset.mode as ErfassenModus
+      this.ui.messRundeErfolg = null
+      return this.render()
+    }
+    if (action === 'mess-erfassungsmodus') {
+      this.sichereMessFormularEntwurf()
+      this.ui.messErfassungModus = ziel.dataset.mode as MessErfassungModus
+      this.ui.messRundeErfolg = null
+      return this.render()
+    }
+    if (action === 'mess-charge') {
+      const chargeId = ziel.dataset.id ?? ''
+      if (chargeId !== this.ui.chargeId) this.leereMessEingaben()
+      this.ui.chargeId = chargeId
+      this.ui.messRundeErfolg = null
+      return this.render()
+    }
+    if (action === 'mess-runde-weiter') {
+      this.ui.chargeId = ziel.dataset.id ?? this.ui.chargeId
+      this.leereMessEingaben()
+      this.ui.messRundeErfolg = null
+      window.scrollTo({ top: 0, behavior: 'auto' })
+      return this.render()
+    }
+    if (action === 'mess-runde-beenden') {
+      this.leereMessEingaben()
+      this.ui.messRundeErfolg = null
+      return this.navigiere('heute')
+    }
     if (action === 'rechner-tab') { this.ui.rechnerTyp = ziel.dataset.rechner as RechnerTyp; return this.render() }
     if (action === 'phase-weiter') return this.phaseWeiter()
     if (action === 'gate-reminder') return this.legeGateReminderAn()
@@ -537,6 +675,7 @@ export class WeinbegleiterApp {
 
   private async behandleAenderung(event: Event): Promise<void> {
     const ziel = event.target as HTMLInputElement | HTMLSelectElement
+    if (ziel.closest('#mess-form')) this.sichereMessFormularEntwurf()
     if (ziel.dataset.action === 'mess-typ') { this.ui.messTyp = ziel.value as MessTyp; return this.render() }
     if (ziel.dataset.action === 'mess-methode') return this.aktualisiereRefraktometerHinweis()
     if (ziel.dataset.action === 'ereignis-art') return this.aktualisiereZugabeFelder(ziel.value as EreignisArt)
@@ -552,6 +691,7 @@ export class WeinbegleiterApp {
 
   private behandleEingabe(event: Event): void {
     const ziel = event.target as HTMLInputElement
+    if (ziel.closest('#mess-form')) this.sichereMessFormularEntwurf()
     if (ziel.closest('#rechner-form')) this.aktualisiereRechner()
     if (ziel.closest('#ereignis-form')) this.aktualisiereZugabeVorschau()
     if (ziel.id === 'wiki-suche') {
@@ -592,6 +732,39 @@ export class WeinbegleiterApp {
     return ids.map(chargeId => this.stand.chargen.find(charge => charge.id === chargeId)).filter((charge): charge is Charge => Boolean(charge))
   }
 
+  private sichereMessFormularEntwurf(formular = this.root.querySelector<HTMLFormElement>('#mess-form')): void {
+    if (!formular) return
+    if (this.ui.messErfassungModus === 'messgroesse') {
+      this.ui.messChargeIds = erhalteMessChargenAuswahl(
+        new FormData(formular).getAll('chargeIds').map(String),
+        this.aktiveChargen().map(charge => charge.id),
+      )
+    }
+    formular.querySelectorAll<HTMLInputElement | HTMLSelectElement>('[data-mess-eingabe]').forEach(feld => {
+      const typ = feld.dataset.messTyp as MessTyp | undefined
+      if (!typ) return
+      const bisher = this.ui.messEntwuerfe[typ]
+      this.ui.messEntwuerfe[typ] = { eingabe: feld.value, methode: bisher?.methode ?? 'spindel' }
+    })
+    formular.querySelectorAll<HTMLSelectElement>('[data-action="mess-methode"]').forEach(feld => {
+      const typ = feld.dataset.messTyp as MessTyp | undefined
+      if (!typ) return
+      const bisher = this.ui.messEntwuerfe[typ]
+      this.ui.messEntwuerfe[typ] = { eingabe: bisher?.eingabe ?? '', methode: feld.value as MessMethode }
+    })
+    this.ui.messZeit = formular.elements.namedItem('zeit') instanceof HTMLInputElement
+      ? (formular.elements.namedItem('zeit') as HTMLInputElement).value
+      : this.ui.messZeit
+    this.ui.messNotiz = formular.elements.namedItem('notiz') instanceof HTMLTextAreaElement
+      ? (formular.elements.namedItem('notiz') as HTMLTextAreaElement).value
+      : this.ui.messNotiz
+  }
+
+  private leereMessEingaben(): void {
+    this.ui.messEntwuerfe = Object.fromEntries(Object.entries(this.ui.messEntwuerfe).map(([typ, entwurf]) => [typ, { ...entwurf, eingabe: '' }]))
+    this.ui.messNotiz = ''
+  }
+
   private formularFehler(text: string): void {
     const feld = this.root.querySelector<HTMLElement>('#erfassen-fehler')
     if (feld) feld.innerHTML = `<div class="form-fehler">${html(text)}</div>`
@@ -599,38 +772,88 @@ export class WeinbegleiterApp {
   }
 
   private async speichereMessungen(formular: HTMLFormElement): Promise<void> {
+    this.sichereMessFormularEntwurf(formular)
+    if (this.ui.messErfassungModus === 'charge') return this.speichereChargeMessungen(formular)
+    return this.speichereMessgroesse(formular)
+  }
+
+  private async speichereChargeMessungen(formular: HTMLFormElement): Promise<void> {
+    const charge = this.aktuelleCharge()
+    if (!charge || charge.archiviert) return this.formularFehler('Wähle eine aktive Charge aus.')
+    const daten = new FormData(formular)
+    const zeit = isoAusDatetimeLocal(daten.get('zeit'))
+    const notiz = String(daten.get('notiz') ?? '').trim() || undefined
+    const neu: Messung[] = []
+    for (const definition of MESS_DEFINITIONEN) {
+      const rohwert = String(daten.get(`mess-${definition.typ}`) ?? '').trim()
+      if (!rohwert) continue
+      const wert = definition.art === 'zahl' ? parseDeZahl(rohwert) : null
+      if (definition.art === 'zahl' && wert === null) return this.formularFehler(`${definition.label}: Trage einen gültigen Zahlenwert ein.`)
+      if ((definition.typ === 'volumen' || definition.typ === 'kopfraum') && wert !== null && wert < 0) return this.formularFehler(`${definition.label} muss mindestens 0 L betragen.`)
+      const methode = DICHTE_TYPEN.includes(definition.typ) ? String(daten.get(`methode-${definition.typ}`) ?? 'spindel') as MessMethode : undefined
+      neu.push({
+        id: id('messung'),
+        chargeId: charge.id,
+        zeit,
+        typ: definition.typ,
+        wert,
+        text: definition.art === 'auswahl' ? rohwert : undefined,
+        methode,
+        notiz,
+      })
+    }
+    if (!neu.length) return this.formularFehler('Trage mindestens einen Messwert ein. Leere Felder werden nicht gespeichert.')
+    this.stand.messungen.push(...neu)
+    this.aktualisiereVolumenAusMessungen(neu)
+    await speichereDatenstand(this.stand)
+    this.ui.messRundeErfolg = { chargeId: charge.id, typen: neu.map(messung => messung.typ) }
+    this.render()
+    this.root.querySelector<HTMLElement>('.mess-runde-erfolg')?.focus({ preventScroll: true })
+  }
+
+  private async speichereMessgroesse(formular: HTMLFormElement): Promise<void> {
     const chargen = this.gewaehlteChargen(formular)
     if (!chargen.length) return this.formularFehler('Wähle mindestens eine Charge aus.')
     const daten = new FormData(formular)
     const typ = String(daten.get('typ')) as MessTyp
     const definition = MESS_DEFINITIONEN.find(eintrag => eintrag.typ === typ)
     if (!definition) return this.formularFehler('Unbekannte Messgröße.')
-    const wert = definition.art === 'zahl' ? parseDeZahl(daten.get('wert')) : null
-    const text = definition.art === 'auswahl' ? String(daten.get('text') ?? '') : undefined
+    const eingabe = daten.get(`mess-${typ}`)
+    const wert = definition.art === 'zahl' ? parseDeZahl(eingabe) : null
+    const text = definition.art === 'auswahl' ? String(eingabe ?? '') : undefined
     if (definition.art === 'zahl' && wert === null) return this.formularFehler('Trage einen gültigen Zahlenwert ein.')
     if ((typ === 'volumen' || typ === 'kopfraum') && wert !== null && wert < 0) return this.formularFehler('Volumenwerte müssen mindestens 0 L betragen.')
     if (definition.art === 'auswahl' && !text) return this.formularFehler('Wähle einen Befund aus.')
     const zeit = isoAusDatetimeLocal(daten.get('zeit'))
-    const methode = DICHTE_TYPEN.includes(typ) ? String(daten.get('methode') ?? 'spindel') as MessMethode : undefined
+    const methode = DICHTE_TYPEN.includes(typ) ? String(daten.get(`methode-${typ}`) ?? 'spindel') as MessMethode : undefined
     const notiz = String(daten.get('notiz') ?? '').trim() || undefined
     const neu: Messung[] = chargen.map(charge => ({ id: id('messung'), chargeId: charge.id, zeit, typ, wert, text, methode, notiz }))
     this.stand.messungen.push(...neu)
-    if (wert !== null && (typ === 'volumen' || typ === 'kopfraum')) {
-      chargen.forEach(charge => {
-        fuegeVolumenPunktHinzu(this.stand, charge.id, {
-          zeit,
-          fuellLiter: typ === 'volumen' ? wert : charge.fuellLiter,
-          kopfraumLiter: typ === 'kopfraum' ? wert : charge.kopfraumLiter,
-          behaelterId: charge.behaelterId,
-          anlass: `${definition.label} gemessen`,
-        })
-      })
-    }
-    await this.persistieren(`${neu.length} Messdatensätze gespeichert.`)
+    this.aktualisiereVolumenAusMessungen(neu)
+    await speichereDatenstand(this.stand)
+    this.ui.status = { art: 'erfolg', text: `${neu.length} Messdatensätze gespeichert.` }
     this.ui.ansicht = 'charge'
     this.ui.chargeTab = 'messungen'
     this.schreibeHistory(true)
     this.render()
+  }
+
+  private aktualisiereVolumenAusMessungen(messungen: Messung[]): void {
+    const chargeIds = [...new Set(messungen.filter(messung => messung.typ === 'volumen' || messung.typ === 'kopfraum').map(messung => messung.chargeId))]
+    for (const chargeId of chargeIds) {
+      const charge = this.stand.chargen.find(eintrag => eintrag.id === chargeId)
+      if (!charge) continue
+      const volumen = messungen.find(messung => messung.chargeId === chargeId && messung.typ === 'volumen')
+      const kopfraum = messungen.find(messung => messung.chargeId === chargeId && messung.typ === 'kopfraum')
+      const definitionen = [volumen, kopfraum].filter((messung): messung is Messung => Boolean(messung)).map(messung => this.messLabel(messung.typ))
+      fuegeVolumenPunktHinzu(this.stand, charge.id, {
+        zeit: (volumen ?? kopfraum)!.zeit,
+        fuellLiter: volumen?.wert ?? charge.fuellLiter,
+        kopfraumLiter: kopfraum?.wert ?? charge.kopfraumLiter,
+        behaelterId: charge.behaelterId,
+        anlass: `${definitionen.join(' und ')} gemessen`,
+      })
+    }
   }
 
   private aktualisiereErfassenFormular(): void {
@@ -684,19 +907,24 @@ export class WeinbegleiterApp {
 
   private aktualisiereRefraktometerHinweis(): void {
     const formular = this.root.querySelector<HTMLFormElement>('#mess-form')
-    const container = this.root.querySelector<HTMLElement>('#refraktometer-hinweis')
-    if (!formular || !container) return
-    const methode = new FormData(formular).get('methode')
-    if (methode !== 'refraktometer') { container.innerHTML = ''; return }
-    const chargen = this.gewaehlteChargen(formular)
-    let befund: ReturnType<typeof befundeFuerCharge>[number] | undefined
-    for (const charge of chargen) {
-      const probe: Messung = { id: 'vorschau-refra', chargeId: charge.id, zeit: new Date().toISOString(), typ: this.ui.messTyp, wert: 0, methode: 'refraktometer' }
-      const vorschau = { ...this.stand, messungen: [...this.stand.messungen, probe] }
-      befund = befundeFuerCharge(vorschau, charge).find(eintrag => eintrag.regelId === 'R-REFRAKTOMETER')
-      if (befund) break
-    }
-    container.innerHTML = befund ? `<div class="warnbox"><strong>${html(befund.regelId)} · ${this.fachtext(befund.titel)}</strong><br>${this.fachtext(befund.text)} ${befund.massnahme ? this.fachtext(befund.massnahme) : ''}</div>` : ''
+    if (!formular) return
+    const daten = new FormData(formular)
+    const chargen = this.ui.messErfassungModus === 'charge'
+      ? [this.aktuelleCharge()].filter((charge): charge is Charge => Boolean(charge))
+      : this.gewaehlteChargen(formular)
+    this.root.querySelectorAll<HTMLElement>('[data-refraktometer-hinweis]').forEach(container => {
+      const typ = container.dataset.messTyp as MessTyp | undefined
+      const methode = typ ? daten.get(`methode-${typ}`) : null
+      if (!typ || methode !== 'refraktometer') { container.innerHTML = ''; return }
+      let befund: ReturnType<typeof befundeFuerCharge>[number] | undefined
+      for (const charge of chargen) {
+        const probe: Messung = { id: 'vorschau-refra', chargeId: charge.id, zeit: new Date().toISOString(), typ, wert: 0, methode: 'refraktometer' }
+        const vorschau = { ...this.stand, messungen: [...this.stand.messungen, probe] }
+        befund = befundeFuerCharge(vorschau, charge).find(eintrag => eintrag.regelId === 'R-REFRAKTOMETER')
+        if (befund) break
+      }
+      container.innerHTML = befund ? `<div class="warnbox"><strong>${html(befund.regelId)} · ${this.fachtext(befund.titel)}</strong><br>${this.fachtext(befund.text)} ${befund.massnahme ? this.fachtext(befund.massnahme) : ''}</div>` : ''
+    })
   }
 
   private async speichereEreignisse(formular: HTMLFormElement): Promise<void> {

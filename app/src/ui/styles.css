@@ -123,7 +123,7 @@ details.erklaer[open] .erklaer-pfeil { transform: rotate(90deg); }
 .zeitphase.gate.aktuell i { background: var(--gold); }
 @keyframes phase-puls { 50% { box-shadow: 0 0 0 7px rgba(216, 184, 110, .06); } }
 .zeitstrahl-legende { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 2px; }
-.zeitstrahl-legende span { overflow-wrap: anywhere; color: var(--text-3); font-size: 8px; line-height: 1.15; text-align: center; }
+.zeitstrahl-legende span { color: var(--text-3); font-size: 8px; line-height: 1.15; text-align: center; white-space: nowrap; }
 .zeitstrahl-legende span.aktuell { color: var(--gold); font-weight: 750; }
 .phasen-satz { margin: 12px 0 0; font-size: 13.5px; }
 
@@ -207,6 +207,43 @@ input[type="file"] { min-height: auto; padding: 10px; font-size: 14px; }
 .chip, .tab { min-height: 44px; flex: none; padding: 9px 13px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface-2); color: var(--text-2); font-size: 13px; }
 .chip.aktiv, .tab.aktiv { border-color: var(--wine); background: var(--wine); color: #fff; font-weight: 700; }
 .form-fehler { margin-top: 7px; color: #ff9ca4; font-size: 13px; }
+
+.mess-modus { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin: 12px 0; padding: 4px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-2); }
+.mess-modus-knopf { min-height: 48px; padding: 8px 7px; border: 0; border-radius: 9px; background: transparent; color: var(--text-2); font-size: 12.5px; font-weight: 680; line-height: 1.25; }
+.mess-modus-knopf.aktiv { background: var(--wine); color: #fff; }
+.mess-bottich-auswahl { margin-top: 17px; }
+.mess-bottich-auswahl legend { margin-bottom: 8px; color: var(--text-3); font-size: 12px; font-weight: 750; letter-spacing: .09em; text-transform: uppercase; }
+.mess-bottiche { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.mess-bottich { min-width: 0; min-height: 58px; padding: 8px 3px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); color: var(--text); font-size: 11.5px; font-weight: 680; line-height: 1.2; }
+.mess-bottich span, .mess-bottich small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mess-bottich small { margin-top: 3px; color: var(--text-3); font-size: 10px; font-weight: 550; font-variant-numeric: tabular-nums; }
+.mess-bottich.aktiv { border-color: var(--wine); background: var(--wine); color: #fff; }
+.mess-bottich.aktiv small { color: rgba(255, 255, 255, .75); }
+.messfelder { padding-top: 3px; padding-bottom: 3px; }
+.mess-feld { display: grid; grid-template-columns: minmax(0, 1fr) minmax(104px, 145px) 38px; gap: 8px; align-items: center; min-height: 66px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.mess-feld:last-child { border-bottom: 0; }
+.mess-feld-label { min-width: 0; }
+.mess-feld-label label { margin: 0; color: var(--text); font-size: 14px; font-weight: 650; }
+.mess-feld-label small { display: block; margin-top: 2px; color: var(--text-3); font-size: 11px; line-height: 1.3; }
+.mess-feld > input, .mess-feld > select { min-height: 44px; padding: 8px 9px; text-align: right; }
+.mess-feld > select { font-size: 13px; text-align: left; }
+.mess-einheit { color: var(--text-3); font-size: 12px; }
+.mess-methode { display: grid; grid-column: 1 / -1; grid-template-columns: minmax(0, 1fr) minmax(104px, 183px); gap: 8px; align-items: center; }
+.mess-methode label { margin: 0; }
+.mess-methode select { min-height: 44px; padding: 8px 9px; font-size: 13px; }
+.mess-methode-hinweis { grid-column: 1 / -1; }
+.mess-methode-hinweis .warnbox { margin: 2px 0 0; }
+.mess-weitere { border-top: 1px solid var(--border); }
+.mess-weitere summary { display: flex; min-height: 48px; align-items: center; gap: 6px; color: var(--gold); cursor: pointer; font-size: 12.5px; font-weight: 680; list-style: none; }
+.mess-weitere summary::-webkit-details-marker { display: none; }
+.mess-weitere[open] .erklaer-pfeil { transform: rotate(90deg); }
+.mess-weitere > div { border-top: 1px solid var(--border); animation: schublade-oeffnen 220ms ease-out; }
+.mess-einzel-feld { margin-top: 8px; padding: 0 2px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.mess-zeit label:first-child { margin-top: 0; }
+.mess-runde-erfolg { display: grid; gap: 3px; margin-top: 12px; padding: 12px; border: 1px solid rgba(95, 168, 118, .45); border-radius: 12px; background: rgba(95, 168, 118, .11); font-size: 13.5px; }
+.mess-runde-erfolg strong { color: #84d29b; }
+.mess-runde-erfolg span { color: var(--text-2); }
+.mess-runde-aktionen { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 
 .befund { margin-bottom: 8px; padding: 11px 12px; border-left: 3px solid; border-radius: 11px; background: var(--surface-2); }
 .befund-green { border-color: var(--green); }
@@ -303,6 +340,8 @@ button.tag { min-height: 44px; cursor: pointer; }
   .ampel { padding-right: 7px; padding-left: 7px; font-size: 9.5px; }
   .ziel-zeile { grid-template-columns: 1fr 68px; }
   .ziel-zeile > :last-child { grid-column: 1 / -1; }
+  .mess-feld { grid-template-columns: minmax(0, 1fr) 112px 32px; gap: 6px; }
+  .mess-runde-aktionen { grid-template-columns: 1fr; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -90,8 +90,12 @@ die Bildschirmbreite und ordnet die Bausteine anders an.
 | Klasse | Breite | Navigation | Struktur |
 |---|---|---|---|
 | **Telefon** | unter 600 px | unten, vier Ziele: Heute · Runde · Termine · Mehr | eine Spalte, Runde bildschirmfüllend |
-| **Tablet** | 600–1100 px | seitlich einklappbar oder unten | zwei Spalten auf Heute und im Gate; Runde bildschirmfüllend mit Vergleichswerten neben den Feldern |
-| **Schreibtisch** | über 1100 px | Seitenleiste, alle Ziele | drei Spalten, Dashboard |
+| **Tablet** | 600–1200 px | seitlich einklappbar oder unten | zwei Spalten auf Heute und im Gate; Runde bildschirmfüllend mit Vergleichswerten neben den Feldern |
+| **Schreibtisch** | über 1200 px | Seitenleiste, alle Ziele | drei Spalten, Dashboard |
+
+Die Grenze liegt bei 1200 px, nicht 1100: Ein iPad im Querformat hat rund 1000–1180 px
+und muss in der Tablet-Klasse bleiben — dort ist die Runde bildschirmfüllend richtig, ein
+Dreispalten-Dashboard wäre es nicht.
 
 Wiki wandert auf Telefon und Tablet unter „Mehr". Am Bottich schlägt niemand nach.
 
@@ -105,19 +109,32 @@ Wiki wandert auf Telefon und Tablet unter „Mehr". Am Bottich schlägt niemand 
 | Wiki-Inhalte, Export, Journal | Gate-Prüfliste → Gate-Fluss |
 | Statusband, Kurvenkonzept, Schubladen, stehende Meldungen (H2) | Einspaltigkeit auf allen Geräten |
 
-## Offene Entscheidungen für Andi
+## Entscheidungen (Andi, 04.09.2026)
 
-1. **Runde: Wischen und „Weiter"-Knopf, kein automatischer Sprung** — einverstanden?
-2. **iPhone in der Gärungsrunde** — kommt das vor, oder ist das iPad dort gesetzt?
-   Entscheidet, ob das Telefon-Layout der Runde erste oder zweite Priorität hat.
-3. **Schreibtisch:** Reicht der Browser, oder soll es als installierte App auf dem
-   Mac laufen (geht mit demselben Code)?
-4. **Sprache am Bottich:** Andi diktiert ohnehin. Spracheingabe je Feld wäre der nächste
-   Schritt nach dieser Stufe — jetzt bewusst nicht dabei, aber als Richtung festhalten?
+| # | Frage | Entscheidung | Folge |
+|---|---|---|---|
+| 1 | Runde: Wischen + „Weiter", kein automatischer Sprung | **Ja** | wie oben beschrieben |
+| 2 | iPhone in der Gärungsrunde | **Nein, iPad reicht** | Die Runde wird für das Tablet entworfen. Das Telefon bekommt nur „Heute" (Blick vom Sofa) und Termine — die Telefon-Runde ist zweite Priorität und wird nicht gemockt |
+| 3 | Schreibtisch | **Browser reicht** | keine Installation, kein eigener Bau |
+| 4 | Sprache | **Ja, als nächste Stufe** | siehe unten |
+
+## Stufe 2 — Sprache am Bottich (festgehalten, nicht Teil von H6)
+
+Andi diktiert ohnehin. Die Runde soll sich künftig sprechen lassen: *„Bottich zwei,
+zweiundzwanzig fünf Grad, siebzig Öchsle, riecht sauber, gärt stark"* — und die App
+ordnet die Werte den Feldern zu.
+
+Andis Vorschlag: ein Transkript über denselben Weg einliefern wie beim Protokoll-Ablauf
+(WhisperFlow, Kurzbefehl, HTTPS-POST). **Wichtig, damit kein zweiter Transportweg
+entsteht:** Der Schreibkanal ist laut `PRD-schreibkanal-mobil.md` §3b (Entscheidung E5,
+30.08.2026) inzwischen auf **iMessage** umgestellt, der Kurzbefehl entfällt dort. Die
+Weinbegleiter-Spracheingabe folgt dem Transport, den der Schreibkanal am Ende benutzt —
+nicht umgekehrt. Was hier zu bauen bleibt, ist nur der letzte Schritt: Transkript rein,
+Messungen raus, mit Rückfrage bei Unklarheit statt Raten.
 
 ## Nächste Schritte
 
 1. Andi nimmt dieses Konzept ab oder korrigiert es.
-2. Mockups, mit echten Daten: **Runde auf iPad**, **Heute auf iPad**, **Schreibtisch auf Mac**,
-   dazu Runde und Heute auf iPhone als Nachweis der Telefonklasse.
+2. Mockups, mit echten Daten: **Runde auf iPad**, **Heute auf iPad**, **Schreibtisch auf Mac**.
+   Telefon: nur „Heute", dafür genügt das bestehende Mockup v2.
 3. Abnahme der Mockups, dann Handoff H6 — als Ersatz der Oberflächenschicht, nicht als Flick.

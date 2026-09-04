@@ -3,9 +3,9 @@
 // Bestehen diese Tests, kann die App den jeweiligen Fehler nicht mehr durchwinken.
 
 import { describe, expect, it } from 'vitest'
-import type { Charge, Datenstand, Ereignis, Messung } from './typen'
+import type { Behaelter, Charge, Datenstand, Ereignis, Messung } from './typen'
 import {
-  abfuellGate, ampelFuerCharge, befundeFuerCharge, gaerendeGate,
+  abfuellGate, ampelFuerCharge, befundeFuerCharge, behaelterVerfuegbar, gaerendeGate,
   stabilitaetsGate, suesseGate, vermischungErlaubt,
 } from './regeln'
 import { molekularesSo2, naehrsalzPlan, schwefelDosierung, zuckerFuerOechsle } from './oenologie'
@@ -363,5 +363,37 @@ describe('2026-N1: Refraktometer nach Gärbeginn', () => {
     ]
     expect(befundeFuerCharge(stand, c, new Date('2026-08-31T10:00:00.000Z'))
       .some(b => b.regelId === 'R-REFRAKTOMETER')).toBe(false)
+  })
+})
+
+// 2026-N2 — Gelieferte Gefäße wurden dauerhaft als „ab <Datum>" angezeigt, obwohl die
+// Auswahl sie längst zuließ. Anzeige und Auswahl beantworteten dieselbe Frage
+// unterschiedlich. Seither entscheidet behaelterVerfuegbar() für beide.
+describe('2026-N2 — Verfügbarkeit von Gefäßen', () => {
+  const gefaess = (felder: Partial<Behaelter>): Behaelter => ({
+    id: 'b-test', name: 'Testballon', bruttoLiter: 5,
+    material: 'Glas', verschluss: 'Gärröhrchen', ...felder,
+  })
+
+  it('gilt am Liefertag selbst als verfügbar', () => {
+    expect(behaelterVerfuegbar(gefaess({ vorhandenAb: '2026-09-04' }), '2026-09-04')).toBe(true)
+  })
+
+  it('gilt vor dem Liefertag als nicht verfügbar', () => {
+    expect(behaelterVerfuegbar(gefaess({ vorhandenAb: '2026-09-05' }), '2026-09-04')).toBe(false)
+  })
+
+  it('gilt ohne Liefertermin als verfügbar', () => {
+    expect(behaelterVerfuegbar(gefaess({}), '2026-09-04')).toBe(true)
+  })
+
+  it('ist ausgemustert nicht mehr verfügbar, auch wenn geliefert', () => {
+    const zerbrochen = gefaess({ vorhandenAb: '2026-09-04', ausgemustertAm: '2026-09-04',
+      ausgemustertGrund: 'Im Transport zerbrochen' })
+    expect(behaelterVerfuegbar(zerbrochen, '2026-09-06')).toBe(false)
+  })
+
+  it('verträgt volle Zeitstempel statt reiner Datumsangaben', () => {
+    expect(behaelterVerfuegbar(gefaess({ vorhandenAb: '2026-09-04T18:00:00Z' }), '2026-09-04T06:00:00Z')).toBe(true)
   })
 })

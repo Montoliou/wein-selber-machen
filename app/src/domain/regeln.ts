@@ -1,7 +1,7 @@
 // Deterministische Regelengine. Entscheidet Ampel und Gates ohne LLM.
 // Jede Regel trägt eine ID, damit Regressionstests einzeln darauf zeigen können.
 
-import type { Ampel, Charge, Datenstand, Ereignis, Messung, MessTyp, Phase } from './typen'
+import type { Ampel, Behaelter, Charge, Datenstand, Ereignis, Messung, MessTyp, Phase } from './typen'
 import { AMPEL_RANG } from './typen'
 import { kopfraumAnteil, molekularesSo2, NAEHRSALZ_MAX_G_PRO_100L } from './oenologie'
 
@@ -622,4 +622,20 @@ export function vermischungErlaubt(stand: Datenstand, a: Charge, b: Charge): { e
     return { erlaubt: false, grund: 'Presswein wird getrennt geführt (Audit-Regel 8). Vereinigung nur nach ausdrücklicher Freigabe.' }
   }
   return { erlaubt: true, grund: 'Keine Regel spricht dagegen.' }
+}
+
+/**
+ * Ist ein Gefäß am Stichtag benutzbar?
+ *
+ * Zwei Gründe sprechen dagegen: Es ist noch nicht geliefert (`vorhandenAb` liegt in der
+ * Zukunft) oder es ist ausgemustert. Beides wird an genau EINER Stelle beantwortet,
+ * damit Auswahl und Anzeige nicht auseinanderlaufen — genau das ist am 04.09.2026
+ * passiert: Die Auswahl beim Zuordnen verglich das Datum, die Übersicht nicht, und
+ * zeigte gelieferte Ballons dauerhaft als „ab 04.09." statt als „frei".
+ */
+export function behaelterVerfuegbar(behaelter: Behaelter, stichtagISO: string): boolean {
+  const tag = stichtagISO.slice(0, 10)
+  if (behaelter.ausgemustertAm && behaelter.ausgemustertAm.slice(0, 10) <= tag) return false
+  if (behaelter.vorhandenAb && behaelter.vorhandenAb.slice(0, 10) > tag) return false
+  return true
 }

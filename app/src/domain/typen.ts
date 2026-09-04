@@ -125,6 +125,13 @@ export interface Behaelter {
   material: string
   verschluss: string
   vorhandenAb?: string   // ISO — für bestellte, noch nicht gelieferte Gefäße
+  /**
+   * ISO — Gefäß ist ausgemustert (zerbrochen, verkauft, aussortiert). Ausgemusterte
+   * Gefäße erscheinen in keiner Auswahl mehr, bleiben aber erhalten: volumenHistorie
+   * und Ereignisse verweisen dauerhaft auf ihre id. Ein Gefäß wird NIE gelöscht.
+   */
+  ausgemustertAm?: string
+  ausgemustertGrund?: string
   notiz?: string
 }
 

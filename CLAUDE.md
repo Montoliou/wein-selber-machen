@@ -243,3 +243,39 @@ lokale Weiterleitungsseite, damit er nicht im Chat landet. Und: macOS hat kein `
 **iOS-Falle vom 04.09.:** Home-Bildschirm-App und Safari haben getrennte Datenbanken.
 Ein Export aus Safari zeigt einen frischen Startdatensatz, nicht die echten Daten.
 Mit dem Abgleich ist das erledigt — beide Instanzen holen denselben Serverstand.
+
+## Oberfläche nach Situationen (04.09.2026, H6 live)
+
+**Anlass:** Andi nach zwei Tagen Betrieb: *„Es wirkt als hätte ein Schüler ein
+Softwareprojekt gebaut."* Er hatte recht — H1 hat eine Funktionsliste in Bildschirme
+übersetzt, H2 bis H4 haben Symptome geflickt. Der Fehler lag in der Spezifikation.
+
+**Die Umkehr:** `docs/ux-konzept.md` — erst die fünf Situationen (Runde am Bottich,
+Blick vom Sofa, Presstag, Ausbau-Kontrolle, Schreibtisch), dann je Situation **ein**
+Bildschirm, dann das Gerät. Bildschirme, die keiner Situation dienen, gibt es nicht.
+Von Andi abgenommen, ebenso die Mockups v3 (iPad, Schreibtisch).
+
+**Ein Code, drei Layouts:** `app/src/ui/layout.ts` mit `layoutKlasse(breite)` —
+unter 600 Telefon, unter 1200 Tablet, darüber Schreibtisch. Die 1200er-Grenze ist
+bewusst gewählt: ein iPad im Querformat hat 1000–1180 px und **muss** Tablet bleiben.
+
+**Die Runde** ersetzt das Erfassungsformular: ein Gefäß füllt den Bildschirm, links
+die Werte von zuletzt mit Trendpfeil, rechts die phasengerechten Felder. Ein
+Zeitstempel je Runde. Nach dem Speichern Befund aus der Regelengine, **kein
+Autosprung**, „Weiter → Bottich n" und 30 Sekunden Rücknahme. Wischen braucht eine
+Mindeststrecke, damit ein Tippen nicht wechselt.
+
+**Der Gate-Fluss** führt eine Prüfung je Bild; fehlt eine Messung, steht das Feld
+direkt in der Prüfung. Sind alle grün, folgt die Handlung — beim Press-Gate Vorlauf
+und Presswein mit Volumen, Kopfraum und Gefäß, dann „Zwei Chargen anlegen und
+Maische archivieren".
+
+**Testen ohne Produktion zu berühren:** `navigator.onLine` auf false setzen **und**
+`window.fetch` für `sync.php`/`kellersensor.php` blockieren, dann lokal die Phase
+manipulieren. Danach lokale IndexedDB löschen und den Serverstand per Sonde
+gegenprüfen. So lief die H6-Abnahme; der Server blieb bei 50 Messungen.
+
+**Falle in der Testumgebung:** Die Browser-Vorschau ändert die Viewportbreite, ohne
+ein `resize`-Ereignis auszulösen. Die Layoutklasse wirkt dann eingefroren. Erst
+`window.dispatchEvent(new Event('resize'))` oder ein Neuladen zeigt das echte
+Verhalten — das war ein falscher Alarm im Review.

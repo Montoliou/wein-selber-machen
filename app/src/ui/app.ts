@@ -41,15 +41,18 @@ import { gleicheMitServerAb } from '../sync'
 import { alsCsv, alsMarkdown, alsSicherung, baueZip, fotoAusSicherung, istSicherung, ladeDatei } from './export'
 import { dateiname, datetimeLocalWert, datumFormat, datumZeitFormat, formatiereZahl, html, id, isoAusDatetimeLocal, kurzDatumFormat, parseDeZahl, zahlFormat } from './format'
 import { icon } from './icons'
+import { layoutKlasse, type LayoutKlasse } from './layout'
 
 declare const __BUILD_TIMESTAMP__: string
 declare const __BUILD_COMMIT__: string
 
-type Ansicht = 'heute' | 'charge' | 'erfassen' | 'messung-bearbeiten' | 'ereignis-bearbeiten' | 'rechner' | 'gate' | 'termine' | 'wiki' | 'wiki-seite' | 'wiki-editor' | 'mehr' | 'umverteilen'
+type Ansicht = 'heute' | 'runde' | 'journal' | 'charge' | 'erfassen' | 'messung-bearbeiten' | 'ereignis-bearbeiten' | 'rechner' | 'gate' | 'termine' | 'wiki' | 'wiki-seite' | 'wiki-editor' | 'mehr' | 'umverteilen'
 type ChargeTab = 'befunde' | 'messungen' | 'ereignisse' | 'gefaess' | 'fotos'
 type RechnerTyp = 'schwefeln' | 'aufzuckern' | 'naehrsalz'
 type ErfassenModus = 'messung' | 'ereignis'
 type MessErfassungModus = 'charge' | 'messgroesse'
+type DesktopKurveTyp = 'gaerung' | 'temperatur' | 'kellerklima'
+type DesktopZeitraum = 'sieben-tage' | 'gaerung' | 'alles'
 
 interface MessEntwurf {
   eingabe: string
@@ -61,8 +64,41 @@ interface MessRundeErfolg {
   typen: MessTyp[]
 }
 
+interface RundenEntwurf {
+  messwerte: Partial<Record<MessTyp, MessEntwurf>>
+  untergestossen: boolean
+}
+
+interface RundenSpeicherung {
+  chargeId: string
+  zeit: string
+  typen: MessTyp[]
+  messungIds: string[]
+  ereignisIds: string[]
+  ampelVorher: Ampel
+  ampelNachher: Ampel
+  volumenVorher: {
+    fuellLiter?: number
+    kopfraumLiter?: number
+    volumenHistorie: NonNullable<Charge['volumenHistorie']>
+  }
+}
+
 const DICHTE_TYPEN: MessTyp[] = ['oechsle', 'sg', 'brix']
 const DICHTE_KURVEN_TYPEN: MessTyp[] = ['oechsle', 'sg']
+const CHARGEN_FARBEN = ['#d44e69', '#e79a68', '#d8b86e', '#91a6d3', '#70b5a0', '#bf86d6']
+const RUNDEN_PRIMAER: Partial<Record<Phase, MessTyp[]>> = {
+  KALTMAZERATION: ['temperatur', 'geruch', 'gaeraktivitaet'],
+  AKTIVE_GAERUNG: ['temperatur', 'oechsle', 'geruch', 'gaeraktivitaet'],
+  PRESS_GATE: ['temperatur', 'oechsle', 'geruch', 'gaeraktivitaet'],
+  NACHGAERUNG: ['temperatur', 'oechsle', 'geruch', 'gaeraktivitaet'],
+  GAERENDE_GATE: ['temperatur', 'oechsle', 'geruch', 'gaeraktivitaet'],
+  ERSTER_ABSTICH: ['oberflaeche', 'geruch', 'kopfraum', 'volumen'],
+  AUSBAU: ['oberflaeche', 'geruch', 'kopfraum', 'volumen'],
+  STABILITAETS_GATE: ['oberflaeche', 'geruch', 'kopfraum', 'volumen'],
+  SUESSE_GATE: ['oberflaeche', 'geruch', 'kopfraum', 'volumen'],
+  ABFUELL_GATE: ['oberflaeche', 'geruch', 'kopfraum', 'volumen'],
+}
 const ZUGABE_ARTEN: EreignisArt[] = ['schwefeln', 'aufzuckern', 'naehrsalz', 'hefe', 'suessen', 'stabilisieren']
 const VOLUMEN_EREIGNIS_ARTEN: EreignisArt[] = ['pressen', 'abstich', 'umfuellen', 'auffuellen']
 const VORRAT_NACH_ART: Partial<Record<EreignisArt, string>> = {
@@ -136,6 +172,17 @@ interface UiZustand {
   wikiId: string | null
   wikiFilter: string
   wikiTag: string | null
+  rundenChargeIds: string[]
+  rundenIndex: number
+  rundenZeit: string
+  rundenEntwuerfe: Record<string, RundenEntwurf>
+  rundenErgebnisse: RundenSpeicherung[]
+  rundenGespeichert: RundenSpeicherung | null
+  rundenUndoBis: number | null
+  rundenAbgeschlossen: boolean
+  gateCheckIndex: number
+  desktopKurveTyp: DesktopKurveTyp
+  desktopZeitraum: DesktopZeitraum
   updateVerfuegbar: boolean
   status: { art: 'erfolg' | 'fehler'; text: string } | null
 }
@@ -145,16 +192,21 @@ export class WeinbegleiterApp {
   private stand: AppDatenstand
   private fotos: Foto[]
   private ui: UiZustand
+  private layout: LayoutKlasse
   private fotoUrls: string[] = []
   private sensorVerlauf: SensorVerlaufPunkt[] = []
   private syncLaeuft = false
   private syncErneut = false
   private syncFehler = navigator.onLine === false
+  private rundenTouchStart: { x: number; y: number; interaktiv: boolean } | null = null
+  private rundenUndoTimer: number | undefined
 
   constructor(root: HTMLElement, stand: AppDatenstand, fotos: Foto[]) {
     this.root = root
     this.stand = stand
     this.fotos = fotos
+    this.layout = layoutKlasse(window.innerWidth)
+    this.root.dataset.layout = this.layout
     const ersteAktiveChargeId = stand.chargen.find(charge => !charge.archiviert)?.id ?? ''
     this.ui = {
       ansicht: 'heute',
@@ -174,6 +226,17 @@ export class WeinbegleiterApp {
       wikiId: null,
       wikiFilter: '',
       wikiTag: null,
+      rundenChargeIds: [],
+      rundenIndex: 0,
+      rundenZeit: datetimeLocalWert(),
+      rundenEntwuerfe: {},
+      rundenErgebnisse: [],
+      rundenGespeichert: null,
+      rundenUndoBis: null,
+      rundenAbgeschlossen: false,
+      gateCheckIndex: 0,
+      desktopKurveTyp: 'gaerung',
+      desktopZeitraum: 'gaerung',
       updateVerfuegbar: false,
       status: null,
     }
@@ -181,6 +244,10 @@ export class WeinbegleiterApp {
     this.root.addEventListener('submit', event => void this.behandleSubmit(event))
     this.root.addEventListener('change', event => void this.behandleAenderung(event))
     this.root.addEventListener('input', event => this.behandleEingabe(event))
+    this.root.addEventListener('keydown', event => this.behandleTaste(event))
+    this.root.addEventListener('touchstart', event => this.beginneRundenWischen(event), { passive: true })
+    this.root.addEventListener('touchend', event => this.beendeRundenWischen(event), { passive: true })
+    window.addEventListener('resize', () => this.aktualisiereLayout())
     window.addEventListener('popstate', event => {
       const route = event.state as { weinbegleiter?: boolean; ui?: Partial<UiZustand> } | null
       if (!route?.weinbegleiter || !route.ui) return
@@ -192,6 +259,7 @@ export class WeinbegleiterApp {
   }
 
   start(): void {
+    this.uebernehmeTiefenLink()
     this.schreibeHistory(true)
     this.render()
   }
@@ -225,6 +293,36 @@ export class WeinbegleiterApp {
     if (messwert.status === 'fulfilled' || verlauf.status === 'fulfilled') this.render()
   }
 
+  private aktualisiereLayout(): void {
+    const naechste = layoutKlasse(window.innerWidth)
+    if (naechste === this.layout) return
+    this.layout = naechste
+    this.root.dataset.layout = naechste
+    this.render()
+  }
+
+  private uebernehmeTiefenLink(): void {
+    const hash = decodeURIComponent(location.hash.replace(/^#/, ''))
+    if (!hash) return
+    const [ziel, kennung] = hash.split('/')
+    if (ziel === 'runde') {
+      this.bereiteRundeVor(kennung)
+      return
+    }
+    if ((ziel === 'charge' || ziel === 'gate') && kennung && this.stand.chargen.some(charge => charge.id === kennung)) {
+      this.ui.chargeId = kennung
+      this.ui.ansicht = ziel
+      return
+    }
+    if (['heute', 'journal', 'termine', 'wiki', 'mehr'].includes(ziel ?? '')) this.ui.ansicht = ziel as Ansicht
+  }
+
+  private routeHash(): string {
+    if (this.ui.ansicht === 'charge' || this.ui.ansicht === 'gate') return `${this.ui.ansicht}/${this.ui.chargeId}`
+    if (this.ui.ansicht === 'runde') return 'runde'
+    return this.ui.ansicht
+  }
+
   private aktiveChargen(): Charge[] {
     return this.stand.chargen.filter(charge => !charge.archiviert)
   }
@@ -236,7 +334,13 @@ export class WeinbegleiterApp {
   private render(): void {
     this.fotoUrls.forEach(url => URL.revokeObjectURL(url))
     this.fotoUrls = []
-    this.root.innerHTML = `${this.renderHeader()}<main id="hauptinhalt" tabindex="-1">${this.renderSeite()}</main>${this.renderNavigation()}${this.renderUpdateHinweis()}${this.renderStatus()}`
+    this.root.dataset.layout = this.layout
+    this.root.dataset.ansicht = this.ui.ansicht
+    const istRunde = this.ui.ansicht === 'runde'
+    const inhalt = this.layout === 'schreibtisch' && !istRunde
+      ? `<a class="skip-link" href="#hauptinhalt">Zum Inhalt</a><div class="desktop-shell ${this.ui.ansicht === 'heute' ? 'desktop-heute' : ''}">${this.renderDesktopSidebar()}<main id="hauptinhalt" class="desktop-mitte" tabindex="-1">${this.ui.ansicht === 'heute' ? this.renderDesktopMitte() : this.renderSeite()}</main>${this.ui.ansicht === 'heute' ? this.renderDesktopDetail() : ''}</div>`
+      : `${istRunde ? '' : this.renderHeader()}<main id="hauptinhalt" class="${istRunde ? 'runden-main' : ''}" tabindex="-1">${this.renderSeite()}</main>${istRunde ? '' : this.renderNavigation()}`
+    this.root.innerHTML = `${inhalt}${this.renderUpdateHinweis()}${this.renderStatus()}`
     if (this.ui.ansicht === 'rechner') this.aktualisiereRechner()
     if (this.ui.ansicht === 'erfassen') this.aktualisiereErfassenFormular()
     if (this.ui.ansicht === 'umverteilen') this.aktualisiereZielzeilen()
@@ -249,12 +353,12 @@ export class WeinbegleiterApp {
   private renderNavigation(): string {
     const basis: Array<{ ansicht: Ansicht; label: string; bild: Parameters<typeof icon>[0] }> = [
       { ansicht: 'heute', label: 'Heute', bild: 'traube' },
+      { ansicht: 'runde', label: 'Runde', bild: 'runde' },
       { ansicht: 'termine', label: 'Termine', bild: 'kalender' },
-      { ansicht: 'wiki', label: 'Wiki', bild: 'buch' },
       { ansicht: 'mehr', label: 'Mehr', bild: 'mehr' },
     ]
     const aktiv = this.hauptAnsicht()
-    return `<nav class="bottom-nav" aria-label="Hauptnavigation">${basis.map(eintrag => `<button class="nav-knopf ${aktiv === eintrag.ansicht ? 'aktiv' : ''}" type="button" data-action="nav" data-view="${eintrag.ansicht}" ${aktiv === eintrag.ansicht ? 'aria-current="page"' : ''}>${icon(eintrag.bild)}<span>${eintrag.label}</span></button>`).join('')}</nav>`
+    return `<nav class="bottom-nav" aria-label="Hauptnavigation">${basis.map(eintrag => `<button class="nav-knopf ${aktiv === eintrag.ansicht ? 'aktiv' : ''}" type="button" data-action="${eintrag.ansicht === 'runde' ? 'runde-start' : 'nav'}" data-view="${eintrag.ansicht}" ${aktiv === eintrag.ansicht ? 'aria-current="page"' : ''}>${icon(eintrag.bild)}<span>${eintrag.label}</span></button>`).join('')}</nav>`
   }
 
   private hauptAnsicht(): Ansicht {
@@ -277,6 +381,8 @@ export class WeinbegleiterApp {
   private renderSeite(): string {
     switch (this.ui.ansicht) {
       case 'heute': return this.renderHeute()
+      case 'runde': return this.renderRunde()
+      case 'journal': return this.renderJournal()
       case 'charge': return this.renderCharge()
       case 'erfassen': return this.renderErfassen()
       case 'messung-bearbeiten': return this.renderMessungBearbeiten()
@@ -294,28 +400,30 @@ export class WeinbegleiterApp {
 
   private renderHeute(): string {
     const offeneReminder = this.stand.reminder.filter(reminder => !reminder.erledigt).sort((a, b) => a.faellig.localeCompare(b.faellig))
+    const faelligeReminder = offeneReminder.filter(reminder => new Date(reminder.faellig).getTime() <= Date.now())
     const naechster = offeneReminder[0]
     const klima = [...this.stand.klima].sort((a, b) => b.zeit.localeCompare(a.zeit))[0]
     const leitCharge = this.aktiveChargen().sort((a, b) => PHASEN_REIHE.indexOf(b.phase) - PHASEN_REIHE.indexOf(a.phase))[0]
-    return `<section class="seite" aria-labelledby="heute-titel">${this.renderStatusband(offeneReminder.length)}<h1 class="sr-only" id="heute-titel">Heute</h1>
-      ${this.renderGaerkurve(this.aktiveChargen(), 'Gärverlauf aller Chargen')}
-      <h2>Jetzt dran</h2>
-      ${naechster ? `<div class="karte karte-akzent"><div class="aktion">${naechster.titel.toLocaleLowerCase('de').includes('tresterhut') ? this.renderTresterhut() : icon('kalender')}<div><strong class="aktion-titel">${html(naechster.titel)}</strong><div class="aktion-text">Fällig: ${datumZeitFormat.format(new Date(naechster.faellig))}</div></div></div>${this.renderErklaerschublade('Warum das wichtig ist', naechster.beschreibung)}<button class="btn btn-haupt" type="button" data-action="nav" data-view="termine">Aufgabe öffnen</button></div>` : '<div class="karte leer">Keine offenen Aufgaben.</div>'}
-      <div class="balken-actions"><button class="btn btn-haupt" type="button" data-action="erfassen">${icon('messung', 'icon-klein')} Messung erfassen</button><button class="btn" type="button" data-action="nav" data-view="umverteilen">Umverteilen</button></div>
-      ${leitCharge ? `<h2>Wo der Jahrgang steht</h2><div class="karte">${this.renderZeitstrahl(leitCharge)}</div>` : ''}
-      <h2>Chargen</h2>${this.aktiveChargen().map(charge => this.renderChargenKarte(charge)).join('') || '<div class="karte leer">Keine aktive Charge.</div>'}
-      <h2>Kellerklima</h2><div class="klima-grid"><div class="klima-wert"><small>Letzte Temperatur</small><strong>${klima ? `${formatiereZahl(klima.temperatur)} °C` : '–'}</strong></div><div class="klima-wert"><small>Feuchte</small><strong>${klima?.feuchte === undefined ? '–' : `${formatiereZahl(klima.feuchte, 0)} %`}</strong></div></div><div class="hint">${klima ? `${klima.quelle === 'sensor' ? 'Sensor' : 'Manuell'} · ${datumZeitFormat.format(new Date(klima.zeit))}` : 'Noch kein Klimawert. Manuelle Eingabe ist unter Mehr jederzeit verfügbar.'}</div>${this.renderBatteriewarnung()}${this.renderKellerkurve()}
-      <h2>Vorrat</h2><div class="karte">${this.stand.vorrat.map(posten => `<div class="vorratsposten"><div class="zeile"><span>${html(posten.name)}</span><b>${zahlFormat.format(posten.mengeWert)} ${html(posten.mengeEinheit)}</b></div><div class="hint">Abgänge: ${zahlFormat.format(summeVorratsabgaenge(this.stand, posten.id))} ${html(posten.mengeEinheit)}</div>${posten.notiz ? `<div class="hint">${html(posten.notiz)}</div>` : ''}</div>`).join('')}</div>
+    const rundeFaellig = this.istRundeFaellig()
+    return `<section class="seite heute-seite" aria-labelledby="heute-titel"><h1 class="sr-only" id="heute-titel">Heute</h1>
+      <div class="heute-links">${this.renderStatusband(faelligeReminder.length, klima)}${this.renderGaerkurve(this.aktiveChargen(), 'Gärverlauf aller Chargen')}${leitCharge ? `<h2>Wo der Jahrgang steht</h2><div class="karte">${this.renderZeitstrahl(leitCharge)}</div>` : ''}</div>
+      <div class="heute-rechts"><h2>Jetzt dran</h2>
+      ${rundeFaellig ? `<div class="karte karte-akzent runden-einstieg"><div class="aktion">${this.renderTresterhut()}<div><strong class="aktion-titel">Runde fällig</strong><div class="aktion-text">${this.aktiveChargen().length} Gefäße · phasengerechte Kontrolle · zuletzt ${html(this.letzteRundenErfassungText())}</div></div></div><button class="btn btn-haupt" type="button" data-action="runde-start">Runde starten</button></div>` : naechster ? `<div class="karte"><button class="aktion aktion-knopf" type="button" data-action="reminder-oeffnen" data-id="${html(naechster.id)}">${naechster.titel.toLocaleLowerCase('de').includes('tresterhut') ? this.renderTresterhut() : icon('kalender')}<span><strong class="aktion-titel">${html(naechster.titel)}</strong><span class="aktion-text">Fällig: ${datumZeitFormat.format(new Date(naechster.faellig))}</span></span></button>${this.renderErklaerschublade('Warum das wichtig ist', naechster.beschreibung)}</div>` : '<div class="karte leer">Keine offenen Aufgaben.</div>'}
+      ${this.renderKlimaKarte(klima)}
+      <h2>Chargen</h2><div class="karte chargenliste">${this.aktiveChargen().map(charge => this.renderChargenZeile(charge)).join('') || '<div class="leer">Keine aktive Charge.</div>'}</div>
+      <h2>Fällig</h2><div class="karte faellig-liste">${offeneReminder.length ? offeneReminder.map(reminder => this.renderFaelligeZeile(reminder)).join('') : '<div class="leer">Keine offenen Aufgaben.</div>'}</div>
+      <h2>Weitere Erfassung</h2><div class="balken-actions"><button class="btn" type="button" data-action="erfassen">${icon('messung', 'icon-klein')} Einzelmessung</button><button class="btn" type="button" data-action="messwert-alle">Ein Wert für alle</button><button class="btn" type="button" data-action="nav" data-view="umverteilen">Umverteilen</button></div>
+      <h2>Vorrat</h2><div class="karte">${this.stand.vorrat.map(posten => `<div class="vorratsposten"><div class="zeile"><span>${html(posten.name)}</span><b>${zahlFormat.format(posten.mengeWert)} ${html(posten.mengeEinheit)}</b></div><div class="hint">Abgänge: ${zahlFormat.format(summeVorratsabgaenge(this.stand, posten.id))} ${html(posten.mengeEinheit)}</div>${posten.notiz ? `<div class="hint">${html(posten.notiz)}</div>` : ''}</div>`).join('')}</div></div>
     </section>`
   }
 
-  private renderStatusband(offeneAufgaben: number): string {
+  private renderStatusband(offeneAufgaben: number, klima = [...this.stand.klima].sort((a, b) => b.zeit.localeCompare(a.zeit))[0]): string {
     const chargen = this.aktiveChargen()
     const ampel = chargen.map(charge => ampelFuerCharge(this.stand, charge)).sort((a, b) => AMPEL_RANG[b] - AMPEL_RANG[a])[0] ?? 'GREEN'
     const ampelKurz: Record<Ampel, string> = { GREEN: 'grün', YELLOW: 'gelb', ORANGE: 'orange', RED: 'rot' }
     const leitCharge = chargen.sort((a, b) => PHASEN_REIHE.indexOf(b.phase) - PHASEN_REIHE.indexOf(a.phase))[0]
     const tag = leitCharge ? this.tagDerPhase(leitCharge) : null
-    return `<div class="statusband" aria-label="Jahrgangsstatus"><div class="statuswert"><strong>${chargen.length}</strong><span>Chargen</span></div><div class="statuswert status-${ampel.toLowerCase()}"><strong>${ampelKurz[ampel]}</strong><span>Ampel</span></div><div class="statuswert"><strong>${tag === null ? '–' : `Tag ${tag}`}</strong><span>${leitCharge ? html(this.phaseKurz(leitCharge.phase)) : 'Phase'}</span></div><div class="statuswert ${offeneAufgaben ? 'status-offen' : ''}"><strong>${offeneAufgaben}</strong><span>offen</span></div></div>`
+    return `<div class="statusband" aria-label="Jahrgangsstatus"><div class="statuswert"><strong>${chargen.length}</strong><span>Chargen</span></div><div class="statuswert status-${ampel.toLowerCase()}"><strong>${ampelKurz[ampel]}</strong><span>Ampel</span></div><div class="statuswert"><strong>${tag === null ? '–' : `Tag ${tag}`}</strong><span>${leitCharge ? html(this.phaseKurz(leitCharge.phase)) : 'Phase'}</span></div><div class="statuswert ${offeneAufgaben ? 'status-offen' : ''}"><strong>${offeneAufgaben}</strong><span>fällig</span></div><div class="statuswert"><strong>${klima ? `${formatiereZahl(klima.temperatur)}°` : '–'}</strong><span>Keller</span></div><div class="statuswert status-feuchte"><strong>${klima?.feuchte === undefined ? '–' : `${formatiereZahl(klima.feuchte, 0)} %`}</strong><span>Feuchte</span></div></div>`
   }
 
   /**
@@ -338,6 +446,67 @@ export class WeinbegleiterApp {
     return Math.max(1, Math.floor(differenz / 86_400_000) + 1)
   }
 
+  private letzteErfassungInAktiverPhase(charge: Charge): string | undefined {
+    const phaseSeit = new Date(charge.phaseSeit ?? charge.startdatum).getTime()
+    return [...this.stand.messungen, ...this.stand.ereignisse]
+      .filter(eintrag => eintrag.chargeId === charge.id && new Date(eintrag.zeit).getTime() >= phaseSeit)
+      .map(eintrag => eintrag.zeit)
+      .sort()
+      .at(-1)
+  }
+
+  private istRundeFaellig(): boolean {
+    const jetzt = Date.now()
+    const wiederholungFaellig = this.stand.reminder.some(reminder => !reminder.erledigt
+      && reminder.wiederholungTage !== undefined
+      && new Date(reminder.faellig).getTime() <= jetzt)
+    if (wiederholungFaellig) return true
+    return this.aktiveChargen().some(charge => {
+      const letzte = this.letzteErfassungInAktiverPhase(charge)
+      return !letzte || jetzt - new Date(letzte).getTime() >= 12 * 60 * 60 * 1000
+    })
+  }
+
+  private letzteRundenErfassungText(): string {
+    const zeiten = this.aktiveChargen().map(charge => this.letzteErfassungInAktiverPhase(charge)).filter((zeit): zeit is string => Boolean(zeit)).sort()
+    return zeiten.length ? datumZeitFormat.format(new Date(zeiten.at(-1)!)) : 'noch nie'
+  }
+
+  private reminderVerlangtRunde(reminder: Reminder): boolean {
+    if (reminder.wiederholungTage !== undefined) return true
+    return /kontroll|runde|tresterhut|untersto|oberfl|geruch|temperatur|dichte|mostgewicht/i.test(`${reminder.titel} ${reminder.beschreibung}`)
+  }
+
+  private aktuelleBatterie(): number | undefined {
+    return this.sensorVerlauf.at(-1)?.batterie
+      ?? [...this.stand.klima].filter(punkt => punkt.quelle === 'sensor' && punkt.batterie !== undefined).sort((a, b) => a.zeit.localeCompare(b.zeit)).at(-1)?.batterie
+  }
+
+  private renderKlimaKarte(klima: AppDatenstand['klima'][number] | undefined): string {
+    const batterie = this.aktuelleBatterie()
+    return `<h2>Kellerklima</h2><div class="karte klima-karte"><div class="klima-grid"><div class="klima-wert"><small>Temperatur</small><strong>${klima ? `${formatiereZahl(klima.temperatur)} °C` : '–'}</strong><span>${klima ? `${klima.quelle === 'sensor' ? 'Sensor' : 'Manuell'} · ${datumZeitFormat.format(new Date(klima.zeit))}` : 'Noch kein Wert'}</span></div><div class="klima-wert"><small>Feuchte</small><strong>${klima?.feuchte === undefined ? '–' : `${formatiereZahl(klima.feuchte, 0)} %`}</strong><span>${batterie === undefined ? 'Batterie unbekannt' : `Batterie ${formatiereZahl(batterie, 0)} %`}</span></div></div>${this.renderBatteriewarnung()}${this.renderKellerkurve()}</div>`
+  }
+
+  private dichteInOechsle(messung: Messung | undefined): number | undefined {
+    if (!messung || messung.wert === null) return undefined
+    return messung.typ === 'sg' ? oechsleAusSg(messung.wert) : messung.wert
+  }
+
+  private renderChargenZeile(charge: Charge): string {
+    const ampel = ampelFuerCharge(this.stand, charge)
+    const temperatur = this.letzteMessung(charge.id, 'temperatur')
+    const dichten = this.stand.messungen.filter(messung => messung.chargeId === charge.id && DICHTE_KURVEN_TYPEN.includes(messung.typ) && messung.methode !== 'refraktometer').sort((a, b) => a.zeit.localeCompare(b.zeit))
+    const ersteDichte = this.dichteInOechsle(dichten[0])
+    const letzteDichte = this.dichteInOechsle(dichten.at(-1))
+    const delta = ersteDichte !== undefined && letzteDichte !== undefined ? letzteDichte - ersteDichte : undefined
+    return `<button class="chargen-zeile" type="button" data-action="charge" data-id="${html(charge.id)}"><span class="listen-ampel ampel-${ampel.toLowerCase()}" aria-label="${html(AMPEL_LABEL[ampel])}"></span><span class="chargen-zeile-name"><strong>${html(charge.name)}</strong><small>${charge.mengeKg === undefined ? 'Menge offen' : `${formatiereZahl(charge.mengeKg)} kg`}</small></span><span class="chargen-zeile-wert"><strong>${letzteDichte === undefined ? '–' : formatiereZahl(letzteDichte, 0)}</strong><small>°Oe</small></span><span class="chargen-zeile-wert"><strong>${temperatur?.wert === null || temperatur?.wert === undefined ? '–' : formatiereZahl(temperatur.wert)}</strong><small>°C</small></span><span class="chargen-trend">${delta === undefined ? '–' : `${delta <= 0 ? '↓' : '↑'}${formatiereZahl(Math.abs(delta), 0)}`}<small>seit Start</small></span></button>`
+  }
+
+  private renderFaelligeZeile(reminder: Reminder): string {
+    const faellig = new Date(reminder.faellig).getTime() <= Date.now()
+    return `<button class="faellig-zeile" type="button" data-action="reminder-oeffnen" data-id="${html(reminder.id)}"><strong>${faellig ? 'heute' : kurzDatumFormat.format(new Date(reminder.faellig))}</strong><span>${html(reminder.titel)}</span></button>`
+  }
+
   private renderTresterhut(): string {
     return '<div class="tresterhut" aria-hidden="true"><i class="trester-fluessigkeit"></i><i class="trester-kappe"></i><i class="trester-blase blase-1"></i><i class="trester-blase blase-2"></i><i class="trester-blase blase-3"></i></div>'
   }
@@ -354,46 +523,45 @@ export class WeinbegleiterApp {
     return null
   }
 
-  private renderGaerkurve(chargen: Charge[], titel: string): string {
-    const ids = new Set(chargen.map(charge => charge.id))
-    const gaerstarts = new Map(chargen.map(charge => [charge.id, this.stand.ereignisse
-      .filter(ereignis => ereignis.chargeId === charge.id && ereignis.art === 'anstellen')
-      .sort((a, b) => b.zeit.localeCompare(a.zeit))[0]?.zeit ?? charge.startdatum]))
-    const gruppen = new Map<string, number[]>()
-    this.stand.messungen
-      .filter(messung => ids.has(messung.chargeId)
-        && DICHTE_KURVEN_TYPEN.includes(messung.typ)
-        && messung.methode !== 'refraktometer'
-        && new Date(messung.zeit).getTime() >= new Date(gaerstarts.get(messung.chargeId) ?? '').getTime())
-      .forEach(messung => {
-        const sg = this.dichteAlsSg(messung)
-        if (sg !== null) gruppen.set(messung.zeit, [...(gruppen.get(messung.zeit) ?? []), sg])
-      })
-    const punkte = [...gruppen.entries()].map(([zeit, werte]) => ({ zeit, sg: werte.reduce((summe, wert) => summe + wert, 0) / werte.length })).sort((a, b) => a.zeit.localeCompare(b.zeit))
+  private renderGaerkurve(chargen: Charge[], titel: string, untergrenze = Number.NEGATIVE_INFINITY, abGaerstart = true): string {
+    const serien = chargen.map((charge, index) => {
+      const gaerstart = this.stand.ereignisse.filter(ereignis => ereignis.chargeId === charge.id && ereignis.art === 'anstellen').sort((a, b) => b.zeit.localeCompare(a.zeit))[0]?.zeit ?? charge.startdatum
+      const punkte = this.stand.messungen
+        .filter(messung => messung.chargeId === charge.id && DICHTE_KURVEN_TYPEN.includes(messung.typ) && messung.methode !== 'refraktometer' && new Date(messung.zeit).getTime() >= Math.max(abGaerstart ? new Date(gaerstart).getTime() : Number.NEGATIVE_INFINITY, untergrenze))
+        .flatMap(messung => { const sg = this.dichteAlsSg(messung); return sg === null ? [] : [{ zeit: messung.zeit, sg }] })
+        .sort((a, b) => a.zeit.localeCompare(b.zeit))
+      return { charge, punkte, farbe: CHARGEN_FARBEN[index % CHARGEN_FARBEN.length]! }
+    }).filter(serie => serie.punkte.length)
+    const allePunkte = serien.flatMap(serie => serie.punkte)
     const pressFrage = chargen[0] ? pressGate(this.stand, chargen[0]).checks.find(check => check.id === 'press-restzucker')?.frage : undefined
     const pressTreffer = /SG\s*≤\s*([\d,.]+)/.exec(pressFrage ?? '')
     const pressGrenze = Number((pressTreffer?.[1] ?? '').replace(',', '.'))
     if (!Number.isFinite(pressGrenze)) return `<div class="kurve-karte"><div class="kurve-kopf"><h3>${html(titel)}</h3></div><div class="kurve-hinweis">Das Pressfenster konnte nicht aus dem Press-Gate gelesen werden.</div></div>`
     const pressGrenzeText = formatiereZahl(pressGrenze, 3)
     const erklaerung = `Die durchgezogene Linie zeigt deine Spindelwerte. Die gestrichelte Linie zeigt den erwarteten Verlauf. Das grüne Band beginnt bei SG ${pressGrenzeText}. Dort prüfst du das Press-Gate. Wird die gemessene Linie deutlich flacher, prüfst du Temperatur und Hefenährsalz.`
-    if (punkte.length < 2) return `<div class="kurve-karte"><div class="kurve-kopf"><h3>${html(titel)}</h3></div><div class="kurve-hinweis">Für eine Kurve braucht die App mindestens zwei Dichtemessungen seit dem Anstellen.</div>${this.renderErklaerschublade('Worauf du bei der Kurve achtest', erklaerung)}</div>`
+    if (!allePunkte.length) return `<div class="kurve-karte"><div class="kurve-kopf"><h3>${html(titel)}</h3></div><div class="kurve-hinweis">Noch keine Spindelwerte seit dem Anstellen.</div>${this.renderErklaerschublade('Worauf du bei der Kurve achtest', erklaerung)}</div>`
 
-    const breite = 320
-    const oben = 8
-    const unten = 112
-    const startMs = new Date(punkte[0]!.zeit).getTime()
-    const endeMs = Math.max(new Date(punkte.at(-1)!.zeit).getTime(), startMs + 7 * 86_400_000)
-    const maxSg = Math.max(1.09, ...punkte.map(punkt => punkt.sg))
+    const breite = 640
+    const links = 44
+    const rechts = 624
+    const oben = 26
+    const unten = 286
+    const startMs = Math.min(...allePunkte.map(punkt => new Date(punkt.zeit).getTime()))
+    const letzterMs = Math.max(...allePunkte.map(punkt => new Date(punkt.zeit).getTime()))
+    const reminderDatum = this.stand.reminder.filter(reminder => !reminder.erledigt && reminder.regelId === 'PRESS_GATE').sort((a, b) => a.faellig.localeCompare(b.faellig))[0]?.faellig
+    const pressDatumMs = reminderDatum ? new Date(reminderDatum).getTime() : startMs + 6 * 86_400_000
+    const endeMs = Math.max(letzterMs, pressDatumMs, startMs + 7 * 86_400_000)
+    const maxSg = Math.max(1.09, ...allePunkte.map(punkt => punkt.sg))
     const minSg = 0.99
-    const x = (zeit: string) => 6 + ((new Date(zeit).getTime() - startMs) / Math.max(1, endeMs - startMs)) * (breite - 12)
+    const x = (zeit: string | number) => links + (((typeof zeit === 'number' ? zeit : new Date(zeit).getTime()) - startMs) / Math.max(1, endeMs - startMs)) * (rechts - links)
     const y = (sg: number) => oben + ((maxSg - sg) / (maxSg - minSg)) * (unten - oben)
-    const istPfad = punkte.map((punkt, index) => `${index ? 'L' : 'M'}${x(punkt.zeit).toFixed(1)},${y(punkt.sg).toFixed(1)}`).join(' ')
-    const erwartungsEnde = new Date(endeMs).toISOString()
-    const erwartetPfad = `M${x(punkte[0]!.zeit).toFixed(1)},${y(punkte[0]!.sg).toFixed(1)} L${x(erwartungsEnde).toFixed(1)},${y(GRENZEN.gaerendeMaxSg).toFixed(1)}`
+    const startSg = serien.reduce((summe, serie) => summe + serie.punkte[0]!.sg, 0) / serien.length
+    const erwartetPfad = `M${x(startMs).toFixed(1)},${y(startSg).toFixed(1)} L${x(pressDatumMs).toFixed(1)},${y(pressGrenze).toFixed(1)}`
     const pressY = y(pressGrenze)
-    const letzte = punkte.at(-1)!
-    const tabellenText = punkte.map(punkt => `${datumZeitFormat.format(new Date(punkt.zeit))}: SG ${formatiereZahl(punkt.sg, 4)}`).join(' · ')
-    return `<div class="kurve-karte"><div class="kurve-kopf"><h3>${html(titel)}</h3><div class="kurve-jetzt">jetzt <strong>SG ${formatiereZahl(letzte.sg, 4)}</strong></div></div><svg class="gaerkurve" viewBox="0 0 320 132" role="img" aria-label="${html(titel)}. ${html(tabellenText)}"><rect class="pressband" x="0" y="${pressY.toFixed(1)}" width="320" height="${Math.max(0, unten - pressY).toFixed(1)}"></rect><text class="presslabel" x="5" y="${Math.min(unten - 3, pressY + 12).toFixed(1)}">PRESSFENSTER · SG ≤ ${pressGrenzeText}</text><line class="kurvenachse" x1="0" y1="112" x2="320" y2="112"></line><path class="kurve-erwartet" d="${erwartetPfad}"></path><path class="kurve-ist" pathLength="1" d="${istPfad}"></path>${punkte.map(punkt => `<circle class="kurvenpunkt" cx="${x(punkt.zeit).toFixed(1)}" cy="${y(punkt.sg).toFixed(1)}" r="3.5"><title>${datumZeitFormat.format(new Date(punkt.zeit))}: SG ${formatiereZahl(punkt.sg, 4)} (${formatiereZahl(oechsleAusSg(punkt.sg), 0)} °Oe)</title></circle>`).join('')}<text class="achstext" x="4" y="128">${kurzDatumFormat.format(new Date(startMs))}</text><text class="achstext achstext-rechts" x="316" y="128">${kurzDatumFormat.format(new Date(endeMs))}</text></svg>${this.renderErklaerschublade('Worauf du bei der Kurve achtest', `${erklaerung} Messwerte: ${tabellenText}`)}</div>`
+    const tabellenText = serien.map(serie => `${serie.charge.name}: ${serie.punkte.map(punkt => `${datumZeitFormat.format(new Date(punkt.zeit))} SG ${formatiereZahl(punkt.sg, 4)}`).join(', ')}`).join(' · ')
+    const achsen = [90, 70, 50, 30, 10].map(oe => `<line class="klima-raster" x1="${links}" y1="${y(sgAusOechsle(oe)).toFixed(1)}" x2="${rechts}" y2="${y(sgAusOechsle(oe)).toFixed(1)}"></line><text class="achstext" x="6" y="${(y(sgAusOechsle(oe)) + 4).toFixed(1)}">${oe}</text>`).join('')
+    const legende = serien.map(serie => `<span><i style="--serienfarbe:${serie.farbe}"></i>${html(serie.charge.name)}</span>`).join('')
+    return `<div class="kurve-karte kurve-gross"><div class="kurve-kopf"><h3>${html(titel)}</h3><div class="kurven-legende">${legende}<span><i class="erwartung"></i>Erwartung</span></div></div><svg class="gaerkurve" viewBox="0 0 ${breite} 330" preserveAspectRatio="none" role="img" aria-label="${html(titel)}. ${html(tabellenText)}"><rect class="pressband" x="${links}" y="${pressY.toFixed(1)}" width="${rechts - links}" height="${Math.max(0, unten - pressY).toFixed(1)}"></rect>${achsen}<text class="presslabel" x="${links + 6}" y="${Math.min(unten - 4, pressY + 16).toFixed(1)}">PRESSFENSTER · ${datumFormat.format(new Date(pressDatumMs))} · SG ≤ ${pressGrenzeText}</text><line class="kurvenachse" x1="${links}" y1="${unten}" x2="${rechts}" y2="${unten}"></line><path class="kurve-erwartet" d="${erwartetPfad}"></path>${serien.map(serie => { const pfad = serie.punkte.map((punkt, index) => `${index ? 'L' : 'M'}${x(punkt.zeit).toFixed(1)},${y(punkt.sg).toFixed(1)}`).join(' '); return `<path class="kurve-serie" style="--serienfarbe:${serie.farbe}" d="${pfad}"></path>${serie.punkte.map(punkt => `<circle class="kurvenpunkt" style="--serienfarbe:${serie.farbe}" cx="${x(punkt.zeit).toFixed(1)}" cy="${y(punkt.sg).toFixed(1)}" r="4"><title>${html(serie.charge.name)} · ${datumZeitFormat.format(new Date(punkt.zeit))}: SG ${formatiereZahl(punkt.sg, 4)} (${formatiereZahl(oechsleAusSg(punkt.sg), 0)} °Oe)</title></circle>`).join('')}` }).join('')}<text class="achstext" x="${links}" y="318">${kurzDatumFormat.format(new Date(startMs))}</text><text class="achstext achstext-rechts" x="${rechts}" y="318">${kurzDatumFormat.format(new Date(endeMs))}</text></svg>${this.renderErklaerschublade('Worauf du bei der Kurve achtest', `${erklaerung} Messwerte: ${tabellenText}`)}</div>`
   }
 
   private renderBatteriewarnung(): string {
@@ -403,8 +571,10 @@ export class WeinbegleiterApp {
     return `<div class="warnbox batteriewarnung"><strong>Sensorbatterie niedrig:</strong> ${formatiereZahl(batterie, 0)} %. Batterie wechseln, damit die Kellerkurve nicht unbemerkt abbricht.</div>`
   }
 
-  private renderKellerkurve(): string {
-    const punkte = this.sensorVerlauf
+  private renderKellerkurve(nur48Stunden = false, untergrenze?: number): string {
+    const letzterZeitpunkt = this.sensorVerlauf.length ? new Date(this.sensorVerlauf.at(-1)!.zeit).getTime() : 0
+    const grenze = untergrenze ?? (nur48Stunden ? letzterZeitpunkt - 48 * 60 * 60 * 1000 : Number.NEGATIVE_INFINITY)
+    const punkte = this.sensorVerlauf.filter(punkt => new Date(punkt.zeit).getTime() >= grenze)
     if (!punkte.length) return ''
     const breite = 320
     const oben = 12
@@ -427,15 +597,6 @@ export class WeinbegleiterApp {
     return `<div class="kurve-karte klima-kurve"><div class="kurve-kopf"><h3>Kellerklima</h3><div class="kurve-jetzt">zuletzt <strong>${formatiereZahl(letzte.temperatur)} °C</strong></div></div><svg class="gaerkurve" viewBox="0 0 320 132" role="img" aria-label="${html(zusammenfassung)}"><line class="klima-raster" x1="0" y1="12" x2="320" y2="12"></line><line class="klima-raster" x1="0" y1="59" x2="320" y2="59"></line><line class="kurvenachse" x1="0" y1="106" x2="320" y2="106"></line><text class="achstext" x="4" y="9">${formatiereZahl(maxRoh)} °C</text><text class="achstext" x="4" y="103">${formatiereZahl(minRoh)} °C</text><path class="kurve-ist klima-linie" pathLength="1" d="${pfad}"></path>${sichtbarePunkte.map(punkt => `<circle class="kurvenpunkt klima-punkt" cx="${x(punkt.zeit).toFixed(1)}" cy="${y(punkt.temperatur).toFixed(1)}" r="3"><title>${datumZeitFormat.format(new Date(punkt.zeit))}: ${formatiereZahl(punkt.temperatur)} °C${punkt.feuchte === undefined ? '' : ` · ${formatiereZahl(punkt.feuchte, 0)} %`}</title></circle>`).join('')}<text class="achstext" x="4" y="128">${kurzDatumFormat.format(new Date(startMs))}</text><text class="achstext achstext-rechts" x="316" y="128">${kurzDatumFormat.format(new Date(letzterMs))}</text></svg><div class="sr-only">${html(zusammenfassung)}</div></div>`
   }
 
-  private renderChargenKarte(charge: Charge): string {
-    const ampel = ampelFuerCharge(this.stand, charge)
-    const letzteTemp = this.letzteMessung(charge.id, 'temperatur')
-    const letzteDichte = this.letzteMessung(charge.id, 'oechsle') ?? this.letzteMessung(charge.id, 'sg')
-    const elternId = charge.elternChargeId
-    const gaeraktivitaet = this.letzteMessung(charge.id, 'gaeraktivitaet')
-    return `<button class="karte klick chargenkarte" type="button" data-action="charge" data-id="${html(charge.id)}"><div class="charge-kopf"><div><div class="charge-name">${html(charge.name)}</div><div class="charge-meta">${charge.mengeKg === undefined ? 'Menge offen' : `${formatiereZahl(charge.mengeKg)} kg`} · ${html(PHASEN_LABEL[charge.phase])} · Tag ${this.tagDerPhase(charge)}</div></div>${this.renderAmpel(ampel)}</div><div class="chargenwerte"><div><strong>${letzteTemp?.wert == null ? '–' : `${formatiereZahl(letzteTemp.wert)}°`}</strong><span>Temperatur</span></div><div><strong>${letzteDichte?.wert == null ? '–' : `${zahlFormat.format(letzteDichte.wert)}`}</strong><span>${letzteDichte?.typ === 'sg' ? 'SG' : '°Oe'}</span></div><div><strong>${html(gaeraktivitaet?.text ?? '–')}</strong><span>Gärung</span></div></div>${elternId ? `<div class="abstammung">Abstammung: ${html(this.stand.chargen.find(c => c.id === elternId)?.name ?? elternId)}</div>` : ''}</button>`
-  }
-
   private renderAmpel(ampel: Ampel): string {
     return `<span class="ampel ampel-${ampel.toLowerCase()}"><i class="ampel-punkt"></i>${html(AMPEL_LABEL[ampel])}</span>`
   }
@@ -445,6 +606,175 @@ export class WeinbegleiterApp {
     const fuehrung = PHASEN_FUEHRUNG[charge.phase]
     const naechstePhase = PHASEN_REIHE[phaseIndex + 1]
     return `<div class="zeitstrahl" aria-label="Phasen-Zeitstrahl, aktuelle Phase ${html(PHASEN_LABEL[charge.phase])}">${PHASEN_REIHE.map((phase, index) => `<div class="zeitphase ${index < phaseIndex ? 'abgeschlossen' : ''} ${index === phaseIndex ? 'aktuell' : ''} ${phase.includes('GATE') ? 'gate' : ''}" aria-label="${html(PHASEN_LABEL[phase])}: ${index < phaseIndex ? 'abgeschlossen' : index === phaseIndex ? 'aktuell' : 'ausstehend'}"><i aria-hidden="true"></i></div>`).join('')}</div><div class="zeitstrahl-legende" aria-hidden="true">${ZEITSTRAHL_MARKEN.map(marke => `<span class="${marke.phase === charge.phase ? 'aktuell' : ''}">${html(marke.label)}</span>`).join('')}</div><p class="phasen-satz"><strong>${html(PHASEN_LABEL[charge.phase])}, Tag ${this.tagDerPhase(charge)}.</strong> ${html(fuehrung.beschreibung)} Deine Aufgabe: ${html(fuehrung.aufgabe)}</p>${this.renderErklaerschublade('Was als Nächstes kommt', naechstePhase ? `${PHASEN_LABEL[naechstePhase]}: ${PHASEN_FUEHRUNG[naechstePhase].beschreibung} ${PHASEN_FUEHRUNG[naechstePhase].aufgabe}` : 'Dieser Jahrgang hat die letzte Phase erreicht.')}`
+  }
+
+  private bereiteRundeVor(startChargeId?: string): void {
+    const ids = this.aktiveChargen().map(charge => charge.id)
+    const index = startChargeId ? ids.indexOf(startChargeId) : -1
+    this.ui.ansicht = 'runde'
+    this.ui.rundenChargeIds = ids
+    this.ui.rundenIndex = index >= 0 ? index : 0
+    this.ui.rundenZeit = datetimeLocalWert()
+    this.ui.rundenEntwuerfe = {}
+    this.ui.rundenErgebnisse = []
+    this.ui.rundenGespeichert = null
+    this.ui.rundenUndoBis = null
+    this.ui.rundenAbgeschlossen = false
+  }
+
+  private starteRunde(startChargeId?: string): void {
+    this.bereiteRundeVor(startChargeId)
+    this.schreibeHistory()
+    this.render()
+  }
+
+  private rundenCharge(): Charge | undefined {
+    const chargeId = this.ui.rundenChargeIds[this.ui.rundenIndex]
+    return this.stand.chargen.find(charge => charge.id === chargeId && !charge.archiviert)
+  }
+
+  private rundenEntwurf(chargeId: string): RundenEntwurf {
+    return this.ui.rundenEntwuerfe[chargeId] ?? { messwerte: {}, untergestossen: false }
+  }
+
+  private rundenDefinitionen(charge: Charge): { primaer: MessDefinition[]; weitere: MessDefinition[] } {
+    const primaerTypen = RUNDEN_PRIMAER[charge.phase] ?? PHASEN_MESS_TYPEN[charge.phase] ?? ['temperatur', 'geruch']
+    const primaer = primaerTypen.map(typ => MESS_DEFINITIONEN.find(definition => definition.typ === typ)).filter((definition): definition is MessDefinition => Boolean(definition))
+    return { primaer, weitere: MESS_DEFINITIONEN.filter(definition => !primaerTypen.includes(definition.typ)) }
+  }
+
+  private renderRunde(): string {
+    if (this.ui.rundenAbgeschlossen) return this.renderRundenZusammenfassung()
+    const charge = this.rundenCharge()
+    if (!charge) return `<section class="runde-leer"><h1>Keine aktive Charge</h1><button class="btn" type="button" data-action="runde-abbrechen">Zurück zu Heute</button></section>`
+    const { primaer, weitere } = this.rundenDefinitionen(charge)
+    const gespeichert = this.ui.rundenErgebnisse.find(ergebnis => ergebnis.chargeId === charge.id) ?? null
+    const ampel = ampelFuerCharge(this.stand, charge)
+    const entwurf = this.rundenEntwurf(charge.id)
+    const naechste = this.stand.chargen.find(eintrag => eintrag.id === this.ui.rundenChargeIds[this.ui.rundenIndex + 1])
+    const nichtAbgeglichen = navigator.onLine === false || this.syncFehler
+    return `<section class="runde-screen" aria-labelledby="runde-titel"><header class="runde-kopf"><label class="runden-zeit" for="runden-zeit"><strong id="runde-titel">Runde</strong><input id="runden-zeit" type="datetime-local" value="${html(this.ui.rundenZeit)}" data-action="runden-zeit" aria-label="Zeitpunkt der gesamten Runde" ${this.ui.rundenErgebnisse.length ? 'disabled title="Nach der ersten Speicherung gilt dieser Zeitpunkt für die gesamte Runde."' : ''}></label><div class="runden-punkte" aria-label="Gefäß ${this.ui.rundenIndex + 1} von ${this.ui.rundenChargeIds.length}">${this.ui.rundenChargeIds.map((chargeId, index) => `<i class="${this.ui.rundenErgebnisse.some(ergebnis => ergebnis.chargeId === chargeId) ? 'ok' : ''} ${index === this.ui.rundenIndex ? 'aktiv' : ''}"></i>`).join('')}</div><span class="runden-abgleich ${nichtAbgeglichen ? 'offen' : ''}"><i></i>${this.syncLaeuft ? 'Abgleich läuft' : nichtAbgeglichen ? 'Nicht abgeglichen' : 'Lokal bereit'}</span><button class="runde-abbrechen" type="button" data-action="runde-abbrechen">Abbrechen</button></header><div class="runde-inhalt" data-runde-wischbereich>
+      <button class="runde-pfeil runde-pfeil-links" type="button" data-action="runde-wechsel" data-richtung="-1" aria-label="Vorheriges Gefäß" ${this.ui.rundenIndex === 0 ? 'disabled' : ''}>‹</button>
+      <div class="runde-links"><div class="runde-gefaess"><div class="runde-nummer">${this.ui.rundenIndex + 1}<span>von ${this.ui.rundenChargeIds.length}</span></div><h1>${html(charge.name)}</h1><p>${charge.mengeKg === undefined ? 'Menge offen' : `${formatiereZahl(charge.mengeKg)} kg`} · ${charge.erwarteteWeinLiter === undefined ? 'Ausbeute offen' : `${formatiereZahl(charge.erwarteteWeinLiter)} L erwartet`} · ${html(PHASEN_LABEL[charge.phase])}</p>${this.renderAmpel(ampel)}</div>${this.renderRundenZuletzt(charge, primaer)}<p class="wisch-hinweis">Wischen oder Pfeile wechseln das Gefäß. Ein Feld reagiert erst bei einer deutlichen Wischstrecke.</p></div>
+      <div class="runde-rechts">${gespeichert ? this.renderRundenBefund(charge, gespeichert, naechste) : `<form id="runde-form"><div class="runden-felder">${primaer.map(definition => this.renderRundenFeld(charge, definition, entwurf)).join('')}</div><details class="runden-weitere"><summary><span aria-hidden="true">›</span>Weitere Messgrößen</summary><div class="runden-felder">${weitere.map(definition => this.renderRundenFeld(charge, definition, entwurf)).join('')}</div></details>${['AKTIVE_GAERUNG', 'PRESS_GATE'].includes(charge.phase) && charge.typ === 'maische' ? `<label class="unterstossen"><input type="checkbox" name="untergestossen" data-runde-untergestossen ${entwurf.untergestossen ? 'checked' : ''}><span>Untergestoßen</span><small>legt ein Ereignis mit dem Rundenzeitpunkt an</small></label>` : ''}<div id="erfassen-fehler" role="alert"></div><button class="btn btn-haupt runde-speichern" type="submit">Ausgefüllte Werte speichern</button><p class="hint">Leere Felder erzeugen keinen Datensatz. Alle Eingaben verwenden den Zeitpunkt oben.</p></form>`}</div>
+      <button class="runde-pfeil runde-pfeil-rechts" type="button" data-action="runde-wechsel" data-richtung="1" aria-label="Nächstes Gefäß" ${this.ui.rundenIndex >= this.ui.rundenChargeIds.length - 1 ? 'disabled' : ''}>›</button>
+    </div></section>`
+  }
+
+  private renderRundenFeld(charge: Charge, definition: MessDefinition, entwurf: RundenEntwurf): string {
+    const wert = entwurf.messwerte[definition.typ] ?? { eingabe: '', methode: 'spindel' as const }
+    const feldId = `runde-${charge.id}-${definition.typ}`
+    const feld = definition.art === 'zahl'
+      ? `<div class="runden-eingabeblock"><input id="${html(feldId)}" name="runde-${definition.typ}" data-runde-eingabe data-mess-typ="${definition.typ}" inputmode="decimal" value="${html(wert.eingabe)}"><span>${html(definition.einheit)}</span></div>`
+      : `<select id="${html(feldId)}" name="runde-${definition.typ}" data-runde-eingabe data-mess-typ="${definition.typ}"><option value="">Nicht erfasst</option>${(definition.optionen ?? []).map(option => `<option value="${html(option)}" ${option === wert.eingabe ? 'selected' : ''}>${html(option)}</option>`).join('')}</select>`
+    const methode = DICHTE_TYPEN.includes(definition.typ) ? `<label class="runden-methode" for="runde-methode-${definition.typ}"><span>Messmethode</span><select id="runde-methode-${definition.typ}" name="methode-${definition.typ}" data-runde-methode data-mess-typ="${definition.typ}"><option value="spindel" ${wert.methode === 'spindel' ? 'selected' : ''}>Spindel</option><option value="refraktometer" ${wert.methode === 'refraktometer' ? 'selected' : ''}>Refraktometer</option><option value="sonstige" ${wert.methode === 'sonstige' ? 'selected' : ''}>Sonstige</option></select></label>` : ''
+    const label = definition.typ === 'volumen' ? 'Füllstand' : definition.label
+    return `<div class="runden-feld"><div class="runden-feld-label"><label for="${html(feldId)}">${html(label)}</label>${definition.hinweis ? `<small>${html(definition.hinweis)}</small>` : ''}</div>${feld}${methode}</div>`
+  }
+
+  private renderRundenZuletzt(charge: Charge, definitionen: MessDefinition[]): string {
+    const letzteJeTyp = definitionen.map(definition => ({ definition, reihe: this.stand.messungen.filter(messung => messung.chargeId === charge.id && messung.typ === definition.typ).sort((a, b) => b.zeit.localeCompare(a.zeit)) }))
+    const letzteZeit = letzteJeTyp.map(eintrag => eintrag.reihe[0]?.zeit).filter((zeit): zeit is string => Boolean(zeit)).sort().at(-1)
+    const zeilen = letzteJeTyp.map(({ definition, reihe }) => {
+      const letzte = reihe[0]
+      const davor = reihe[1]
+      const anzeige = !letzte ? '–' : letzte.wert === null ? html(letzte.text ?? '–') : `${formatiereZahl(letzte.wert, definition.typ === 'sg' ? 4 : 1)} ${html(definition.einheit)}`
+      const trend = letzte?.wert !== null && letzte?.wert !== undefined && davor?.wert !== null && davor?.wert !== undefined
+        ? `<span class="runden-trend">${letzte.wert >= davor.wert ? '↑' : '↓'} von ${formatiereZahl(davor.wert, definition.typ === 'sg' ? 4 : 1)}</span>`
+        : ''
+      return `<div><span>${html(definition.typ === 'volumen' ? 'Füllstand' : definition.label)}</span><strong>${anzeige}${trend}</strong></div>`
+    }).join('')
+    return `<section class="runden-zuletzt"><h2>Zuletzt · ${letzteZeit ? datumZeitFormat.format(new Date(letzteZeit)) : 'noch nie'}</h2>${zeilen}</section>`
+  }
+
+  private renderRundenBefund(charge: Charge, gespeichert: RundenSpeicherung, naechste: Charge | undefined): string {
+    const ampel = ampelFuerCharge(this.stand, charge)
+    const befund = befundeFuerCharge(this.stand, charge)[0]
+    const dichten = this.stand.messungen.filter(messung => messung.chargeId === charge.id && DICHTE_KURVEN_TYPEN.includes(messung.typ) && messung.methode !== 'refraktometer').sort((a, b) => b.zeit.localeCompare(a.zeit))
+    const letzte = this.dichteInOechsle(dichten[0])
+    const davor = this.dichteInOechsle(dichten[1])
+    const normalText = letzte !== undefined && davor !== undefined
+      ? `Mostgewicht seit dem letzten Wert um ${formatiereZahl(Math.abs(letzte - davor), 0)} °Oe ${letzte <= davor ? 'gefallen' : 'gestiegen'}. Die Regelengine meldet keine Abweichung.`
+      : 'Die Regelengine meldet für die gespeicherten Werte keine Abweichung.'
+    const istLetzteSpeicherung = this.ui.rundenGespeichert === gespeichert
+    const sekunden = !istLetzteSpeicherung || this.ui.rundenUndoBis === null ? 0 : Math.max(0, Math.ceil((this.ui.rundenUndoBis - Date.now()) / 1000))
+    return `<div class="runden-nachher"><div class="runden-befund befund-${ampel.toLowerCase()}" role="status"><div>${this.renderAmpel(ampel)}<strong>Gespeichert</strong></div><p>${this.fachtext(befund?.text ?? normalText)}</p>${befund?.massnahme ? `<small>${this.fachtext(befund.massnahme)}</small>` : ''}</div><button class="btn btn-haupt runde-weiter" type="button" data-action="runde-weiter">${naechste ? `Weiter → ${html(naechste.name)}` : 'Weiter → Zusammenfassung'}</button>${sekunden > 0 ? `<button class="runde-undo" type="button" data-action="runde-undo">Letzte Eingabe zurücknehmen <strong>· ${sekunden} s</strong></button>` : istLetzteSpeicherung ? '<p class="hint">Die Rücknahmefrist ist abgelaufen.</p>' : ''}<p class="hint">${gespeichert.typen.length ? gespeichert.typen.map(typ => this.messLabel(typ)).join(', ') : 'Unterstoßen'} · ${datumZeitFormat.format(new Date(gespeichert.zeit))}</p></div>`
+  }
+
+  private renderRundenZusammenfassung(): string {
+    const offene = this.stand.reminder.filter(reminder => !reminder.erledigt).sort((a, b) => a.faellig.localeCompare(b.faellig))
+    return `<section class="runden-zusammenfassung" aria-labelledby="runden-abschluss"><div><span class="abschluss-merker">Runde abgeschlossen</span><h1 id="runden-abschluss">${this.ui.rundenErgebnisse.length} Gefäße erfasst</h1><p>${datumZeitFormat.format(new Date(isoAusDatetimeLocal(this.ui.rundenZeit)))}</p></div><div class="abschluss-grid"><div class="karte"><h2>Erfasste Werte</h2>${this.ui.rundenErgebnisse.map(ergebnis => { const charge = this.stand.chargen.find(eintrag => eintrag.id === ergebnis.chargeId); return `<div class="abschluss-zeile"><strong>${html(charge?.name ?? ergebnis.chargeId)}</strong><span>${ergebnis.typen.map(typ => this.messLabel(typ)).join(', ')}${ergebnis.ereignisIds.length ? `${ergebnis.typen.length ? ' · ' : ''}Untergestoßen` : ''}</span></div>` }).join('') || '<div class="leer">Keine Werte gespeichert.</div>'}</div><div class="karte"><h2>Ampelwechsel</h2>${this.ui.rundenErgebnisse.filter(ergebnis => ergebnis.ampelVorher !== ergebnis.ampelNachher).map(ergebnis => `<div class="abschluss-zeile"><strong>${html(this.stand.chargen.find(charge => charge.id === ergebnis.chargeId)?.name ?? ergebnis.chargeId)}</strong><span>${html(AMPEL_LABEL[ergebnis.ampelVorher])} → ${html(AMPEL_LABEL[ergebnis.ampelNachher])}</span></div>`).join('') || '<div class="leer">Keine Ampel hat gewechselt.</div>'}</div><div class="karte"><h2>Fällig</h2>${offene.slice(0, 5).map(reminder => `<div class="abschluss-zeile"><strong>${datumFormat.format(new Date(reminder.faellig))}</strong><span>${html(reminder.titel)}</span></div>`).join('') || '<div class="leer">Nichts offen.</div>'}</div></div><button class="btn btn-haupt" type="button" data-action="runde-beenden">Zu Heute</button></section>`
+  }
+
+  private renderDesktopSidebar(): string {
+    const nav: Array<{ ansicht: Ansicht; label: string; bild: Parameters<typeof icon>[0] }> = [
+      { ansicht: 'heute', label: 'Heute', bild: 'traube' },
+      { ansicht: 'runde', label: 'Runde', bild: 'runde' },
+      { ansicht: 'journal', label: 'Journal', bild: 'journal' },
+      { ansicht: 'termine', label: 'Termine', bild: 'kalender' },
+      { ansicht: 'wiki', label: 'Wiki', bild: 'buch' },
+      { ansicht: 'mehr', label: 'Einstellungen', bild: 'mehr' },
+    ]
+    const letzterAbgleich = typeof this.stand.appMeta.letzterAbgleich === 'string' ? this.stand.appMeta.letzterAbgleich : null
+    return `<aside class="desktop-seite"><div class="desktop-logo"><span>${icon('traube')}</span><div><strong>Weinbegleiter</strong><small>Jahrgang ${this.stand.jahrgang} · Rotwein</small></div></div><nav aria-label="Hauptnavigation">${nav.map(eintrag => `<button class="desktop-nav-knopf ${this.hauptAnsicht() === eintrag.ansicht ? 'aktiv' : ''}" type="button" data-action="${eintrag.ansicht === 'runde' ? 'runde-start' : 'nav'}" data-view="${eintrag.ansicht}" ${this.hauptAnsicht() === eintrag.ansicht ? 'aria-current="page"' : ''}>${icon(eintrag.bild)}<span>${eintrag.label}</span></button>`).join('')}</nav><h2>Gefäße</h2><div class="desktop-gefaesse">${this.aktiveChargen().map(charge => { const ampel = ampelFuerCharge(this.stand, charge); const dichte = this.dichteInOechsle(this.letzteMessung(charge.id, 'oechsle') ?? this.letzteMessung(charge.id, 'sg')); return `<button class="desktop-gefaess ${charge.id === this.ui.chargeId ? 'aktiv' : ''}" type="button" data-action="desktop-charge" data-id="${html(charge.id)}"><span class="listen-ampel ampel-${ampel.toLowerCase()}"></span><strong>${html(charge.name)}</strong><small>${dichte === undefined ? '–' : `${formatiereZahl(dichte, 0)} °Oe`}</small></button>` }).join('')}</div><div class="desktop-fassung"><span>Abgleich ${letzterAbgleich ? datumZeitFormat.format(new Date(letzterAbgleich)) : 'noch nie'}</span><strong>Fassung vom ${BUILD_ZEIT_FORMAT.format(new Date(__BUILD_TIMESTAMP__))} (${html(__BUILD_COMMIT__)})</strong></div></aside>`
+  }
+
+  private renderDesktopMitte(): string {
+    const faellige = this.stand.reminder.filter(reminder => !reminder.erledigt && new Date(reminder.faellig).getTime() <= Date.now())
+    const klima = [...this.stand.klima].sort((a, b) => b.zeit.localeCompare(a.zeit))[0]
+    const charge = this.aktuelleCharge() ?? this.aktiveChargen()[0]
+    return `<section class="desktop-dashboard" aria-labelledby="desktop-titel"><h1 class="sr-only" id="desktop-titel">Schreibtisch</h1>${this.renderStatusband(faellige.length, klima)}${this.renderDesktopVerlauf()}<div class="desktop-unten"><div>${this.renderKellerkurve(true)}</div>${charge ? `<div class="karte desktop-phase"><h3>Phase · ${html(charge.name)}</h3>${this.renderZeitstrahl(charge)}</div>` : ''}</div></section>`
+  }
+
+  private renderDesktopVerlauf(): string {
+    const kurven: Array<[DesktopKurveTyp, string]> = [['gaerung', 'Gärverlauf'], ['temperatur', 'Temperatur'], ['kellerklima', 'Kellerklima']]
+    const zeitraeume: Array<[DesktopZeitraum, string]> = [['sieben-tage', '7 Tage'], ['gaerung', 'Gärung'], ['alles', 'Alles']]
+    const inhalt = this.ui.desktopKurveTyp === 'gaerung'
+      ? this.renderGaerkurve(this.aktiveChargen(), 'Verlauf', this.desktopZeitGrenze(), this.ui.desktopZeitraum === 'gaerung')
+      : this.ui.desktopKurveTyp === 'temperatur'
+        ? this.renderTemperaturKurve()
+        : this.renderKellerkurve(false, this.desktopZeitGrenze())
+    return `<div class="desktop-verlauf"><div class="desktop-verlauf-kopf"><h2>Verlauf</h2><div class="umschalter" role="group" aria-label="Kurvenart">${kurven.map(([wert, label]) => `<button class="${wert === this.ui.desktopKurveTyp ? 'aktiv' : ''}" type="button" data-action="desktop-kurve" data-kurve="${wert}">${label}</button>`).join('')}</div><div class="umschalter" role="group" aria-label="Zeitraum">${zeitraeume.map(([wert, label]) => `<button class="${wert === this.ui.desktopZeitraum ? 'aktiv' : ''}" type="button" data-action="desktop-zeitraum" data-zeitraum="${wert}">${label}</button>`).join('')}</div></div>${inhalt}</div>`
+  }
+
+  private desktopZeitGrenze(): number {
+    if (this.ui.desktopZeitraum === 'alles') return Number.NEGATIVE_INFINITY
+    if (this.ui.desktopZeitraum === 'sieben-tage') return Date.now() - 7 * 86_400_000
+    const starts = this.aktiveChargen().map(charge => this.stand.ereignisse.filter(ereignis => ereignis.chargeId === charge.id && ereignis.art === 'anstellen').sort((a, b) => a.zeit.localeCompare(b.zeit))[0]?.zeit ?? charge.phaseSeit ?? charge.startdatum)
+    return Math.min(...starts.map(zeit => new Date(zeit).getTime()))
+  }
+
+  private renderTemperaturKurve(): string {
+    const grenze = this.desktopZeitGrenze()
+    const serien = this.aktiveChargen().map((charge, index) => ({ charge, farbe: CHARGEN_FARBEN[index % CHARGEN_FARBEN.length]!, punkte: this.stand.messungen.filter(messung => messung.chargeId === charge.id && messung.typ === 'temperatur' && messung.wert !== null && new Date(messung.zeit).getTime() >= grenze).sort((a, b) => a.zeit.localeCompare(b.zeit)) })).filter(serie => serie.punkte.length)
+    const punkte = serien.flatMap(serie => serie.punkte)
+    if (!punkte.length) return '<div class="kurve-karte"><div class="kurve-hinweis">Im gewählten Zeitraum liegen keine Temperaturmessungen vor.</div></div>'
+    const start = Math.min(...punkte.map(punkt => new Date(punkt.zeit).getTime()))
+    const ende = Math.max(start + 60 * 60 * 1000, ...punkte.map(punkt => new Date(punkt.zeit).getTime()))
+    const werte = punkte.map(punkt => punkt.wert!)
+    const min = Math.min(...werte) - 1
+    const max = Math.max(...werte) + 1
+    const x = (zeit: string) => 44 + ((new Date(zeit).getTime() - start) / Math.max(1, ende - start)) * 580
+    const y = (wert: number) => 26 + ((max - wert) / Math.max(1, max - min)) * 260
+    const legende = serien.map(serie => `<span><i style="--serienfarbe:${serie.farbe}"></i>${html(serie.charge.name)}</span>`).join('')
+    return `<div class="kurve-karte kurve-gross"><div class="kurven-legende">${legende}</div><svg class="gaerkurve" viewBox="0 0 640 330" preserveAspectRatio="none" role="img" aria-label="Temperaturverlauf aller Chargen"><line class="kurvenachse" x1="44" y1="286" x2="624" y2="286"></line><text class="achstext" x="4" y="30">${formatiereZahl(max)} °C</text><text class="achstext" x="4" y="286">${formatiereZahl(min)} °C</text>${serien.map(serie => { const pfad = serie.punkte.map((punkt, index) => `${index ? 'L' : 'M'}${x(punkt.zeit).toFixed(1)},${y(punkt.wert!).toFixed(1)}`).join(' '); return `<path class="kurve-serie" style="--serienfarbe:${serie.farbe}" d="${pfad}"></path>${serie.punkte.map(punkt => `<circle class="kurvenpunkt" style="--serienfarbe:${serie.farbe}" cx="${x(punkt.zeit).toFixed(1)}" cy="${y(punkt.wert!).toFixed(1)}" r="4"><title>${html(serie.charge.name)} · ${datumZeitFormat.format(new Date(punkt.zeit))}: ${formatiereZahl(punkt.wert!)} °C</title></circle>`).join('')}` }).join('')}<text class="achstext" x="44" y="318">${kurzDatumFormat.format(new Date(start))}</text><text class="achstext achstext-rechts" x="624" y="318">${kurzDatumFormat.format(new Date(ende))}</text></svg></div>`
+  }
+
+  private renderDesktopDetail(): string {
+    const charge = this.aktuelleCharge() ?? this.aktiveChargen()[0]
+    if (!charge) return '<aside class="desktop-detail"><div class="leer">Keine aktive Charge.</div></aside>'
+    const messungen = this.stand.messungen.filter(messung => messung.chargeId === charge.id).sort((a, b) => b.zeit.localeCompare(a.zeit))
+    const ereignisse = this.stand.ereignisse.filter(ereignis => ereignis.chargeId === charge.id).sort((a, b) => b.zeit.localeCompare(a.zeit))
+    const ampel = ampelFuerCharge(this.stand, charge)
+    return `<aside class="desktop-detail"><div class="desktop-detail-kopf"><div><h2>${html(charge.name)}</h2>${this.renderAmpel(ampel)}</div><button class="btn btn-klein" type="button" data-action="erfassen">Erfassen</button></div><p>${charge.mengeKg === undefined ? 'Menge offen' : `${formatiereZahl(charge.mengeKg)} kg`} · ${charge.erwarteteWeinLiter === undefined ? 'Ausbeute offen' : `${formatiereZahl(charge.erwarteteWeinLiter)} L erwartet`} · ${html(PHASEN_LABEL[charge.phase])}</p><h3>Messungen</h3><div class="desktop-tabelle-wrap"><table class="desktop-tabelle"><thead><tr><th>Zeit</th><th>Größe</th><th>Wert</th></tr></thead><tbody>${messungen.map(messung => `<tr class="mess-tabellenzeile" data-action="messung-bearbeiten" data-id="${html(messung.id)}" tabindex="0"><td>${datumZeitFormat.format(new Date(messung.zeit))}</td><td>${html(this.messLabel(messung.typ))}</td><td>${messung.wert === null ? html(messung.text ?? '–') : `${zahlFormat.format(messung.wert)} ${html(this.messEinheit(messung.typ))}`}</td></tr>`).join('')}</tbody></table></div><h3>Ereignisse</h3><div class="desktop-ereignisse">${ereignisse.map(ereignis => `<button type="button" data-action="ereignis-bearbeiten" data-id="${html(ereignis.id)}"><strong>${html(EREIGNIS_LABEL[ereignis.art])}${ereignis.mengeWert === undefined ? '' : ` · ${zahlFormat.format(ereignis.mengeWert)} ${html(ereignis.mengeEinheit)}`}</strong><small>${datumZeitFormat.format(new Date(ereignis.zeit))} · ${html(ereignis.begruendung)}</small></button>`).join('') || '<div class="leer">Noch keine Ereignisse.</div>'}</div></aside>`
+  }
+
+  private renderJournal(): string {
+    const eintraege = [
+      ...this.stand.messungen.map(messung => ({ zeit: messung.zeit, art: 'messung' as const, id: messung.id, chargeId: messung.chargeId, titel: this.messLabel(messung.typ), text: messung.wert === null ? messung.text ?? '–' : `${zahlFormat.format(messung.wert)} ${this.messEinheit(messung.typ)}` })),
+      ...this.stand.ereignisse.map(ereignis => ({ zeit: ereignis.zeit, art: 'ereignis' as const, id: ereignis.id, chargeId: ereignis.chargeId, titel: EREIGNIS_LABEL[ereignis.art], text: ereignis.begruendung })),
+    ].sort((a, b) => b.zeit.localeCompare(a.zeit))
+    return `<section class="seite journal" aria-labelledby="journal-titel"><h1 class="seiten-titel" id="journal-titel">Journal</h1><div class="karte protokoll-liste">${eintraege.map(eintrag => `<button class="protokoll-eintrag" type="button" data-action="${eintrag.art === 'messung' ? 'messung-bearbeiten' : 'ereignis-bearbeiten'}" data-id="${html(eintrag.id)}"><span>${datumZeitFormat.format(new Date(eintrag.zeit))} · ${html(this.stand.chargen.find(charge => charge.id === eintrag.chargeId)?.name ?? eintrag.chargeId)}</span><b>${html(eintrag.titel)} · ${html(eintrag.text)}</b><small>Antippen zum Bearbeiten</small></button>`).join('') || '<div class="leer">Noch keine Einträge.</div>'}</div></section>`
   }
 
   private renderCharge(): string {
@@ -639,7 +969,122 @@ export class WeinbegleiterApp {
     const phaseIndex = PHASEN_REIHE.indexOf(charge.phase)
     const naechstePhase = PHASEN_REIHE[phaseIndex + 1]
     const chargeGesperrt = ampelFuerCharge(this.stand, charge) === 'RED'
-    return `<section class="seite" aria-labelledby="gate-titel"><button class="zurueck" type="button" data-action="nav" data-view="charge">${icon('pfeil')}${html(charge.name)}</button><div class="gate-kopf"><h1 class="seiten-titel" id="gate-titel">${html(gate.titel)}</h1>${this.renderAmpel(gate.freigegeben && !chargeGesperrt ? 'GREEN' : 'RED')}</div><div class="hint">Alle Prüfungen müssen erfüllt sein. Unbekannt blockiert wie nicht erfüllt, wird aber grau dargestellt.</div><div class="karte">${gate.checks.map(check => `<div class="check"><div class="check-status ${check.erfuellt === true ? 'check-ja' : check.erfuellt === false ? 'check-nein' : 'check-unbekannt'}" aria-label="${check.erfuellt === true ? 'Erfüllt' : check.erfuellt === false ? 'Nicht erfüllt' : 'Unbekannt'}">${check.erfuellt === true ? '✓' : check.erfuellt === false ? '×' : '?'}</div><div><div class="check-frage">${this.fachtext(check.frage)}</div><div class="check-grund">${this.fachtext(check.begruendung)}</div></div></div>`).join('')}</div>${gate.freigegeben && !chargeGesperrt ? '<div class="erfolgbox"><strong>Gate freigegeben.</strong> Alle Prüfungen sind erfüllt.</div>' : `<div class="fehlerbox"><strong>Gate nicht freigegeben.</strong><ul>${chargeGesperrt ? '<li>Die Regelengine hat die Charge rot gesperrt.</li>' : gate.blocker.map(blocker => `<li>${this.fachtext(blocker)}</li>`).join('')}</ul></div>`}<button class="btn btn-haupt" type="button" data-action="phase-weiter" ${gate.freigegeben && !chargeGesperrt && naechstePhase ? '' : 'disabled'}>${naechstePhase ? `Weiter zu ${html(PHASEN_LABEL[naechstePhase])}` : 'Keine weitere Phase'}</button><button class="btn" type="button" data-action="gate-reminder">Erinnerung zur erneuten Prüfung anlegen</button></section>`
+    if (gate.freigegeben && !chargeGesperrt) {
+      return `<section class="seite gate-fluss" aria-labelledby="gate-titel"><button class="zurueck" type="button" data-action="nav" data-view="charge">${icon('pfeil')}${html(charge.name)}</button><div class="gate-kopf"><div><span class="gate-schritt">Prüfungen abgeschlossen</span><h1 class="seiten-titel" id="gate-titel">${html(gate.titel)}</h1></div>${this.renderAmpel('GREEN')}</div><div class="erfolgbox"><strong>Alle ${gate.checks.length} Prüfungen sind erfüllt.</strong> Die Handlung ist freigegeben.</div>${gate.gate === 'PRESS_GATE' ? this.renderPressTeilung(charge) : `<div class="gate-handlung karte"><h2>Handlung</h2><p>${naechstePhase ? `Die Charge kann jetzt in die Phase ${html(PHASEN_LABEL[naechstePhase])} wechseln.` : 'Keine weitere Phase vorhanden.'}</p><button class="btn btn-haupt" type="button" data-action="phase-weiter" ${naechstePhase ? '' : 'disabled'}>${naechstePhase ? `Weiter zu ${html(PHASEN_LABEL[naechstePhase])}` : 'Keine weitere Phase'}</button></div>`}</section>`
+    }
+    const index = Math.min(Math.max(0, this.ui.gateCheckIndex), Math.max(0, gate.checks.length - 1))
+    const check = gate.checks[index]!
+    const status = chargeGesperrt ? 'Charge gesperrt' : check.erfuellt === true ? 'Erfüllt' : check.erfuellt === false ? 'Noch nicht erfüllt' : 'Noch offen'
+    return `<section class="seite gate-fluss" aria-labelledby="gate-titel"><button class="zurueck" type="button" data-action="nav" data-view="charge">${icon('pfeil')}${html(charge.name)}</button><div class="gate-kopf"><div><span class="gate-schritt">Prüfung ${index + 1} von ${gate.checks.length}</span><h1 class="seiten-titel" id="gate-titel">${html(gate.titel)}</h1></div>${this.renderAmpel(chargeGesperrt ? 'RED' : 'YELLOW')}</div><div class="gate-fortschritt" aria-hidden="true">${gate.checks.map((eintrag, nummer) => `<i class="${eintrag.erfuellt === true ? 'ok' : ''} ${nummer === index ? 'aktiv' : ''}"></i>`).join('')}</div><article class="gate-frage karte" data-gate-open><span class="gate-status ${check.erfuellt === null ? 'unbekannt' : check.erfuellt ? 'erfuellt' : 'offen'}">${html(status)}</span><h2>${this.fachtext(check.frage)}</h2><p>${this.fachtext(check.begruendung)}</p>${chargeGesperrt ? '<div class="warnbox">Die Regelengine hat diese Charge gesperrt. Das Gate bleibt zu.</div>' : this.renderGateMessForm(check.id, check.erfuellt)}</article><div class="gate-navigation"><button class="btn" type="button" data-action="gate-zurueck" ${index === 0 ? 'disabled' : ''}>Zurück</button><button class="btn" type="button" data-action="gate-weiter" ${index >= gate.checks.length - 1 ? 'disabled' : ''}>Nächste Prüfung</button></div><button class="btn" type="button" data-action="gate-reminder">Erinnerung zur erneuten Prüfung anlegen</button></section>`
+  }
+
+  private gateMessTyp(checkId: string): MessTyp | null {
+    if (['press-dichte', 'press-restzucker', 'gaerende-zwei-messungen', 'gaerende-konstant', 'gaerende-trocken', 'stab-restzucker'].includes(checkId)) return 'oechsle'
+    if (checkId === 'press-geruch') return 'geruch'
+    if (checkId === 'stab-ph') return 'ph'
+    if (checkId === 'stab-so2' || checkId === 'suesse-so2') return 'so2_frei'
+    if (checkId === 'stab-kopfraum') return 'kopfraum'
+    if (checkId === 'abfuell-oberflaeche') return 'oberflaeche'
+    return null
+  }
+
+  private renderGateMessForm(checkId: string, erfuellt: boolean | null): string {
+    if (erfuellt === true) return '<div class="gate-belegt">Diese Prüfung ist durch die gespeicherten Daten belegt.</div>'
+    const typ = this.gateMessTyp(checkId)
+    if (!typ) return '<div class="gate-belegt">Diese Prüfung hängt nicht von einer Messung ab. Prüfe die Begründung und ergänze die fehlende Voraussetzung.</div>'
+    const definition = MESS_DEFINITIONEN.find(eintrag => eintrag.typ === typ)
+    if (!definition) return ''
+    const letzte = this.letzteMessung(this.ui.chargeId, typ)
+    const feld = definition.art === 'zahl'
+      ? `<label for="gate-wert">${html(definition.label)} in ${html(definition.einheit || 'Zahlen')}</label><input id="gate-wert" name="wert" inputmode="decimal" placeholder="${letzte?.wert === null || letzte?.wert === undefined ? '' : html(formatiereZahl(letzte.wert, typ === 'sg' ? 4 : 1))}" required>`
+      : `<label for="gate-text">${html(definition.label)}</label><select id="gate-text" name="text" required><option value="">Bitte prüfen und wählen</option>${(definition.optionen ?? []).map(option => `<option value="${html(option)}">${html(option)}</option>`).join('')}</select>`
+    const fuellLiter = this.aktuelleCharge()?.fuellLiter
+    const fuellstand = typ === 'kopfraum' ? `<label for="gate-fuellwert">Füllstand in L</label><input id="gate-fuellwert" name="fuellwert" inputmode="decimal" value="${fuellLiter === undefined ? '' : html(formatiereZahl(fuellLiter))}" required>` : ''
+    const methode = DICHTE_TYPEN.includes(typ) ? '<label for="gate-methode">Messmethode</label><select id="gate-methode" name="methode"><option value="spindel">Spindel</option><option value="refraktometer">Refraktometer</option><option value="sonstige">Sonstige</option></select>' : ''
+    return `<form id="gate-mess-form"><input type="hidden" name="typ" value="${typ}"><h3>${erfuellt === null ? 'Fehlende Messung hier erfassen' : 'Aktuellen Wert neu erfassen'}</h3>${fuellstand}${feld}${methode}<label for="gate-mess-zeit">Zeitpunkt</label><input id="gate-mess-zeit" name="zeit" type="datetime-local" value="${datetimeLocalWert()}" required><div id="erfassen-fehler" role="alert"></div><button class="btn btn-haupt" type="submit">Wert speichern und erneut prüfen</button></form>`
+  }
+
+  private renderPressTeilung(charge: Charge): string {
+    const heute = this.lokalesIsoDatum(new Date())
+    const freieBehaelter = this.stand.behaelter.filter(behaelter => (!behaelter.vorhandenAb || behaelter.vorhandenAb <= heute) && !this.stand.chargen.some(eintrag => !eintrag.archiviert && eintrag.id !== charge.id && eintrag.behaelterId === behaelter.id))
+    const optionen = freieBehaelter.map(behaelter => `<option value="${html(behaelter.id)}">${html(behaelter.name)} · ${formatiereZahl(behaelter.bruttoLiter)} L</option>`).join('')
+    return `<form class="karte press-teilung" id="press-teilung-form"><h2>Pressen dokumentieren</h2><p>Vorlauf und Presswein bleiben getrennte Chargen. Füllvolumen, Kopfraum und Gefäß werden beim Anlegen festgehalten.</p><div class="press-spalten"><fieldset><legend>Vorlauf</legend><label for="vorlauf-liter">Füllvolumen in L</label><input id="vorlauf-liter" name="vorlaufLiter" inputmode="decimal" required><label for="vorlauf-kopfraum">Kopfraum in L</label><input id="vorlauf-kopfraum" name="vorlaufKopfraum" inputmode="decimal" required><label for="vorlauf-behaelter">Gefäß</label><select id="vorlauf-behaelter" name="vorlaufBehaelter" required><option value="">Bitte wählen</option>${optionen}</select></fieldset><fieldset><legend>Presswein</legend><label for="presswein-liter">Füllvolumen in L</label><input id="presswein-liter" name="pressweinLiter" inputmode="decimal" required><label for="presswein-kopfraum">Kopfraum in L</label><input id="presswein-kopfraum" name="pressweinKopfraum" inputmode="decimal" required><label for="presswein-behaelter">Gefäß</label><select id="presswein-behaelter" name="pressweinBehaelter" required><option value="">Bitte wählen</option>${optionen}</select></fieldset></div><label for="press-zeit">Zeitpunkt</label><input id="press-zeit" name="zeit" type="datetime-local" value="${datetimeLocalWert()}" required><div id="erfassen-fehler" role="alert"></div><button class="btn btn-haupt" type="submit">Zwei Chargen anlegen und Maische archivieren</button></form>`
+  }
+
+  private async speichereGateMessung(formular: HTMLFormElement): Promise<void> {
+    const charge = this.aktuelleCharge()
+    if (!charge || charge.archiviert) return this.formularFehler('Die aktive Charge fehlt.')
+    const daten = new FormData(formular)
+    const typ = String(daten.get('typ')) as MessTyp
+    const definition = MESS_DEFINITIONEN.find(eintrag => eintrag.typ === typ)
+    if (!definition) return this.formularFehler('Unbekannte Messgröße.')
+    const zeit = isoAusDatetimeLocal(daten.get('zeit'))
+    const geaendert = new Date().toISOString()
+    const messungen: Messung[] = []
+    if (typ === 'kopfraum') {
+      const fuellstand = parseDeZahl(daten.get('fuellwert'))
+      const kopfraum = parseDeZahl(daten.get('wert'))
+      if (fuellstand === null || kopfraum === null || fuellstand < 0 || kopfraum < 0) return this.formularFehler('Füllstand und Kopfraum vollständig in Litern eintragen.')
+      messungen.push(
+        { id: id('messung'), zuletztGeaendert: geaendert, chargeId: charge.id, zeit, typ: 'volumen', wert: fuellstand },
+        { id: id('messung'), zuletztGeaendert: geaendert, chargeId: charge.id, zeit, typ: 'kopfraum', wert: kopfraum },
+      )
+    } else if (definition.art === 'zahl') {
+      const wert = parseDeZahl(daten.get('wert'))
+      if (wert === null) return this.formularFehler('Trage einen gültigen Zahlenwert ein.')
+      messungen.push({ id: id('messung'), zuletztGeaendert: geaendert, chargeId: charge.id, zeit, typ, wert, methode: DICHTE_TYPEN.includes(typ) ? String(daten.get('methode') ?? 'spindel') as MessMethode : undefined })
+    } else {
+      const text = String(daten.get('text') ?? '').trim()
+      if (!text) return this.formularFehler('Wähle den geprüften Befund aus.')
+      messungen.push({ id: id('messung'), zuletztGeaendert: geaendert, chargeId: charge.id, zeit, typ, wert: null, text })
+    }
+    this.stand.messungen.push(...messungen)
+    this.aktualisiereVolumenAusMessungen(messungen)
+    await this.speichereLokalUndStarteAbgleich()
+    const gate = gateFuerPhase(this.stand, charge)
+    if (!gate?.freigegeben) this.ui.gateCheckIndex = Math.min(this.ui.gateCheckIndex + 1, Math.max(0, (gate?.checks.length ?? 1) - 1))
+    this.render()
+  }
+
+  private async speicherePressTeilung(formular: HTMLFormElement): Promise<void> {
+    const quelle = this.aktuelleCharge()
+    if (!quelle || quelle.archiviert || quelle.phase !== 'PRESS_GATE') return this.formularFehler('Die Press-Charge ist nicht mehr aktiv.')
+    const gate = gateFuerPhase(this.stand, quelle)
+    if (!gate?.freigegeben || ampelFuerCharge(this.stand, quelle) === 'RED') return this.formularFehler('Das Press-Gate ist nicht mehr freigegeben.')
+    const mischPruefung = vermischungErlaubt(this.stand, quelle, quelle)
+    if (!mischPruefung.erlaubt) return this.formularFehler(mischPruefung.grund)
+    const daten = new FormData(formular)
+    const vorlaufLiter = parseDeZahl(daten.get('vorlaufLiter'))
+    const vorlaufKopfraum = parseDeZahl(daten.get('vorlaufKopfraum'))
+    const pressweinLiter = parseDeZahl(daten.get('pressweinLiter'))
+    const pressweinKopfraum = parseDeZahl(daten.get('pressweinKopfraum'))
+    const vorlaufBehaelter = String(daten.get('vorlaufBehaelter') ?? '')
+    const pressweinBehaelter = String(daten.get('pressweinBehaelter') ?? '')
+    if (vorlaufLiter === null || pressweinLiter === null || vorlaufKopfraum === null || pressweinKopfraum === null || vorlaufLiter <= 0 || pressweinLiter <= 0 || vorlaufKopfraum < 0 || pressweinKopfraum < 0) return this.formularFehler('Liter und Kopfraum für beide Teilchargen vollständig eintragen.')
+    if (!vorlaufBehaelter || !pressweinBehaelter || vorlaufBehaelter === pressweinBehaelter) return this.formularFehler('Wähle zwei verschiedene Gefäße.')
+    const pruefeKapazitaet = (behaelterId: string, fuellLiter: number, kopfraumLiter: number) => {
+      const behaelter = this.stand.behaelter.find(eintrag => eintrag.id === behaelterId)
+      return behaelter && fuellLiter + kopfraumLiter <= behaelter.bruttoLiter + 0.01
+    }
+    if (!pruefeKapazitaet(vorlaufBehaelter, vorlaufLiter, vorlaufKopfraum) || !pruefeKapazitaet(pressweinBehaelter, pressweinLiter, pressweinKopfraum)) return this.formularFehler('Füllvolumen plus Kopfraum überschreitet die Gefäßgröße.')
+    const zeit = isoAusDatetimeLocal(daten.get('zeit'))
+    const geaendert = new Date().toISOString()
+    const baueCharge = (typ: 'vorlauf' | 'presswein', name: string, fuellLiter: number, kopfraumLiter: number, behaelterId: string): Charge => ({
+      id: id('charge'), zuletztGeaendert: geaendert, jahrgang: quelle.jahrgang, name, typ, phase: 'NACHGAERUNG', phaseSeit: zeit, startdatum: quelle.startdatum, elternChargeId: quelle.id, behaelterId, erwarteteWeinLiter: fuellLiter,
+      volumenHistorie: [{ zeit, fuellLiter, kopfraumLiter, behaelterId, anlass: typ === 'vorlauf' ? 'Pressen · Vorlauf' : 'Pressen · Presswein' }], fuellLiter, kopfraumLiter, gesperrt: false, isoliert: false,
+    })
+    const vorlauf = baueCharge('vorlauf', `Vorlauf · ${quelle.name}`, vorlaufLiter, vorlaufKopfraum, vorlaufBehaelter)
+    const presswein = baueCharge('presswein', `Presswein · ${quelle.name}`, pressweinLiter, pressweinKopfraum, pressweinBehaelter)
+    quelle.archiviert = true
+    markiereGeaendert(quelle, geaendert)
+    this.stand.chargen.push(vorlauf, presswein)
+    this.stand.ereignisse.push({ id: id('ereignis'), zuletztGeaendert: geaendert, chargeId: quelle.id, zeit, art: 'pressen', mengeWert: vorlaufLiter + pressweinLiter, mengeEinheit: 'L', begruendung: 'Press-Gate erfüllt. Vorlauf und Presswein getrennt erfasst.' })
+    this.ui.chargeId = vorlauf.id
+    this.ui.status = { art: 'erfolg', text: 'Vorlauf und Presswein wurden angelegt; die Maische-Charge ist archiviert.' }
+    this.ui.ansicht = 'heute'
+    await this.speichereLokalUndStarteAbgleich()
+    this.schreibeHistory(true)
+    this.render()
   }
 
   private renderTermine(): string {
@@ -650,7 +1095,7 @@ export class WeinbegleiterApp {
   private renderReminder(reminder: Reminder): string {
     const datum = new Date(reminder.faellig)
     const faellig = !reminder.erledigt && datum.getTime() <= Date.now()
-    return `<div class="termin ${faellig ? 'faellig' : ''}"><div class="termin-datum"><strong>${datum.getDate().toString().padStart(2, '0')}</strong><small>${MONATE[datum.getMonth()]}</small></div><div class="termin-inhalt"><strong>${html(reminder.titel)}${reminder.erledigt ? ' · erledigt' : ''}</strong><small>${html(reminder.beschreibung)}</small><div class="termin-aktionen"><button class="text-knopf" type="button" data-action="ics-einzel" data-id="${html(reminder.id)}">In Kalender übernehmen</button><button class="text-knopf" type="button" data-action="reminder-toggle" data-id="${html(reminder.id)}">${reminder.erledigt ? 'Wieder öffnen' : 'Erledigt'}</button></div></div></div>`
+    return `<div class="termin ${faellig ? 'faellig' : ''}"><div class="termin-datum"><strong>${datum.getDate().toString().padStart(2, '0')}</strong><small>${MONATE[datum.getMonth()]}</small></div><div class="termin-inhalt"><button class="termin-oeffnen" type="button" data-action="reminder-oeffnen" data-id="${html(reminder.id)}"><strong>${html(reminder.titel)}${reminder.erledigt ? ' · erledigt' : ''}</strong><small>${html(reminder.beschreibung)}</small></button><div class="termin-aktionen"><button class="text-knopf" type="button" data-action="ics-einzel" data-id="${html(reminder.id)}">In Kalender übernehmen</button><button class="text-knopf" type="button" data-action="reminder-toggle" data-id="${html(reminder.id)}">${reminder.erledigt ? 'Wieder öffnen' : 'Erledigt'}</button></div></div></div>`
   }
 
   private renderWiki(): string {
@@ -690,7 +1135,7 @@ export class WeinbegleiterApp {
       : navigator.onLine === false || this.syncFehler
         ? 'Nicht abgeglichen'
         : letzterAbgleich ? `Zuletzt abgeglichen: ${abgleichZeit}` : 'Nicht abgeglichen'
-    return `<section class="seite" aria-labelledby="mehr-titel"><h1 class="seiten-titel" id="mehr-titel">Mehr</h1><h2>Export & Sicherung</h2><div class="karte button-grid"><button class="btn" type="button" data-action="export-md">Jahrgang als Markdown</button><button class="btn" type="button" data-action="export-csv">Messreihen als CSV</button><button class="btn" type="button" data-action="export-json">Vollsicherung als JSON</button><button class="btn" type="button" data-action="export-zip">ZIP inklusive Fotos</button><label class="btn" for="import-json">JSON-Sicherung importieren</label><input class="sr-only" id="import-json" type="file" accept="application/json,.json" data-action="import-json"></div>
+    return `<section class="seite" aria-labelledby="mehr-titel"><h1 class="seiten-titel" id="mehr-titel">Mehr</h1><div class="mehr-ziele"><button class="btn" type="button" data-action="nav" data-view="wiki">${icon('buch', 'icon-klein')} Wiki</button><button class="btn" type="button" data-action="messwert-alle">${icon('messung', 'icon-klein')} Ein Wert für alle Gefäße</button></div><h2>Export & Sicherung</h2><div class="karte button-grid"><button class="btn" type="button" data-action="export-md">Jahrgang als Markdown</button><button class="btn" type="button" data-action="export-csv">Messreihen als CSV</button><button class="btn" type="button" data-action="export-json">Vollsicherung als JSON</button><button class="btn" type="button" data-action="export-zip">ZIP inklusive Fotos</button><label class="btn" for="import-json">JSON-Sicherung importieren</label><input class="sr-only" id="import-json" type="file" accept="application/json,.json" data-action="import-json"></div>
       <h2>Kellersensor</h2><form class="karte" id="sensor-form"><label for="sensor-adapter">Adapter</label><select id="sensor-adapter" name="adapter"><option value="shelly-cloud" ${sensor.adapter === 'shelly-cloud' ? 'selected' : ''}>Shelly Cloud</option><option value="govee" ${sensor.adapter === 'govee' ? 'selected' : ''}>Govee</option><option value="generisch-json" ${sensor.adapter === 'generisch-json' ? 'selected' : ''}>Generisches JSON</option></select><label for="sensor-url">HTTPS-Endpunkt</label><input id="sensor-url" name="url" type="url" value="${html(sensor.url)}" placeholder="https://…"><div class="hint">HTTP wird mit einer klaren Mixed-Content-Meldung blockiert.</div><div class="formular-grid zwei"><div><label for="sensor-token">Token</label><input id="sensor-token" name="token" type="password" value="${html(sensor.token ?? '')}" autocomplete="off"></div><div><label for="sensor-id">Geräte-ID</label><input id="sensor-id" name="geraeteId" value="${html(sensor.geraeteId ?? '')}"></div><div><label for="sensor-temp-pfad">JSON-Pfad Temperatur</label><input id="sensor-temp-pfad" name="pfadTemperatur" value="${html(sensor.pfadTemperatur ?? '')}" placeholder="data.temp"></div><div><label for="sensor-feuchte-pfad">JSON-Pfad Feuchte</label><input id="sensor-feuchte-pfad" name="pfadFeuchte" value="${html(sensor.pfadFeuchte ?? '')}" placeholder="data.humidity"></div></div><div id="sensor-fehler" role="alert"></div><div class="balken-actions"><button class="btn" type="submit" name="sensorAktion" value="speichern">Konfiguration speichern</button><button class="btn btn-haupt" type="submit" name="sensorAktion" value="testen">Verbindung testen</button></div></form>
       <h2>Manueller Klimawert</h2><form class="karte" id="klima-form"><div class="formular-grid zwei"><div><label for="klima-temp">Temperatur in °C</label><input id="klima-temp" name="temperatur" inputmode="decimal" required></div><div><label for="klima-feuchte">Feuchte in %</label><input id="klima-feuchte" name="feuchte" inputmode="decimal"></div></div><button class="btn btn-haupt" type="submit">Manuell speichern</button><div class="hint">Funktioniert immer und bleibt der Standardweg.</div></form>
       <h2>Behälter</h2><div class="karte">${this.stand.behaelter.map(behaelter => { const charge = this.stand.chargen.find(c => c.behaelterId === behaelter.id && !c.archiviert); return `<div class="zeile"><span>${html(behaelter.name)} · ${zahlFormat.format(behaelter.bruttoLiter)} L</span><b>${charge ? `belegt: ${html(charge.name)}` : behaelter.vorhandenAb ? `ab ${datumFormat.format(new Date(`${behaelter.vorhandenAb}T12:00:00`))}` : 'frei'}</b></div>` }).join('')}</div>
@@ -710,15 +1155,182 @@ export class WeinbegleiterApp {
     return Array.from({ length: anzahl }, (_, index) => `<div class="ziel-zeile"><div><label for="ziel-name-${index}">Ziel ${index + 1}</label><input id="ziel-name-${index}" name="zielName" value="Gärbottich ${index + 1}" required></div><div><label for="ziel-menge-${index}">kg</label><input id="ziel-menge-${index}" name="zielMenge" inputmode="decimal" value="${html(formatiereZahl(menge, 3))}" required></div><div><label for="ziel-behaelter-${index}">Behälter</label><select id="ziel-behaelter-${index}" name="zielBehaelter"><option value="">Ohne Zuordnung</option>${nutzbar.map(behaelter => { const zukunft = Boolean(behaelter.vorhandenAb && behaelter.vorhandenAb > heute); return `<option value="${html(behaelter.id)}" ${behaelter.id === `bottich-${index + 1}` ? 'selected' : ''} ${zukunft ? 'disabled' : ''}>${html(behaelter.name)}${zukunft ? ` · ab ${datumFormat.format(new Date(`${behaelter.vorhandenAb}T12:00:00`))}` : ''}</option>` }).join('')}</select></div></div>`).join('')
   }
 
+  private sichereRundenEntwurf(formular = this.root.querySelector<HTMLFormElement>('#runde-form')): void {
+    const charge = this.rundenCharge()
+    if (!formular || !charge) return
+    const entwurf = this.rundenEntwurf(charge.id)
+    formular.querySelectorAll<HTMLInputElement | HTMLSelectElement>('[data-runde-eingabe]').forEach(feld => {
+      const typ = feld.dataset.messTyp as MessTyp | undefined
+      if (!typ) return
+      entwurf.messwerte[typ] = { eingabe: feld.value, methode: entwurf.messwerte[typ]?.methode ?? 'spindel' }
+    })
+    formular.querySelectorAll<HTMLSelectElement>('[data-runde-methode]').forEach(feld => {
+      const typ = feld.dataset.messTyp as MessTyp | undefined
+      if (!typ) return
+      entwurf.messwerte[typ] = { eingabe: entwurf.messwerte[typ]?.eingabe ?? '', methode: feld.value as MessMethode }
+    })
+    entwurf.untergestossen = Boolean(formular.querySelector<HTMLInputElement>('[data-runde-untergestossen]')?.checked)
+    this.ui.rundenEntwuerfe[charge.id] = entwurf
+  }
+
+  private wechsleRundenCharge(richtung: number): void {
+    this.sichereRundenEntwurf()
+    const index = this.ui.rundenIndex + richtung
+    if (index < 0 || index >= this.ui.rundenChargeIds.length) return
+    this.ui.rundenIndex = index
+    this.schreibeHistory(true)
+    this.render()
+  }
+
+  private beginneRundenWischen(event: TouchEvent): void {
+    if (this.ui.ansicht !== 'runde' || event.touches.length !== 1) return
+    const touch = event.touches[0]
+    if (!touch) return
+    const ziel = event.target as HTMLElement
+    this.rundenTouchStart = { x: touch.clientX, y: touch.clientY, interaktiv: Boolean(ziel.closest('input, select, textarea, button, label, summary')) }
+  }
+
+  private beendeRundenWischen(event: TouchEvent): void {
+    const start = this.rundenTouchStart
+    this.rundenTouchStart = null
+    if (!start || start.interaktiv || this.ui.ansicht !== 'runde' || event.changedTouches.length !== 1) return
+    const touch = event.changedTouches[0]
+    if (!touch) return
+    const deltaX = touch.clientX - start.x
+    const deltaY = touch.clientY - start.y
+    if (Math.abs(deltaX) < 80 || Math.abs(deltaX) < Math.abs(deltaY) * 1.25) return
+    this.wechsleRundenCharge(deltaX < 0 ? 1 : -1)
+  }
+
+  private planeRundenUndoTimer(): void {
+    if (this.rundenUndoTimer !== undefined) window.clearInterval(this.rundenUndoTimer)
+    this.rundenUndoTimer = window.setInterval(() => {
+      if (this.ui.ansicht !== 'runde' || this.ui.rundenUndoBis === null) {
+        window.clearInterval(this.rundenUndoTimer)
+        this.rundenUndoTimer = undefined
+        return
+      }
+      if (Date.now() >= this.ui.rundenUndoBis) {
+        window.clearInterval(this.rundenUndoTimer)
+        this.rundenUndoTimer = undefined
+      }
+      this.render()
+    }, 1000)
+  }
+
+  private async speichereRunde(formular: HTMLFormElement): Promise<void> {
+    const charge = this.rundenCharge()
+    if (!charge || charge.archiviert) return this.formularFehler('Wähle eine aktive Charge aus.')
+    this.sichereRundenEntwurf(formular)
+    const entwurf = this.rundenEntwurf(charge.id)
+    const zeit = isoAusDatetimeLocal(this.ui.rundenZeit)
+    const geaendert = new Date().toISOString()
+    const ampelVorher = ampelFuerCharge(this.stand, charge)
+    const volumenVorher = {
+      ...(charge.fuellLiter === undefined ? {} : { fuellLiter: charge.fuellLiter }),
+      ...(charge.kopfraumLiter === undefined ? {} : { kopfraumLiter: charge.kopfraumLiter }),
+      volumenHistorie: (charge.volumenHistorie ?? []).map(punkt => ({ ...punkt })),
+    }
+    const neu: Messung[] = []
+    for (const definition of MESS_DEFINITIONEN) {
+      const feld = entwurf.messwerte[definition.typ]
+      const rohwert = feld?.eingabe.trim() ?? ''
+      if (!rohwert) continue
+      const wert = definition.art === 'zahl' ? parseDeZahl(rohwert) : null
+      if (definition.art === 'zahl' && wert === null) return this.formularFehler(`${definition.label}: Trage einen gültigen Zahlenwert ein.`)
+      if ((definition.typ === 'volumen' || definition.typ === 'kopfraum') && wert !== null && wert < 0) return this.formularFehler(`${definition.label} muss mindestens 0 L betragen.`)
+      neu.push({ id: id('messung'), zuletztGeaendert: geaendert, chargeId: charge.id, zeit, typ: definition.typ, wert, text: definition.art === 'auswahl' ? rohwert : undefined, methode: DICHTE_TYPEN.includes(definition.typ) ? feld?.methode ?? 'spindel' : undefined })
+    }
+    const neueEreignisse: Ereignis[] = entwurf.untergestossen ? [{ id: id('ereignis'), zuletztGeaendert: geaendert, chargeId: charge.id, zeit, art: 'unterstossen', begruendung: 'Während der Runde am Gefäß untergestoßen.' }] : []
+    if (!neu.length && !neueEreignisse.length) return this.formularFehler('Trage mindestens einen Messwert ein oder markiere Untergestoßen. Leere Felder werden nicht gespeichert.')
+    this.stand.messungen.push(...neu)
+    this.stand.ereignisse.push(...neueEreignisse)
+    this.aktualisiereVolumenAusMessungen(neu)
+    const gespeichert: RundenSpeicherung = { chargeId: charge.id, zeit, typen: neu.map(messung => messung.typ), messungIds: neu.map(messung => messung.id), ereignisIds: neueEreignisse.map(ereignis => ereignis.id), ampelVorher, ampelNachher: ampelFuerCharge(this.stand, charge), volumenVorher }
+    this.ui.rundenErgebnisse = [...this.ui.rundenErgebnisse.filter(ergebnis => ergebnis.chargeId !== charge.id), gespeichert]
+    this.ui.rundenGespeichert = gespeichert
+    this.ui.rundenUndoBis = Date.now() + 30_000
+    await this.speichereLokalUndStarteAbgleich()
+    this.planeRundenUndoTimer()
+    this.render()
+  }
+
+  private async nehmeLetzteRundenEingabeZurueck(): Promise<void> {
+    const gespeichert = this.ui.rundenGespeichert
+    if (!gespeichert || this.ui.rundenUndoBis === null || Date.now() >= this.ui.rundenUndoBis) return
+    const loeschZeit = new Date().toISOString()
+    const messungIds = new Set(gespeichert.messungIds)
+    const ereignisIds = new Set(gespeichert.ereignisIds)
+    this.stand.messungen = this.stand.messungen.filter(messung => !messungIds.has(messung.id))
+    this.stand.ereignisse = this.stand.ereignisse.filter(ereignis => !ereignisIds.has(ereignis.id))
+    gespeichert.messungIds.forEach(messungId => merkeLoeschung(this.stand, 'messungen', messungId, loeschZeit))
+    gespeichert.ereignisIds.forEach(ereignisId => merkeLoeschung(this.stand, 'ereignisse', ereignisId, loeschZeit))
+    const charge = this.stand.chargen.find(eintrag => eintrag.id === gespeichert.chargeId)
+    if (charge) {
+      charge.volumenHistorie = gespeichert.volumenVorher.volumenHistorie.map(punkt => ({ ...punkt }))
+      if (gespeichert.volumenVorher.fuellLiter === undefined) delete charge.fuellLiter
+      else charge.fuellLiter = gespeichert.volumenVorher.fuellLiter
+      if (gespeichert.volumenVorher.kopfraumLiter === undefined) delete charge.kopfraumLiter
+      else charge.kopfraumLiter = gespeichert.volumenVorher.kopfraumLiter
+      markiereGeaendert(charge, loeschZeit)
+    }
+    this.ui.rundenErgebnisse = this.ui.rundenErgebnisse.filter(ergebnis => ergebnis !== gespeichert)
+    this.ui.rundenGespeichert = null
+    this.ui.rundenUndoBis = null
+    if (this.rundenUndoTimer !== undefined) window.clearInterval(this.rundenUndoTimer)
+    this.rundenUndoTimer = undefined
+    await this.speichereLokalUndStarteAbgleich()
+    this.render()
+  }
+
   private async behandleKlick(event: Event): Promise<void> {
     const ziel = (event.target as HTMLElement).closest<HTMLElement>('[data-action]')
     if (!ziel) return
     const action = ziel.dataset.action
+    if (action === 'runde-start') return this.starteRunde(ziel.dataset.id || this.ui.chargeId || undefined)
+    if (action === 'runde-abbrechen') {
+      this.ui.rundenGespeichert = null
+      this.ui.rundenUndoBis = null
+      if (this.rundenUndoTimer !== undefined) window.clearInterval(this.rundenUndoTimer)
+      this.rundenUndoTimer = undefined
+      return this.navigiere('heute')
+    }
+    if (action === 'runde-wechsel') return this.wechsleRundenCharge(Number(ziel.dataset.richtung ?? 0))
+    if (action === 'runde-weiter') {
+      if (this.ui.rundenIndex >= this.ui.rundenChargeIds.length - 1) {
+        this.ui.rundenAbgeschlossen = true
+        this.ui.rundenGespeichert = null
+        this.ui.rundenUndoBis = null
+        if (this.rundenUndoTimer !== undefined) window.clearInterval(this.rundenUndoTimer)
+        this.rundenUndoTimer = undefined
+        this.schreibeHistory(true)
+        return this.render()
+      }
+      return this.wechsleRundenCharge(1)
+    }
+    if (action === 'runde-undo') return this.nehmeLetzteRundenEingabeZurueck()
+    if (action === 'runde-beenden') return this.navigiere('heute')
+    if (action === 'reminder-oeffnen') {
+      const reminder = this.stand.reminder.find(eintrag => eintrag.id === ziel.dataset.id)
+      if (reminder && this.reminderVerlangtRunde(reminder)) return this.starteRunde(reminder.chargeId)
+      return this.navigiere('termine')
+    }
+    if (action === 'messwert-alle') {
+      this.ui.ansicht = 'erfassen'
+      this.ui.erfassenModus = 'messung'
+      this.ui.messErfassungModus = 'messgroesse'
+      this.ui.messChargeIds = this.aktiveChargen().map(charge => charge.id)
+      this.ui.messEntwuerfe = {}
+      this.ui.messZeit = datetimeLocalWert()
+      this.schreibeHistory()
+      return this.render()
+    }
     if (action === 'nav') {
       if (ziel.classList.contains('zurueck') && history.length > 1) return history.back()
       return this.navigiere(ziel.dataset.view as Ansicht)
     }
     if (action === 'charge') { this.ui.chargeId = ziel.dataset.id ?? ''; this.ui.ansicht = 'charge'; this.ui.chargeTab = 'befunde'; this.schreibeHistory(); return this.render() }
+    if (action === 'desktop-charge') { this.ui.chargeId = ziel.dataset.id ?? this.ui.chargeId; this.schreibeHistory(true); return this.render() }
     if (action === 'charge-tab') { this.ui.chargeTab = ziel.dataset.tab as ChargeTab; return this.render() }
     if (action === 'messung-bearbeiten') { this.ui.editMessungId = ziel.dataset.id ?? null; this.ui.ansicht = 'messung-bearbeiten'; this.schreibeHistory(); return this.render() }
     if (action === 'ereignis-bearbeiten') { this.ui.editEreignisId = ziel.dataset.id ?? null; this.ui.ansicht = 'ereignis-bearbeiten'; this.schreibeHistory(); return this.render() }
@@ -766,6 +1378,10 @@ export class WeinbegleiterApp {
       return this.navigiere('heute')
     }
     if (action === 'rechner-tab') { this.ui.rechnerTyp = ziel.dataset.rechner as RechnerTyp; return this.render() }
+    if (action === 'desktop-kurve') { this.ui.desktopKurveTyp = ziel.dataset.kurve as DesktopKurveTyp; return this.render() }
+    if (action === 'desktop-zeitraum') { this.ui.desktopZeitraum = ziel.dataset.zeitraum as DesktopZeitraum; return this.render() }
+    if (action === 'gate-zurueck') { this.ui.gateCheckIndex = Math.max(0, this.ui.gateCheckIndex - 1); return this.render() }
+    if (action === 'gate-weiter') { this.ui.gateCheckIndex += 1; return this.render() }
     if (action === 'phase-weiter') return this.phaseWeiter()
     if (action === 'gate-reminder') return this.legeGateReminderAn()
     if (action === 'ics-einzel') return this.exportiereEinzelIcs(ziel.dataset.id ?? '')
@@ -789,6 +1405,9 @@ export class WeinbegleiterApp {
   private async behandleSubmit(event: SubmitEvent): Promise<void> {
     event.preventDefault()
     const formular = event.target as HTMLFormElement
+    if (formular.id === 'runde-form') return this.speichereRunde(formular)
+    if (formular.id === 'gate-mess-form') return this.speichereGateMessung(formular)
+    if (formular.id === 'press-teilung-form') return this.speicherePressTeilung(formular)
     if (formular.id === 'mess-form') return this.speichereMessungen(formular)
     if (formular.id === 'messung-bearbeiten-form') return this.aktualisiereMessung(formular)
     if (formular.id === 'ereignis-form') return this.speichereEreignisse(formular)
@@ -803,6 +1422,8 @@ export class WeinbegleiterApp {
 
   private async behandleAenderung(event: Event): Promise<void> {
     const ziel = event.target as HTMLInputElement | HTMLSelectElement
+    if (ziel.dataset.action === 'runden-zeit') { this.ui.rundenZeit = ziel.value; return }
+    if (ziel.closest('#runde-form')) this.sichereRundenEntwurf()
     if (ziel.closest('#mess-form')) this.sichereMessFormularEntwurf()
     if (ziel.dataset.action === 'mess-typ') { this.ui.messTyp = ziel.value as MessTyp; return this.render() }
     if (ziel.dataset.action === 'mess-methode') return this.aktualisiereRefraktometerHinweis()
@@ -819,6 +1440,7 @@ export class WeinbegleiterApp {
 
   private behandleEingabe(event: Event): void {
     const ziel = event.target as HTMLInputElement
+    if (ziel.closest('#runde-form')) this.sichereRundenEntwurf()
     if (ziel.closest('#mess-form')) this.sichereMessFormularEntwurf()
     if (ziel.closest('#rechner-form')) this.aktualisiereRechner()
     if (ziel.closest('#ereignis-form')) this.aktualisiereZugabeVorschau()
@@ -830,7 +1452,16 @@ export class WeinbegleiterApp {
     if (ziel.closest('#umverteilen-form') && ziel.name === 'zielMenge') this.pruefeUmverteilung()
   }
 
+  private behandleTaste(event: KeyboardEvent): void {
+    if (event.key !== 'Enter' && event.key !== ' ') return
+    const ziel = (event.target as HTMLElement).closest<HTMLElement>('[data-action][tabindex="0"]')
+    if (!ziel) return
+    event.preventDefault()
+    ziel.click()
+  }
+
   private navigiere(ansicht: Ansicht): void {
+    if (ansicht === 'gate') this.ui.gateCheckIndex = 0
     this.ui.ansicht = ansicht
     this.schreibeHistory()
     window.scrollTo({ top: 0, behavior: 'auto' })
@@ -840,7 +1471,7 @@ export class WeinbegleiterApp {
 
   private schreibeHistory(ersetzen = false): void {
     const route = { weinbegleiter: true, ui: { ...this.ui, status: null } }
-    const url = `${location.pathname}${location.search}#${this.ui.ansicht}`
+    const url = `${location.pathname}${location.search}#${this.routeHash()}`
     if (ersetzen) history.replaceState(route, '', url)
     else history.pushState(route, '', url)
   }

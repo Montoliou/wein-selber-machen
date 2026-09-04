@@ -13,6 +13,8 @@ const pfade: Record<string, string> = {
   klima: '<path d="M14 14.8V5a4 4 0 0 0-8 0v9.8a6 6 0 1 0 8 0z"/><path d="M10 9v8"/>',
   warnung: '<path d="M12 3 2.8 20h18.4z"/><path d="M12 9v4M12 17h.01"/>',
   kamera: '<path d="M4 7h3l1.5-2h7L17 7h3v12H4z"/><circle cx="12" cy="13" r="3"/>',
+  runde: '<path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v6h-6"/><circle cx="12" cy="12" r="2"/>',
+  journal: '<path d="M5 3h14v18H5zM8 3v18M11 8h5M11 12h5M11 16h3"/>',
 }
 
 export function icon(name: keyof typeof pfade, klasse = ''): string {

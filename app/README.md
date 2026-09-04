@@ -12,6 +12,18 @@ npm run dev
 
 Vite zeigt die lokale URL im Terminal. Für die Bedienung mit iPhone-Breite kann die Browseransicht auf 375 px gestellt werden.
 
+## Oberfläche nach Situation
+
+Die App ordnet ihre Oberfläche über `layoutKlasse()` in drei Klassen ein: Telefon unter 600 px, Tablet ab 600 px und Schreibtisch ab 1.200 px. Die Klasse steht als `data-layout` am App-Wurzelelement und wird bei einer Größenänderung neu gesetzt. Ein iPad im Querformat bleibt dadurch in der Tablet-Ansicht.
+
+„Heute“ zeigt auf dem Telefon eine Spalte und auf dem Tablet zwei Spalten. Die Runde öffnet ein Gefäß je Bildschirm, verwendet einen gemeinsamen Zeitpunkt und wartet nach dem Speichern auf den Knopf „Weiter“. Wischen wechselt erst ab 80 px horizontaler Strecke und nur dann, wenn die Bewegung deutlich horizontaler als vertikal ist. Beginnt die Berührung auf einem Eingabefeld oder Bedienelement, löst sie keinen Gefäßwechsel aus.
+
+Jede Rundeneingabe wird zuerst lokal in IndexedDB gespeichert. Fällt die Verbindung während der Runde aus, bleibt die Erfassung benutzbar; der Abgleich startet beim nächsten Speichern oder beim nächsten Online-Ereignis erneut. Die Rücknahmefrist entfernt genau die zuletzt gespeicherten Messungen und Ereignisse und legt dafür Sync-Grabsteine an.
+
+Gate-Prüfungen laufen einzeln nacheinander. Eine fehlende Messung kann direkt in der betreffenden Prüfung erfasst werden. Nach bestandenem Press-Gate legt der geführte Press-Schritt Vorlauf und Presswein als getrennte Nachgärungs-Chargen mit Eltern-ID, Volumenpunkt, Kopfraum und Behälter an und archiviert die Maische-Charge.
+
+Ab 1.200 px zeigt der Schreibtisch links Navigation und Gefäße, in der Mitte Status, Kurven, Kellerklima und Phase sowie rechts Messungen und Ereignisse des gewählten Gefäßes. Die Zeilen im rechten Bereich öffnen die vorhandenen Bearbeitungsansichten.
+
 ## Messungen erfassen
 
 Die Messerfassung öffnet im Modus „Ein Bottich / viele Werte“. Die App zeigt zuerst die Messgrößen, die zur aktuellen Phase der gewählten Charge gehören. „Weitere Messgrößen“ enthält die übrigen Felder. Jede ausgefüllte Messgröße erzeugt einen Datensatz; leere Felder werden ignoriert. Alle Datensätze einer Eingabe verwenden denselben sichtbaren und änderbaren Zeitpunkt.
@@ -81,3 +93,5 @@ Unter „Mehr“ stehen Markdown-, CSV-, JSON- und ZIP-Export bereit. Die JSON-V
 ## Offene Punkte
 
 Fotos bleiben gerätelokal. Sie liegen als Blobs in einem eigenen IndexedDB-Store und sind ausdrücklich nicht Bestandteil des Geräteabgleichs. Ein späterer Fotoabgleich braucht eine eigene Größen-, Übertragungs- und Konfliktstrategie.
+
+H6 bringt keine weiteren offenen Punkte mit. Der Schreibtisch, die Runde, „Heute“ und der Press-Gate-Fluss verwenden ausschließlich die seit H2 bis H5 vorhandenen Datenstrukturen und Fachfunktionen.

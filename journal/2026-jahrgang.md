@@ -359,25 +359,32 @@ und der beste Beleg dafür, dass Handoff H3 nötig ist.
 
 ---
 
-## 04.09.2026 — Datenverlust auf dem iPad, rekonstruiert
+## 04.09.2026 — Geräteabgleich: kein Datenverlust, sondern zwei Speicherbereiche
 
-Beim Abgleich der beiden Geräte stellte sich heraus: Die iPad-Sicherung enthielt
-**nur den Startdatensatz**. Die am 03.09. vormittags dort erfassten Werte waren weg.
+Der Export vom iPad enthielt nur den Startdatensatz (26 Messungen). Meine erste
+Diagnose war „Website-Daten gelöscht" — **falsch.** Andi hat nichts gelöscht, und die
+App auf dem iPad zeigt die Vormittagswerte vom 03.09. weiterhin.
 
-**Ursache:** der Schritt „Website-Daten löschen" aus einer Aktualisierungsanleitung
-von Claude. Er löscht die IndexedDB und damit den gesamten Bestand. Die Anleitung
-enthielt zwar den Hinweis, vorher zu sichern — aber sie führte an einer Stelle vorbei,
-an der ein Fehlgriff alles kostet.
+**Tatsächliche Ursache:** Auf iOS hat eine auf den Home-Bildschirm gelegte Web-App eine
+eigene Datenbank, getrennt von Safari. Der Export lief mit hoher Wahrscheinlichkeit über
+Safari — dort legt die App beim ersten Öffnen einen frischen Startdatensatz an. Das
+erklärt exakt den Befund: 26 Messungen, Version 2, kein Sensor, kein Klimapunkt.
 
-**Wiederhergestellt** aus diesem Journal und den Screenshots vom 03.09.: sieben
-Messungen, in der Sicherung `outputs/weinbegleiter-stand-2026-09-04.json` als
-rekonstruiert gekennzeichnet.
+**Konsequenz:** Ein Export muss aus der Home-Bildschirm-App selbst erfolgen. Bis H5 den
+Abgleich übernimmt, ist das die einzige Quelle, die den echten Stand trägt.
 
-**Die Lehre ist nicht neu, sondern dieselbe wie 2025:** Was nur an einer Stelle steht,
-ist nicht gesichert. Dass die Werte wieder da sind, liegt ausschließlich daran, dass sie
-parallel im Journal standen. Der Geräteabgleich aus H5 behebt die Ursache.
+**Zusammenführung 04.09.:** MacBook-Stand (Seed + Abendrunde 20:00) ergänzt um die sieben
+Vormittagswerte aus der iPad-Anzeige (Duplikate weggelassen, 08:58-Temperatur bei Bottich 3
+eingeordnet) und um acht Unterstoßen-Ereignisse (je Bottich vormittags und 20:00, nach
+Andis Angabe). Ergebnis: `outputs/weinbegleiter-stand-2026-09-04.json`, auf beiden Geräten
+zu importieren.
 
-**Nebenbefund für H5:** Die Kennungen des Startdatensatzes sind fortlaufend nummeriert
-und verschieben sich, wenn `startdaten.ts` sich ändert. Ein Abgleich über die Kennung
-kann dadurch unverwandte Datensätze zusammenführen — auf den beiden Geräten stand
-`e-42` für zwei verschiedene Ereignisse. Gehört im Review von PR #5 geprüft.
+**Nebenbefund für H5:** Die Kennungen des Startdatensatzes sind fortlaufend nummeriert und
+verschieben sich, wenn `startdaten.ts` sich ändert. Zwischen Safari-Instanz (aktueller Seed)
+und Home-App/MacBook (Seed vom 02.09.) stand `e-42` für zwei verschiedene Ereignisse. Ein
+Abgleich über die Kennung darf sich darauf nicht verlassen — im Review von PR #5 zu prüfen.
+
+## 03.09.2026 — Nachtrag Tresterhut
+
+Bei allen vier Bottichen zweimal untergestoßen: vormittags zu den Messzeiten
+(08:44 / 08:46 / 08:57 / 09:01) und abends um 20:00.

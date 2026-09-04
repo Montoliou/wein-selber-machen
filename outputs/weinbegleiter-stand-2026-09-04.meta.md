@@ -12,21 +12,18 @@ ueberholt: weinbegleiter-stand-2026-09-02
 Kanonischer Stand nach dem Abgleich der beiden Geräte am 04.09.2026.
 Auf beiden Geräten zu importieren (Mehr → JSON-Sicherung importieren).
 
-## Befund: Datenverlust auf dem iPad
+## Befund: kein Datenverlust, sondern zwei Speicherbereiche
 
-Die iPad-Sicherung enthielt **ausschließlich den Startdatensatz** — 26 Messungen,
-alle vom 02.09., keine einzige eigene Kennung, kein Klimapunkt, keine Sensor-
-Konfiguration. Die am Vormittag des 03.09. dort erfassten Werte (08:44–09:01)
-waren nicht mehr vorhanden.
+Die iPad-Sicherung enthielt nur den Startdatensatz (26 Messungen, Version 2, kein Sensor).
+Erste Diagnose „Website-Daten gelöscht" war falsch — Andi hat nichts gelöscht, die
+Home-Bildschirm-App zeigt die Vormittagswerte weiterhin.
 
-Ursache mit hoher Wahrscheinlichkeit: der Schritt „Website-Daten löschen" aus einer
-Aktualisierungsanleitung von Claude. Das löscht die IndexedDB und damit den gesamten
-Bestand; die App legt danach den Startdatensatz neu an.
+Tatsächliche Ursache: Auf iOS hat eine Home-Bildschirm-Web-App eine eigene Datenbank,
+getrennt von Safari. Der Export lief vermutlich über Safari, wo die App eine frische
+Instanz mit Startdatensatz anlegt.
 
-**Wiederhergestellt** aus `journal/2026-jahrgang.md` und den Screenshots vom 03.09.:
-sieben Messungen (Temperatur bei allen vier Bottichen, Mostgewicht bei 2, 3 und 4).
-Jede trägt eine Notiz, dass sie rekonstruiert ist. Bottich 1 hatte am Vormittag
-kein Mostgewicht — das war schon damals die einzige echte Lücke.
+Die sieben Vormittagswerte wurden aus der iPad-Anzeige übernommen (Duplikate weggelassen),
+dazu acht Unterstoßen-Ereignisse vom 03.09. nach Andis Angabe.
 
 ## Zweiter Befund: Kennungen im Startdatensatz sind nicht stabil
 
@@ -43,6 +40,6 @@ statt fortlaufende Kennungen im Startdatensatz.
 
 ## Inhalt
 
-50 Messungen (43 vom MacBook, 7 rekonstruiert), 20 Ereignisse, 4 Chargen,
+50 Messungen (43 vom MacBook, 7 aus der iPad-Anzeige), 28 Ereignisse (20 Seed, 8 Unterstoßen), 4 Chargen,
 12 Behälter, 5 Reminder, 7 Wiki-Seiten, 4 Vorratsposten, 1 Klimapunkt,
 Sensor-Konfiguration enthalten.

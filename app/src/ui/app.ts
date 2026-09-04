@@ -6,6 +6,7 @@ import {
   PHASEN_LABEL,
   PHASEN_REIHE,
   type Ampel,
+  type Behaelter,
   type Charge,
   type Ereignis,
   type EreignisArt,
@@ -20,7 +21,7 @@ import {
   type WikiSeite,
 } from '../domain/typen'
 import { alkoholPotenzial, naehrsalzPlan, NAEHRSALZ_MAX_G_PRO_100L, NAEHRSALZ_PORTIONEN, oechsleAusSg, sgAusOechsle, schwefelDosierung, zuckerFuerOechsle } from '../domain/oenologie'
-import { ampelFuerCharge, befundeFuerCharge, gateFuerPhase, GRENZEN, pressGate, vermischungErlaubt } from '../domain/regeln'
+import { ampelFuerCharge, behaelterVerfuegbar, befundeFuerCharge, gateFuerPhase, GRENZEN, pressGate, vermischungErlaubt } from '../domain/regeln'
 import { kalenderAlsIcs, reminderAlsIcs } from '../ics'
 import { alsKlimapunkt, ladeSensorverlauf, ladeSensorwert, pruefeSensorKonfiguration, type SensorVerlaufPunkt } from '../sensor'
 import { ersetzeFotos, speichereDatenstand, speichereFoto } from '../speicher/indexeddb'
@@ -42,6 +43,15 @@ import { alsCsv, alsMarkdown, alsSicherung, baueZip, fotoAusSicherung, istSicher
 import { dateiname, datetimeLocalWert, datumFormat, datumZeitFormat, formatiereZahl, html, id, isoAusDatetimeLocal, kurzDatumFormat, parseDeZahl, zahlFormat } from './format'
 import { icon } from './icons'
 import { layoutKlasse, type LayoutKlasse } from './layout'
+import {
+  faelligeZugabeReminder,
+  globalerReminderIstFuerAlleChargenErfasst,
+  passendeVorratsZuordnung,
+  zugabeArtFuerReminder,
+  zugabeArtenFuerPhase,
+  zugabeVorschlag,
+  type RundenZugabeArt,
+} from './runden-zugaben'
 
 declare const __BUILD_TIMESTAMP__: string
 declare const __BUILD_COMMIT__: string
@@ -64,9 +74,25 @@ interface MessRundeErfolg {
   typen: MessTyp[]
 }
 
+interface RundenZugabeEntwurf {
+  aktiv: boolean
+  menge: string
+  einheit: string
+  stoff: string
+  begruendung: string
+  begruendungAutomatisch: boolean
+}
+
 interface RundenEntwurf {
   messwerte: Partial<Record<MessTyp, MessEntwurf>>
   untergestossen: boolean
+  zugaben: Partial<Record<RundenZugabeArt, RundenZugabeEntwurf>>
+}
+
+interface ReminderVorher {
+  reminderId: string
+  erledigt: boolean
+  faellig: string
 }
 
 interface RundenSpeicherung {
@@ -75,6 +101,7 @@ interface RundenSpeicherung {
   typen: MessTyp[]
   messungIds: string[]
   ereignisIds: string[]
+  reminderAenderungen: ReminderVorher[]
   ampelVorher: Ampel
   ampelNachher: Ampel
   volumenVorher: {
@@ -168,6 +195,9 @@ interface UiZustand {
   messRundeErfolg: MessRundeErfolg | null
   editMessungId: string | null
   editEreignisId: string | null
+  behaelterDialog: 'neu' | 'bearbeiten' | 'ausmustern' | null
+  behaelterId: string | null
+  lieferReminderId: string | null
   rechnerTyp: RechnerTyp
   wikiId: string | null
   wikiFilter: string
@@ -180,6 +210,7 @@ interface UiZustand {
   rundenGespeichert: RundenSpeicherung | null
   rundenUndoBis: number | null
   rundenAbgeschlossen: boolean
+  zuckerZielJeCharge: Record<string, number>
   gateCheckIndex: number
   desktopKurveTyp: DesktopKurveTyp
   desktopZeitraum: DesktopZeitraum
@@ -222,6 +253,9 @@ export class WeinbegleiterApp {
       messRundeErfolg: null,
       editMessungId: null,
       editEreignisId: null,
+      behaelterDialog: null,
+      behaelterId: null,
+      lieferReminderId: null,
       rechnerTyp: 'schwefeln',
       wikiId: null,
       wikiFilter: '',
@@ -234,6 +268,7 @@ export class WeinbegleiterApp {
       rundenGespeichert: null,
       rundenUndoBis: null,
       rundenAbgeschlossen: false,
+      zuckerZielJeCharge: {},
       gateCheckIndex: 0,
       desktopKurveTyp: 'gaerung',
       desktopZeitraum: 'gaerung',
@@ -331,6 +366,12 @@ export class WeinbegleiterApp {
     return this.stand.chargen.find(charge => charge.id === this.ui.chargeId)
   }
 
+  private behaelterFuerAuswahl(chargeId?: string): Behaelter[] {
+    const heute = this.lokalesIsoDatum(new Date())
+    return this.stand.behaelter.filter(behaelter => behaelterVerfuegbar(behaelter, heute)
+      && !this.stand.chargen.some(charge => !charge.archiviert && charge.id !== chargeId && charge.behaelterId === behaelter.id))
+  }
+
   private render(): void {
     this.fotoUrls.forEach(url => URL.revokeObjectURL(url))
     this.fotoUrls = []
@@ -340,7 +381,7 @@ export class WeinbegleiterApp {
     const inhalt = this.layout === 'schreibtisch' && !istRunde
       ? `<a class="skip-link" href="#hauptinhalt">Zum Inhalt</a><div class="desktop-shell ${this.ui.ansicht === 'heute' ? 'desktop-heute' : ''}">${this.renderDesktopSidebar()}<main id="hauptinhalt" class="desktop-mitte" tabindex="-1">${this.ui.ansicht === 'heute' ? this.renderDesktopMitte() : this.renderSeite()}</main>${this.ui.ansicht === 'heute' ? this.renderDesktopDetail() : ''}</div>`
       : `${istRunde ? '' : this.renderHeader()}<main id="hauptinhalt" class="${istRunde ? 'runden-main' : ''}" tabindex="-1">${this.renderSeite()}</main>${istRunde ? '' : this.renderNavigation()}`
-    this.root.innerHTML = `${inhalt}${this.renderUpdateHinweis()}${this.renderStatus()}`
+    this.root.innerHTML = `${inhalt}${this.renderDialoge()}${this.renderUpdateHinweis()}${this.renderStatus()}`
     if (this.ui.ansicht === 'rechner') this.aktualisiereRechner()
     if (this.ui.ansicht === 'erfassen') this.aktualisiereErfassenFormular()
     if (this.ui.ansicht === 'umverteilen') this.aktualisiereZielzeilen()
@@ -634,7 +675,27 @@ export class WeinbegleiterApp {
   }
 
   private rundenEntwurf(chargeId: string): RundenEntwurf {
-    return this.ui.rundenEntwuerfe[chargeId] ?? { messwerte: {}, untergestossen: false }
+    const vorhanden = this.ui.rundenEntwuerfe[chargeId]
+    if (vorhanden) return vorhanden
+    const charge = this.stand.chargen.find(eintrag => eintrag.id === chargeId)
+    const zugaben: Partial<Record<RundenZugabeArt, RundenZugabeEntwurf>> = {}
+    if (charge) {
+      const zeit = isoAusDatetimeLocal(this.ui.rundenZeit)
+      for (const art of zugabeArtenFuerPhase(charge.phase)) {
+        const vorschlag = zugabeVorschlag(this.stand, charge, art, zeit, this.ui.zuckerZielJeCharge[charge.id])
+        zugaben[art] = {
+          aktiv: false,
+          menge: vorschlag.menge,
+          einheit: vorschlag.einheit,
+          stoff: vorschlag.stoff,
+          begruendung: vorschlag.begruendung,
+          begruendungAutomatisch: true,
+        }
+      }
+    }
+    const entwurf = { messwerte: {}, untergestossen: false, zugaben }
+    this.ui.rundenEntwuerfe[chargeId] = entwurf
+    return entwurf
   }
 
   private rundenDefinitionen(charge: Charge): { primaer: MessDefinition[]; weitere: MessDefinition[] } {
@@ -656,7 +717,7 @@ export class WeinbegleiterApp {
     return `<section class="runde-screen" aria-labelledby="runde-titel"><header class="runde-kopf"><label class="runden-zeit" for="runden-zeit"><strong id="runde-titel">Runde</strong><input id="runden-zeit" type="datetime-local" value="${html(this.ui.rundenZeit)}" data-action="runden-zeit" aria-label="Zeitpunkt der gesamten Runde" ${this.ui.rundenErgebnisse.length ? 'disabled title="Nach der ersten Speicherung gilt dieser Zeitpunkt für die gesamte Runde."' : ''}></label><div class="runden-punkte" aria-label="Gefäß ${this.ui.rundenIndex + 1} von ${this.ui.rundenChargeIds.length}">${this.ui.rundenChargeIds.map((chargeId, index) => `<i class="${this.ui.rundenErgebnisse.some(ergebnis => ergebnis.chargeId === chargeId) ? 'ok' : ''} ${index === this.ui.rundenIndex ? 'aktiv' : ''}"></i>`).join('')}</div><span class="runden-abgleich ${nichtAbgeglichen ? 'offen' : ''}"><i></i>${this.syncLaeuft ? 'Abgleich läuft' : nichtAbgeglichen ? 'Nicht abgeglichen' : 'Lokal bereit'}</span><button class="runde-abbrechen" type="button" data-action="runde-abbrechen">Abbrechen</button></header><div class="runde-inhalt" data-runde-wischbereich>
       <button class="runde-pfeil runde-pfeil-links" type="button" data-action="runde-wechsel" data-richtung="-1" aria-label="Vorheriges Gefäß" ${this.ui.rundenIndex === 0 ? 'disabled' : ''}>‹</button>
       <div class="runde-links"><div class="runde-gefaess"><div class="runde-nummer">${this.ui.rundenIndex + 1}<span>von ${this.ui.rundenChargeIds.length}</span></div><h1>${html(charge.name)}</h1><p>${charge.mengeKg === undefined ? 'Menge offen' : `${formatiereZahl(charge.mengeKg)} kg`} · ${charge.erwarteteWeinLiter === undefined ? 'Ausbeute offen' : `${formatiereZahl(charge.erwarteteWeinLiter)} L erwartet`} · ${html(PHASEN_LABEL[charge.phase])}</p>${this.renderAmpel(ampel)}</div>${this.renderRundenZuletzt(charge, primaer)}<p class="wisch-hinweis">Wischen oder Pfeile wechseln das Gefäß. Ein Feld reagiert erst bei einer deutlichen Wischstrecke.</p></div>
-      <div class="runde-rechts">${gespeichert ? this.renderRundenBefund(charge, gespeichert, naechste) : `<form id="runde-form"><div class="runden-felder">${primaer.map(definition => this.renderRundenFeld(charge, definition, entwurf)).join('')}</div><details class="runden-weitere"><summary><span aria-hidden="true">›</span>Weitere Messgrößen</summary><div class="runden-felder">${weitere.map(definition => this.renderRundenFeld(charge, definition, entwurf)).join('')}</div></details>${['AKTIVE_GAERUNG', 'PRESS_GATE'].includes(charge.phase) && charge.typ === 'maische' ? `<label class="unterstossen"><input type="checkbox" name="untergestossen" data-runde-untergestossen ${entwurf.untergestossen ? 'checked' : ''}><span>Untergestoßen</span><small>legt ein Ereignis mit dem Rundenzeitpunkt an</small></label>` : ''}<div id="erfassen-fehler" role="alert"></div><button class="btn btn-haupt runde-speichern" type="submit">Ausgefüllte Werte speichern</button><p class="hint">Leere Felder erzeugen keinen Datensatz. Alle Eingaben verwenden den Zeitpunkt oben.</p></form>`}</div>
+      <div class="runde-rechts">${gespeichert ? this.renderRundenBefund(charge, gespeichert, naechste) : `<form id="runde-form"><div class="runden-felder">${primaer.map(definition => this.renderRundenFeld(charge, definition, entwurf)).join('')}</div><details class="runden-weitere"><summary><span aria-hidden="true">›</span>Weitere Messgrößen</summary><div class="runden-felder">${weitere.map(definition => this.renderRundenFeld(charge, definition, entwurf)).join('')}</div></details>${this.renderRundenZugaben(charge, entwurf)}${['AKTIVE_GAERUNG', 'PRESS_GATE'].includes(charge.phase) && charge.typ === 'maische' ? `<label class="unterstossen"><input type="checkbox" name="untergestossen" data-runde-untergestossen ${entwurf.untergestossen ? 'checked' : ''}><span>Untergestoßen</span><small>legt ein Ereignis mit dem Rundenzeitpunkt an</small></label>` : ''}<div id="erfassen-fehler" role="alert"></div><button class="btn btn-haupt runde-speichern" type="submit">Ausgefüllte Werte speichern</button><p class="hint">Leere und nicht markierte Felder erzeugen keinen Datensatz. Alle Eingaben verwenden den Zeitpunkt oben.</p></form>`}</div>
       <button class="runde-pfeil runde-pfeil-rechts" type="button" data-action="runde-wechsel" data-richtung="1" aria-label="Nächstes Gefäß" ${this.ui.rundenIndex >= this.ui.rundenChargeIds.length - 1 ? 'disabled' : ''}>›</button>
     </div></section>`
   }
@@ -670,6 +731,48 @@ export class WeinbegleiterApp {
     const methode = DICHTE_TYPEN.includes(definition.typ) ? `<label class="runden-methode" for="runde-methode-${definition.typ}"><span>Messmethode</span><select id="runde-methode-${definition.typ}" name="methode-${definition.typ}" data-runde-methode data-mess-typ="${definition.typ}"><option value="spindel" ${wert.methode === 'spindel' ? 'selected' : ''}>Spindel</option><option value="refraktometer" ${wert.methode === 'refraktometer' ? 'selected' : ''}>Refraktometer</option><option value="sonstige" ${wert.methode === 'sonstige' ? 'selected' : ''}>Sonstige</option></select></label>` : ''
     const label = definition.typ === 'volumen' ? 'Füllstand' : definition.label
     return `<div class="runden-feld"><div class="runden-feld-label"><label for="${html(feldId)}">${html(label)}</label>${definition.hinweis ? `<small>${html(definition.hinweis)}</small>` : ''}</div>${feld}${methode}</div>`
+  }
+
+  private renderRundenZugaben(charge: Charge, entwurf: RundenEntwurf): string {
+    const zeit = isoAusDatetimeLocal(this.ui.rundenZeit)
+    const erinnerungen = faelligeZugabeReminder(this.stand, charge)
+    const erinnerungsZeilen = erinnerungen.map(reminder => {
+      const art = zugabeArtFuerReminder(reminder)
+      const zugabe = art ? entwurf.zugaben[art] : undefined
+      const menge = zugabe?.menge.trim() ? ` · ${html(zugabe.menge)} ${html(zugabe.einheit)}` : ''
+      return `<div class="runden-zugabe-reminder"><strong>Fällig: ${html(reminder.titel)}</strong><span>${html(charge.name)}${menge}</span></div>`
+    }).join('')
+    const zeilen = zugabeArtenFuerPhase(charge.phase).map(art => {
+      const vorschlag = zugabeVorschlag(this.stand, charge, art, zeit, this.ui.zuckerZielJeCharge[charge.id])
+      const zugabe = entwurf.zugaben[art] ?? {
+        aktiv: false,
+        menge: vorschlag.menge,
+        einheit: vorschlag.einheit,
+        stoff: vorschlag.stoff,
+        begruendung: vorschlag.begruendung,
+        begruendungAutomatisch: true,
+      }
+      return this.renderRundenZugabe(vorschlag, zugabe)
+    }).join('')
+    return `<section class="runden-zugaben" aria-labelledby="runden-zugaben-titel"><div class="runden-zugaben-kopf"><h2 id="runden-zugaben-titel">Zugaben</h2><span>Nur „Zugegeben“ wird protokolliert</span></div>${erinnerungsZeilen}<div class="runden-zugabe-liste">${zeilen}</div></section>`
+  }
+
+  private renderRundenZugabe(vorschlag: ReturnType<typeof zugabeVorschlag>, zugabe: RundenZugabeEntwurf): string {
+    const menge = parseDeZahl(zugabe.menge)
+    const vorrat = passendeVorratsZuordnung(this.stand, vorschlag.art, zugabe.stoff, zugabe.einheit, menge ?? undefined)
+    const gesamtNachEingabe = (vorschlag.bisherGesamt ?? 0) + (menge ?? 0)
+    const maxErreicht = vorschlag.gesamtMax !== undefined && gesamtNachEingabe >= vorschlag.gesamtMax
+    const feldId = `runden-zugabe-${vorschlag.art}`
+    const stoffFeld = vorschlag.art === 'sonstiges'
+      ? `<label class="runden-zugabe-stoff" for="${feldId}-stoff"><span>Stoffname</span><input id="${feldId}-stoff" name="zugabe-${vorschlag.art}-stoff" data-runde-zugabe-stoff value="${html(zugabe.stoff)}"></label>`
+      : `<strong class="runden-zugabe-name">${html(vorschlag.label)}</strong>`
+    const einheit = vorschlag.art === 'sonstiges'
+      ? `<select name="zugabe-${vorschlag.art}-einheit" data-runde-zugabe-einheit aria-label="Einheit für sonstige Zugabe">${['g', 'kg', 'ml', 'L', 'Beutel'].map(option => `<option value="${option}" ${option === zugabe.einheit ? 'selected' : ''}>${option}</option>`).join('')}</select>`
+      : `<span>${html(zugabe.einheit)}</span>`
+    return `<article class="runden-zugabe ${zugabe.aktiv ? 'aktiv' : ''}" data-runde-zugabe data-zugabe-art="${vorschlag.art}"${vorschlag.gesamtMax === undefined ? '' : ` data-zugabe-max="${vorschlag.gesamtMax}" data-zugabe-bisher="${vorschlag.bisherGesamt ?? 0}"`}>
+      <label class="runden-zugabe-aktiv"><input type="checkbox" name="zugabe-${vorschlag.art}-aktiv" data-runde-zugabe-aktiv ${zugabe.aktiv ? 'checked' : ''}><span>Zugegeben</span></label>
+      <div class="runden-zugabe-inhalt">${stoffFeld}<div class="runden-zugabe-menge"><label for="${feldId}">Menge</label><div><input id="${feldId}" name="zugabe-${vorschlag.art}-menge" data-runde-zugabe-menge inputmode="decimal" value="${html(zugabe.menge)}">${einheit}</div></div><p class="runden-zugabe-herkunft">${html(vorschlag.herkunft)}</p><p class="runden-zugabe-vorrat ${vorrat.warnung ? 'warnung' : ''}" data-runde-zugabe-vorrat>${html(vorrat.hinweis)}</p><div class="warnbox runden-zugabe-max" data-runde-zugabe-maxwarnung ${maxErreicht ? '' : 'hidden'}>Die erfasste Gesamtmenge erreicht oder überschreitet die Höchstmenge aus naehrsalzPlan(). Die Zugabe bleibt möglich; R-NAEHRSALZ-MAX bleibt unverändert die Regelquelle.</div><details class="runden-zugabe-begruendung"><summary>Begründung ansehen oder ändern</summary><textarea name="zugabe-${vorschlag.art}-begruendung" data-runde-zugabe-begruendung aria-label="Begründung für ${html(vorschlag.label)}">${html(zugabe.begruendung)}</textarea></details></div>
+    </article>`
   }
 
   private renderRundenZuletzt(charge: Charge, definitionen: MessDefinition[]): string {
@@ -698,12 +801,25 @@ export class WeinbegleiterApp {
       : 'Die Regelengine meldet für die gespeicherten Werte keine Abweichung.'
     const istLetzteSpeicherung = this.ui.rundenGespeichert === gespeichert
     const sekunden = !istLetzteSpeicherung || this.ui.rundenUndoBis === null ? 0 : Math.max(0, Math.ceil((this.ui.rundenUndoBis - Date.now()) / 1000))
-    return `<div class="runden-nachher"><div class="runden-befund befund-${ampel.toLowerCase()}" role="status"><div>${this.renderAmpel(ampel)}<strong>Gespeichert</strong></div><p>${this.fachtext(befund?.text ?? normalText)}</p>${befund?.massnahme ? `<small>${this.fachtext(befund.massnahme)}</small>` : ''}</div><button class="btn btn-haupt runde-weiter" type="button" data-action="runde-weiter">${naechste ? `Weiter → ${html(naechste.name)}` : 'Weiter → Zusammenfassung'}</button>${sekunden > 0 ? `<button class="runde-undo" type="button" data-action="runde-undo">Letzte Eingabe zurücknehmen <strong>· ${sekunden} s</strong></button>` : istLetzteSpeicherung ? '<p class="hint">Die Rücknahmefrist ist abgelaufen.</p>' : ''}<p class="hint">${gespeichert.typen.length ? gespeichert.typen.map(typ => this.messLabel(typ)).join(', ') : 'Unterstoßen'} · ${datumZeitFormat.format(new Date(gespeichert.zeit))}</p></div>`
+    const protokoll = this.rundenProtokollText(gespeichert)
+    return `<div class="runden-nachher"><div class="runden-befund befund-${ampel.toLowerCase()}" role="status"><div>${this.renderAmpel(ampel)}<strong>Gespeichert</strong></div><p>${this.fachtext(befund?.text ?? normalText)}</p>${befund?.massnahme ? `<small>${this.fachtext(befund.massnahme)}</small>` : ''}</div><button class="btn btn-haupt runde-weiter" type="button" data-action="runde-weiter">${naechste ? `Weiter → ${html(naechste.name)}` : 'Weiter → Zusammenfassung'}</button>${sekunden > 0 ? `<button class="runde-undo" type="button" data-action="runde-undo">Letzte Eingabe zurücknehmen <strong>· ${sekunden} s</strong></button>` : istLetzteSpeicherung ? '<p class="hint">Die Rücknahmefrist ist abgelaufen.</p>' : ''}<p class="hint">${html(protokoll || 'Keine Werte')} · ${datumZeitFormat.format(new Date(gespeichert.zeit))}</p></div>`
+  }
+
+  private rundenProtokollText(ergebnis: RundenSpeicherung): string {
+    const ereignisse = ergebnis.ereignisIds
+      .map(ereignisId => this.stand.ereignisse.find(ereignis => ereignis.id === ereignisId))
+      .filter((ereignis): ereignis is Ereignis => Boolean(ereignis))
+    const teile = ergebnis.typen.map(typ => this.messLabel(typ))
+    if (ereignisse.some(ereignis => ereignis.art === 'unterstossen')) teile.push('Untergestoßen')
+    teile.push(...ereignisse.filter(ereignis => ereignis.mengeWert !== undefined).map(ereignis => `${EREIGNIS_LABEL[ereignis.art]} ${formatiereZahl(ereignis.mengeWert!)} ${ereignis.mengeEinheit ?? ''}`.trim()))
+    return teile.join(', ')
   }
 
   private renderRundenZusammenfassung(): string {
     const offene = this.stand.reminder.filter(reminder => !reminder.erledigt).sort((a, b) => a.faellig.localeCompare(b.faellig))
-    return `<section class="runden-zusammenfassung" aria-labelledby="runden-abschluss"><div><span class="abschluss-merker">Runde abgeschlossen</span><h1 id="runden-abschluss">${this.ui.rundenErgebnisse.length} Gefäße erfasst</h1><p>${datumZeitFormat.format(new Date(isoAusDatetimeLocal(this.ui.rundenZeit)))}</p></div><div class="abschluss-grid"><div class="karte"><h2>Erfasste Werte</h2>${this.ui.rundenErgebnisse.map(ergebnis => { const charge = this.stand.chargen.find(eintrag => eintrag.id === ergebnis.chargeId); return `<div class="abschluss-zeile"><strong>${html(charge?.name ?? ergebnis.chargeId)}</strong><span>${ergebnis.typen.map(typ => this.messLabel(typ)).join(', ')}${ergebnis.ereignisIds.length ? `${ergebnis.typen.length ? ' · ' : ''}Untergestoßen` : ''}</span></div>` }).join('') || '<div class="leer">Keine Werte gespeichert.</div>'}</div><div class="karte"><h2>Ampelwechsel</h2>${this.ui.rundenErgebnisse.filter(ergebnis => ergebnis.ampelVorher !== ergebnis.ampelNachher).map(ergebnis => `<div class="abschluss-zeile"><strong>${html(this.stand.chargen.find(charge => charge.id === ergebnis.chargeId)?.name ?? ergebnis.chargeId)}</strong><span>${html(AMPEL_LABEL[ergebnis.ampelVorher])} → ${html(AMPEL_LABEL[ergebnis.ampelNachher])}</span></div>`).join('') || '<div class="leer">Keine Ampel hat gewechselt.</div>'}</div><div class="karte"><h2>Fällig</h2>${offene.slice(0, 5).map(reminder => `<div class="abschluss-zeile"><strong>${datumFormat.format(new Date(reminder.faellig))}</strong><span>${html(reminder.titel)}</span></div>`).join('') || '<div class="leer">Nichts offen.</div>'}</div></div><button class="btn btn-haupt" type="button" data-action="runde-beenden">Zu Heute</button></section>`
+    const geaenderteReminderIds = [...new Set(this.ui.rundenErgebnisse.flatMap(ergebnis => ergebnis.reminderAenderungen.map(aenderung => aenderung.reminderId)))]
+    const geaenderteReminder = geaenderteReminderIds.map(reminderId => this.stand.reminder.find(reminder => reminder.id === reminderId)).filter((reminder): reminder is Reminder => Boolean(reminder))
+    return `<section class="runden-zusammenfassung" aria-labelledby="runden-abschluss"><div><span class="abschluss-merker">Runde abgeschlossen</span><h1 id="runden-abschluss">${this.ui.rundenErgebnisse.length} Gefäße erfasst</h1><p>${datumZeitFormat.format(new Date(isoAusDatetimeLocal(this.ui.rundenZeit)))}</p></div><div class="abschluss-grid"><div class="karte"><h2>Messungen und Zugaben</h2>${this.ui.rundenErgebnisse.map(ergebnis => { const charge = this.stand.chargen.find(eintrag => eintrag.id === ergebnis.chargeId); return `<div class="abschluss-zeile"><strong>${html(charge?.name ?? ergebnis.chargeId)}</strong><span>${html(this.rundenProtokollText(ergebnis) || 'Keine Werte')}</span></div>` }).join('') || '<div class="leer">Keine Werte gespeichert.</div>'}</div><div class="karte"><h2>Ampelwechsel</h2>${this.ui.rundenErgebnisse.filter(ergebnis => ergebnis.ampelVorher !== ergebnis.ampelNachher).map(ergebnis => `<div class="abschluss-zeile"><strong>${html(this.stand.chargen.find(charge => charge.id === ergebnis.chargeId)?.name ?? ergebnis.chargeId)}</strong><span>${html(AMPEL_LABEL[ergebnis.ampelVorher])} → ${html(AMPEL_LABEL[ergebnis.ampelNachher])}</span></div>`).join('') || '<div class="leer">Keine Ampel hat gewechselt.</div>'}</div><div class="karte"><h2>Termine</h2>${geaenderteReminder.map(reminder => `<div class="abschluss-zeile"><strong>${reminder.wiederholungTage === undefined ? 'Erledigt' : 'Weitergeführt'}</strong><span>${html(reminder.titel)}${reminder.wiederholungTage === undefined ? '' : ` · nächster Termin ${datumFormat.format(new Date(reminder.faellig))}`}</span></div>`).join('') || '<div class="leer">Keine Termine durch Zugaben erledigt.</div>'}${offene.slice(0, 3).map(reminder => `<div class="abschluss-zeile"><strong>Offen · ${datumFormat.format(new Date(reminder.faellig))}</strong><span>${html(reminder.titel)}</span></div>`).join('')}</div></div><button class="btn btn-haupt" type="button" data-action="runde-beenden">Zu Heute</button></section>`
   }
 
   private renderDesktopSidebar(): string {
@@ -815,7 +931,7 @@ export class WeinbegleiterApp {
         const behaelter = this.stand.behaelter.find(eintrag => eintrag.id === charge.behaelterId)
         return `<div class="karte"><div class="zeile"><span>Behälter</span><b>${html(behaelter?.name ?? 'nicht zugeordnet')}</b></div><div class="zeile"><span>Erwartete Weinausbeute</span><b>${charge.erwarteteWeinLiter === undefined ? 'nicht erfasst' : `${zahlFormat.format(charge.erwarteteWeinLiter)} L`}</b></div><div class="zeile"><span>Füllvolumen</span><b>${this.fuellvolumenText(charge)}</b></div><div class="zeile"><span>Kopfraum</span><b>${charge.kopfraumLiter === undefined ? 'nicht erfasst' : `${zahlFormat.format(charge.kopfraumLiter)} L`}</b></div>${this.renderVolumenHistorie(charge)}</div>`
       }
-      return `<form class="karte" id="gefaess-form"><div class="zeile"><span>Erwartete Weinausbeute</span><b>${charge.erwarteteWeinLiter === undefined ? 'nicht erfasst' : `${zahlFormat.format(charge.erwarteteWeinLiter)} L`}</b></div><div class="zeile"><span>Aktuelles Füllvolumen</span><b>${this.fuellvolumenText(charge)}</b></div><label for="charge-gefaess">Behälter</label><select id="charge-gefaess" name="behaelterId"><option value="">Nicht zugeordnet</option>${this.stand.behaelter.map(b => `<option value="${html(b.id)}" ${b.id === charge.behaelterId ? 'selected' : ''}>${html(b.name)} · ${zahlFormat.format(b.bruttoLiter)} L</option>`).join('')}</select><div class="formular-grid zwei"><div><label for="fuell-liter">Neues Füllvolumen in L</label><input id="fuell-liter" name="fuellLiter" inputmode="decimal" value="${charge.fuellLiter === undefined ? '' : html(formatiereZahl(charge.fuellLiter))}" required></div><div><label for="kopfraum-liter">Neuer Kopfraum in L</label><input id="kopfraum-liter" name="kopfraumLiter" inputmode="decimal" value="${charge.kopfraumLiter === undefined ? '' : html(formatiereZahl(charge.kopfraumLiter))}" required></div></div><label for="volumen-anlass">Anlass *</label><input id="volumen-anlass" name="anlass" value="Manuelle Gefäßaktualisierung" required><label for="volumen-zeit">Zeitpunkt</label><input id="volumen-zeit" name="zeit" type="datetime-local" value="${datetimeLocalWert()}" required><button class="btn" type="submit">Volumenpunkt speichern</button>${this.renderVolumenHistorie(charge)}</form>`
+      return `<form class="karte" id="gefaess-form"><div class="zeile"><span>Erwartete Weinausbeute</span><b>${charge.erwarteteWeinLiter === undefined ? 'nicht erfasst' : `${zahlFormat.format(charge.erwarteteWeinLiter)} L`}</b></div><div class="zeile"><span>Aktuelles Füllvolumen</span><b>${this.fuellvolumenText(charge)}</b></div><label for="charge-gefaess">Behälter</label><select id="charge-gefaess" name="behaelterId"><option value="">Nicht zugeordnet</option>${this.behaelterFuerAuswahl(charge.id).map(b => `<option value="${html(b.id)}" ${b.id === charge.behaelterId ? 'selected' : ''}>${html(b.name)} · ${zahlFormat.format(b.bruttoLiter)} L</option>`).join('')}</select><div class="formular-grid zwei"><div><label for="fuell-liter">Neues Füllvolumen in L</label><input id="fuell-liter" name="fuellLiter" inputmode="decimal" value="${charge.fuellLiter === undefined ? '' : html(formatiereZahl(charge.fuellLiter))}" required></div><div><label for="kopfraum-liter">Neuer Kopfraum in L</label><input id="kopfraum-liter" name="kopfraumLiter" inputmode="decimal" value="${charge.kopfraumLiter === undefined ? '' : html(formatiereZahl(charge.kopfraumLiter))}" required></div></div><label for="volumen-anlass">Anlass *</label><input id="volumen-anlass" name="anlass" value="Manuelle Gefäßaktualisierung" required><label for="volumen-zeit">Zeitpunkt</label><input id="volumen-zeit" name="zeit" type="datetime-local" value="${datetimeLocalWert()}" required><button class="btn" type="submit">Volumenpunkt speichern</button>${this.renderVolumenHistorie(charge)}</form>`
     }
     const ereignisFotoIds = new Set(this.stand.ereignisse.filter(e => e.chargeId === charge.id).flatMap(e => e.fotoIds ?? []))
     const chargeFotos = this.fotos.filter(foto => foto.chargeId === charge.id || ereignisFotoIds.has(foto.id))
@@ -941,7 +1057,7 @@ export class WeinbegleiterApp {
   private renderZugabeFelder(art: EreignisArt): string {
     if (VOLUMEN_EREIGNIS_ARTEN.includes(art)) {
       const charge = this.aktuelleCharge()
-      return `<div class="formular-grid zwei"><div><label for="ereignis-fuell-liter">Füllvolumen nach dem Vorgang *</label><input id="ereignis-fuell-liter" name="fuellLiter" inputmode="decimal" value="${charge?.fuellLiter === undefined ? '' : html(formatiereZahl(charge.fuellLiter))}" required></div><div><label for="ereignis-kopfraum-liter">Kopfraum nach dem Vorgang *</label><input id="ereignis-kopfraum-liter" name="kopfraumLiter" inputmode="decimal" value="${charge?.kopfraumLiter === undefined ? '' : html(formatiereZahl(charge.kopfraumLiter))}" required></div></div><label for="ereignis-behaelter">Behälter nach dem Vorgang *</label><select id="ereignis-behaelter" name="behaelterId" required><option value="">Bitte wählen</option>${this.stand.behaelter.map(behaelter => `<option value="${html(behaelter.id)}" ${behaelter.id === charge?.behaelterId ? 'selected' : ''}>${html(behaelter.name)} · ${zahlFormat.format(behaelter.bruttoLiter)} L</option>`).join('')}</select><div class="hint">Die App hängt für jede ausgewählte Charge einen neuen Volumenpunkt an.</div>`
+      return `<div class="formular-grid zwei"><div><label for="ereignis-fuell-liter">Füllvolumen nach dem Vorgang *</label><input id="ereignis-fuell-liter" name="fuellLiter" inputmode="decimal" value="${charge?.fuellLiter === undefined ? '' : html(formatiereZahl(charge.fuellLiter))}" required></div><div><label for="ereignis-kopfraum-liter">Kopfraum nach dem Vorgang *</label><input id="ereignis-kopfraum-liter" name="kopfraumLiter" inputmode="decimal" value="${charge?.kopfraumLiter === undefined ? '' : html(formatiereZahl(charge.kopfraumLiter))}" required></div></div><label for="ereignis-behaelter">Behälter nach dem Vorgang *</label><select id="ereignis-behaelter" name="behaelterId" required><option value="">Bitte wählen</option>${this.behaelterFuerAuswahl(charge?.id).map(behaelter => `<option value="${html(behaelter.id)}" ${behaelter.id === charge?.behaelterId ? 'selected' : ''}>${html(behaelter.name)} · ${zahlFormat.format(behaelter.bruttoLiter)} L</option>`).join('')}</select><div class="hint">Die App hängt für jede ausgewählte Charge einen neuen Volumenpunkt an.</div>`
     }
     if (!ZUGABE_ARTEN.includes(art)) return '<div class="info-box">Für dieses Ereignis ist keine Zugabemenge erforderlich.</div>'
     const defaults: Partial<Record<EreignisArt, [string, string]>> = {
@@ -1005,8 +1121,7 @@ export class WeinbegleiterApp {
   }
 
   private renderPressTeilung(charge: Charge): string {
-    const heute = this.lokalesIsoDatum(new Date())
-    const freieBehaelter = this.stand.behaelter.filter(behaelter => (!behaelter.vorhandenAb || behaelter.vorhandenAb <= heute) && !this.stand.chargen.some(eintrag => !eintrag.archiviert && eintrag.id !== charge.id && eintrag.behaelterId === behaelter.id))
+    const freieBehaelter = this.behaelterFuerAuswahl(charge.id)
     const optionen = freieBehaelter.map(behaelter => `<option value="${html(behaelter.id)}">${html(behaelter.name)} · ${formatiereZahl(behaelter.bruttoLiter)} L</option>`).join('')
     return `<form class="karte press-teilung" id="press-teilung-form"><h2>Pressen dokumentieren</h2><p>Vorlauf und Presswein bleiben getrennte Chargen. Füllvolumen, Kopfraum und Gefäß werden beim Anlegen festgehalten.</p><div class="press-spalten"><fieldset><legend>Vorlauf</legend><label for="vorlauf-liter">Füllvolumen in L</label><input id="vorlauf-liter" name="vorlaufLiter" inputmode="decimal" required><label for="vorlauf-kopfraum">Kopfraum in L</label><input id="vorlauf-kopfraum" name="vorlaufKopfraum" inputmode="decimal" required><label for="vorlauf-behaelter">Gefäß</label><select id="vorlauf-behaelter" name="vorlaufBehaelter" required><option value="">Bitte wählen</option>${optionen}</select></fieldset><fieldset><legend>Presswein</legend><label for="presswein-liter">Füllvolumen in L</label><input id="presswein-liter" name="pressweinLiter" inputmode="decimal" required><label for="presswein-kopfraum">Kopfraum in L</label><input id="presswein-kopfraum" name="pressweinKopfraum" inputmode="decimal" required><label for="presswein-behaelter">Gefäß</label><select id="presswein-behaelter" name="pressweinBehaelter" required><option value="">Bitte wählen</option>${optionen}</select></fieldset></div><label for="press-zeit">Zeitpunkt</label><input id="press-zeit" name="zeit" type="datetime-local" value="${datetimeLocalWert()}" required><div id="erfassen-fehler" role="alert"></div><button class="btn btn-haupt" type="submit">Zwei Chargen anlegen und Maische archivieren</button></form>`
   }
@@ -1064,7 +1179,8 @@ export class WeinbegleiterApp {
     if (!vorlaufBehaelter || !pressweinBehaelter || vorlaufBehaelter === pressweinBehaelter) return this.formularFehler('Wähle zwei verschiedene Gefäße.')
     const pruefeKapazitaet = (behaelterId: string, fuellLiter: number, kopfraumLiter: number) => {
       const behaelter = this.stand.behaelter.find(eintrag => eintrag.id === behaelterId)
-      return behaelter && fuellLiter + kopfraumLiter <= behaelter.bruttoLiter + 0.01
+      return behaelter && this.behaelterFuerAuswahl(quelle.id).some(eintrag => eintrag.id === behaelterId)
+        && fuellLiter + kopfraumLiter <= behaelter.bruttoLiter + 0.01
     }
     if (!pruefeKapazitaet(vorlaufBehaelter, vorlaufLiter, vorlaufKopfraum) || !pruefeKapazitaet(pressweinBehaelter, pressweinLiter, pressweinKopfraum)) return this.formularFehler('Füllvolumen plus Kopfraum überschreitet die Gefäßgröße.')
     const zeit = isoAusDatetimeLocal(daten.get('zeit'))
@@ -1138,9 +1254,61 @@ export class WeinbegleiterApp {
     return `<section class="seite" aria-labelledby="mehr-titel"><h1 class="seiten-titel" id="mehr-titel">Mehr</h1><div class="mehr-ziele"><button class="btn" type="button" data-action="nav" data-view="wiki">${icon('buch', 'icon-klein')} Wiki</button><button class="btn" type="button" data-action="messwert-alle">${icon('messung', 'icon-klein')} Ein Wert für alle Gefäße</button></div><h2>Export & Sicherung</h2><div class="karte button-grid"><button class="btn" type="button" data-action="export-md">Jahrgang als Markdown</button><button class="btn" type="button" data-action="export-csv">Messreihen als CSV</button><button class="btn" type="button" data-action="export-json">Vollsicherung als JSON</button><button class="btn" type="button" data-action="export-zip">ZIP inklusive Fotos</button><label class="btn" for="import-json">JSON-Sicherung importieren</label><input class="sr-only" id="import-json" type="file" accept="application/json,.json" data-action="import-json"></div>
       <h2>Kellersensor</h2><form class="karte" id="sensor-form"><label for="sensor-adapter">Adapter</label><select id="sensor-adapter" name="adapter"><option value="shelly-cloud" ${sensor.adapter === 'shelly-cloud' ? 'selected' : ''}>Shelly Cloud</option><option value="govee" ${sensor.adapter === 'govee' ? 'selected' : ''}>Govee</option><option value="generisch-json" ${sensor.adapter === 'generisch-json' ? 'selected' : ''}>Generisches JSON</option></select><label for="sensor-url">HTTPS-Endpunkt</label><input id="sensor-url" name="url" type="url" value="${html(sensor.url)}" placeholder="https://…"><div class="hint">HTTP wird mit einer klaren Mixed-Content-Meldung blockiert.</div><div class="formular-grid zwei"><div><label for="sensor-token">Token</label><input id="sensor-token" name="token" type="password" value="${html(sensor.token ?? '')}" autocomplete="off"></div><div><label for="sensor-id">Geräte-ID</label><input id="sensor-id" name="geraeteId" value="${html(sensor.geraeteId ?? '')}"></div><div><label for="sensor-temp-pfad">JSON-Pfad Temperatur</label><input id="sensor-temp-pfad" name="pfadTemperatur" value="${html(sensor.pfadTemperatur ?? '')}" placeholder="data.temp"></div><div><label for="sensor-feuchte-pfad">JSON-Pfad Feuchte</label><input id="sensor-feuchte-pfad" name="pfadFeuchte" value="${html(sensor.pfadFeuchte ?? '')}" placeholder="data.humidity"></div></div><div id="sensor-fehler" role="alert"></div><div class="balken-actions"><button class="btn" type="submit" name="sensorAktion" value="speichern">Konfiguration speichern</button><button class="btn btn-haupt" type="submit" name="sensorAktion" value="testen">Verbindung testen</button></div></form>
       <h2>Manueller Klimawert</h2><form class="karte" id="klima-form"><div class="formular-grid zwei"><div><label for="klima-temp">Temperatur in °C</label><input id="klima-temp" name="temperatur" inputmode="decimal" required></div><div><label for="klima-feuchte">Feuchte in %</label><input id="klima-feuchte" name="feuchte" inputmode="decimal"></div></div><button class="btn btn-haupt" type="submit">Manuell speichern</button><div class="hint">Funktioniert immer und bleibt der Standardweg.</div></form>
-      <h2>Behälter</h2><div class="karte">${this.stand.behaelter.map(behaelter => { const charge = this.stand.chargen.find(c => c.behaelterId === behaelter.id && !c.archiviert); return `<div class="zeile"><span>${html(behaelter.name)} · ${zahlFormat.format(behaelter.bruttoLiter)} L</span><b>${charge ? `belegt: ${html(charge.name)}` : behaelter.vorhandenAb ? `ab ${datumFormat.format(new Date(`${behaelter.vorhandenAb}T12:00:00`))}` : 'frei'}</b></div>` }).join('')}</div>
+      <h2>Gefäße</h2><div class="karte gefaess-liste">${this.stand.behaelter.map(behaelter => this.renderBehaelterZeile(behaelter)).join('') || '<div class="leer">Noch keine Gefäße angelegt.</div>'}</div><button class="btn" type="button" data-action="behaelter-neu">${icon('plus', 'icon-klein')} Neues Gefäß anlegen</button>
       <div class="fassung"><div>Fassung vom ${BUILD_ZEIT_FORMAT.format(new Date(__BUILD_TIMESTAMP__))} (${html(__BUILD_COMMIT__)})</div><div class="abgleich-zeile"><span>Abgleich: ${html(abgleichZeit)}</span><button class="btn btn-klein" type="button" data-action="sync-jetzt" ${this.syncLaeuft ? 'disabled' : ''}>Jetzt abgleichen</button></div><small class="abgleich-hinweis" aria-live="polite">${html(abgleichHinweis)}</small></div>
     </section>`
+  }
+
+  private renderBehaelterZeile(behaelter: Behaelter): string {
+    const heute = this.lokalesIsoDatum(new Date())
+    const verfuegbar = behaelterVerfuegbar(behaelter, heute)
+    const ausgemustert = !verfuegbar && Boolean(behaelter.ausgemustertAm && behaelter.ausgemustertAm.slice(0, 10) <= heute)
+    const charge = this.stand.chargen.find(eintrag => !eintrag.archiviert && eintrag.behaelterId === behaelter.id)
+    const zustand = ausgemustert
+      ? `ausgemustert · ${behaelter.ausgemustertGrund || 'Grund fehlt'}`
+      : charge
+        ? `belegt durch ${charge.name}`
+        : verfuegbar
+          ? 'frei'
+          : `erwartet ab ${datumFormat.format(new Date(`${behaelter.vorhandenAb!.slice(0, 10)}T12:00:00`))}`
+    return `<article class="gefaess-eintrag" data-behaelter-id="${html(behaelter.id)}"><div class="gefaess-kopf"><div><strong>${html(behaelter.name)}</strong><small>${zahlFormat.format(behaelter.bruttoLiter)} L · ${html(behaelter.material)} · ${html(behaelter.verschluss)}</small></div><span class="gefaess-zustand ${ausgemustert ? 'ausgemustert' : verfuegbar ? 'verfuegbar' : 'erwartet'}">${html(zustand)}</span></div><div class="gefaess-aktionen"><button class="text-knopf" type="button" data-action="behaelter-bearbeiten" data-id="${html(behaelter.id)}">Bearbeiten</button>${behaelter.vorhandenAb && !ausgemustert ? `<button class="text-knopf" type="button" data-action="behaelter-angekommen" data-id="${html(behaelter.id)}">Angekommen</button>` : ''}${ausgemustert ? `<button class="text-knopf" type="button" data-action="behaelter-zurueckholen" data-id="${html(behaelter.id)}">Zurückholen</button>` : `<button class="text-knopf text-gefahr" type="button" data-action="behaelter-ausmustern" data-id="${html(behaelter.id)}">Ausmustern</button>`}</div></article>`
+  }
+
+  private renderDialoge(): string {
+    if (this.ui.lieferReminderId) return this.renderLieferungDialog()
+    if (this.ui.behaelterDialog) return this.renderBehaelterDialog()
+    return ''
+  }
+
+  private renderBehaelterDialog(): string {
+    const behaelter = this.stand.behaelter.find(eintrag => eintrag.id === this.ui.behaelterId)
+    if (this.ui.behaelterDialog === 'ausmustern' && behaelter) {
+      return `<div class="dialog-hintergrund"><section class="dialog-karte" role="dialog" aria-modal="true" aria-labelledby="ausmustern-titel"><h2 id="ausmustern-titel">${html(behaelter.name)} ausmustern</h2><p>Das Gefäß bleibt mit seiner ID in der Historie erhalten.</p><form id="behaelter-ausmustern-form"><input type="hidden" name="id" value="${html(behaelter.id)}"><label for="ausmustern-grund">Grund *</label><textarea id="ausmustern-grund" name="grund" required placeholder="Zum Beispiel: Im Transport zerbrochen"></textarea><div id="dialog-fehler" role="alert"></div><div class="dialog-aktionen"><button class="btn" type="button" data-action="dialog-schliessen">Abbrechen</button><button class="btn btn-gefahr" type="submit">Ausmustern</button></div></form></section></div>`
+    }
+    const bearbeiten = this.ui.behaelterDialog === 'bearbeiten' && behaelter
+    const titel = bearbeiten ? `${behaelter.name} bearbeiten` : 'Neues Gefäß anlegen'
+    return `<div class="dialog-hintergrund"><section class="dialog-karte" role="dialog" aria-modal="true" aria-labelledby="behaelter-dialog-titel"><h2 id="behaelter-dialog-titel">${html(titel)}</h2><form id="behaelter-verwalten-form"><input type="hidden" name="id" value="${html(bearbeiten ? behaelter.id : '')}"><label for="behaelter-name">Name *</label><input id="behaelter-name" name="name" value="${html(bearbeiten ? behaelter.name : '')}" required><label for="behaelter-liter">Brutto-Liter *</label><input id="behaelter-liter" name="bruttoLiter" inputmode="decimal" value="${bearbeiten ? html(formatiereZahl(behaelter.bruttoLiter)) : ''}" required><div class="formular-grid zwei"><div><label for="behaelter-material">Material *</label><input id="behaelter-material" name="material" value="${html(bearbeiten ? behaelter.material : '')}" required></div><div><label for="behaelter-verschluss">Verschluss *</label><input id="behaelter-verschluss" name="verschluss" value="${html(bearbeiten ? behaelter.verschluss : '')}" required></div></div><label for="behaelter-vorhanden-ab">Erwartet ab</label><input id="behaelter-vorhanden-ab" name="vorhandenAb" type="date" value="${html(bearbeiten ? behaelter.vorhandenAb?.slice(0, 10) ?? '' : '')}"><div class="hint">Leer lassen, wenn das Gefäß schon vorhanden ist.</div><div id="dialog-fehler" role="alert"></div><div class="dialog-aktionen"><button class="btn" type="button" data-action="dialog-schliessen">Abbrechen</button><button class="btn btn-haupt" type="submit">${bearbeiten ? 'Änderungen speichern' : 'Gefäß anlegen'}</button></div></form></section></div>`
+  }
+
+  private renderLieferungDialog(): string {
+    const reminder = this.stand.reminder.find(eintrag => eintrag.id === this.ui.lieferReminderId)
+    if (!reminder) return ''
+    const behaelter = this.erwarteteBehaelterFuerReminder(reminder)
+    return `<div class="dialog-hintergrund"><section class="dialog-karte" role="dialog" aria-modal="true" aria-labelledby="lieferung-titel"><h2 id="lieferung-titel">Lieferung einlösen</h2><p>${html(reminder.titel)}</p><form id="lieferung-erledigen-form"><input type="hidden" name="reminderId" value="${html(reminder.id)}"><fieldset class="lieferung-auswahl"><legend>Welche Gefäße sind angekommen?</legend>${behaelter.map(eintrag => `<label><input type="checkbox" name="behaelterIds" value="${html(eintrag.id)}" checked><span><strong>${html(eintrag.name)}</strong><small>${zahlFormat.format(eintrag.bruttoLiter)} L · erwartet ${datumFormat.format(new Date(`${eintrag.vorhandenAb!.slice(0, 10)}T12:00:00`))}</small></span></label>`).join('')}</fieldset><div class="hint">Entferne den Haken bei allem, was nicht angekommen ist.</div><div class="dialog-aktionen"><button class="btn" type="button" data-action="dialog-schliessen">Abbrechen</button><button class="btn btn-haupt" type="submit">Auswahl übernehmen und Termin erledigen</button></div></form></section></div>`
+  }
+
+  private erwarteteBehaelterFuerReminder(reminder: Reminder): Behaelter[] {
+    const terminTag = this.lokalesIsoDatum(new Date(reminder.faellig))
+    return this.stand.behaelter.filter(behaelter => Boolean(behaelter.vorhandenAb && behaelter.vorhandenAb.slice(0, 10) <= terminTag))
+  }
+
+  private istLieferReminder(reminder: Reminder): boolean {
+    if (reminder.erledigt || new Date(reminder.faellig).getTime() > Date.now()) return false
+    const text = `${reminder.titel} ${reminder.beschreibung}`
+    const nenntLieferung = /(liefer|ankomm|zustell)/i.test(text)
+      || (/erwart/i.test(text) && /(gefäß|gefaess|behälter|behaelter|ballon)/i.test(text))
+    if (!nenntLieferung) return false
+    return this.erwarteteBehaelterFuerReminder(reminder).length > 0
   }
 
   private renderUmverteilen(): string {
@@ -1151,8 +1319,9 @@ export class WeinbegleiterApp {
     const menge = gesamt / anzahl
     const quellIds = new Set(quellen.map(charge => charge.id))
     const heute = this.lokalesIsoDatum(new Date())
-    const nutzbar = this.stand.behaelter.filter(behaelter => !this.stand.chargen.some(charge => charge.behaelterId === behaelter.id && !charge.archiviert && !quellIds.has(charge.id)))
-    return Array.from({ length: anzahl }, (_, index) => `<div class="ziel-zeile"><div><label for="ziel-name-${index}">Ziel ${index + 1}</label><input id="ziel-name-${index}" name="zielName" value="Gärbottich ${index + 1}" required></div><div><label for="ziel-menge-${index}">kg</label><input id="ziel-menge-${index}" name="zielMenge" inputmode="decimal" value="${html(formatiereZahl(menge, 3))}" required></div><div><label for="ziel-behaelter-${index}">Behälter</label><select id="ziel-behaelter-${index}" name="zielBehaelter"><option value="">Ohne Zuordnung</option>${nutzbar.map(behaelter => { const zukunft = Boolean(behaelter.vorhandenAb && behaelter.vorhandenAb > heute); return `<option value="${html(behaelter.id)}" ${behaelter.id === `bottich-${index + 1}` ? 'selected' : ''} ${zukunft ? 'disabled' : ''}>${html(behaelter.name)}${zukunft ? ` · ab ${datumFormat.format(new Date(`${behaelter.vorhandenAb}T12:00:00`))}` : ''}</option>` }).join('')}</select></div></div>`).join('')
+    const nutzbar = this.stand.behaelter.filter(behaelter => behaelterVerfuegbar(behaelter, heute)
+      && !this.stand.chargen.some(charge => charge.behaelterId === behaelter.id && !charge.archiviert && !quellIds.has(charge.id)))
+    return Array.from({ length: anzahl }, (_, index) => `<div class="ziel-zeile"><div><label for="ziel-name-${index}">Ziel ${index + 1}</label><input id="ziel-name-${index}" name="zielName" value="Gärbottich ${index + 1}" required></div><div><label for="ziel-menge-${index}">kg</label><input id="ziel-menge-${index}" name="zielMenge" inputmode="decimal" value="${html(formatiereZahl(menge, 3))}" required></div><div><label for="ziel-behaelter-${index}">Behälter</label><select id="ziel-behaelter-${index}" name="zielBehaelter"><option value="">Ohne Zuordnung</option>${nutzbar.map(behaelter => `<option value="${html(behaelter.id)}" ${behaelter.id === `bottich-${index + 1}` ? 'selected' : ''}>${html(behaelter.name)}</option>`).join('')}</select></div></div>`).join('')
   }
 
   private sichereRundenEntwurf(formular = this.root.querySelector<HTMLFormElement>('#runde-form')): void {
@@ -1170,7 +1339,60 @@ export class WeinbegleiterApp {
       entwurf.messwerte[typ] = { eingabe: entwurf.messwerte[typ]?.eingabe ?? '', methode: feld.value as MessMethode }
     })
     entwurf.untergestossen = Boolean(formular.querySelector<HTMLInputElement>('[data-runde-untergestossen]')?.checked)
+    formular.querySelectorAll<HTMLElement>('[data-runde-zugabe]').forEach(zeile => {
+      const art = zeile.dataset.zugabeArt as RundenZugabeArt | undefined
+      if (!art) return
+      const vorhanden = entwurf.zugaben[art]
+      entwurf.zugaben[art] = {
+        aktiv: Boolean(zeile.querySelector<HTMLInputElement>('[data-runde-zugabe-aktiv]')?.checked),
+        menge: zeile.querySelector<HTMLInputElement>('[data-runde-zugabe-menge]')?.value ?? vorhanden?.menge ?? '',
+        einheit: zeile.querySelector<HTMLSelectElement>('[data-runde-zugabe-einheit]')?.value ?? vorhanden?.einheit ?? 'g',
+        stoff: zeile.querySelector<HTMLInputElement>('[data-runde-zugabe-stoff]')?.value ?? vorhanden?.stoff ?? '',
+        begruendung: zeile.querySelector<HTMLTextAreaElement>('[data-runde-zugabe-begruendung]')?.value ?? vorhanden?.begruendung ?? '',
+        begruendungAutomatisch: vorhanden?.begruendungAutomatisch ?? true,
+      }
+    })
     this.ui.rundenEntwuerfe[charge.id] = entwurf
+  }
+
+  private aktualisiereRundenZugabeHinweise(): void {
+    this.root.querySelectorAll<HTMLElement>('[data-runde-zugabe]').forEach(zeile => {
+      const art = zeile.dataset.zugabeArt as RundenZugabeArt | undefined
+      if (!art) return
+      const aktiv = Boolean(zeile.querySelector<HTMLInputElement>('[data-runde-zugabe-aktiv]')?.checked)
+      const menge = parseDeZahl(zeile.querySelector<HTMLInputElement>('[data-runde-zugabe-menge]')?.value ?? null)
+      const einheit = zeile.querySelector<HTMLSelectElement>('[data-runde-zugabe-einheit]')?.value ?? 'g'
+      const stoff = zeile.querySelector<HTMLInputElement>('[data-runde-zugabe-stoff]')?.value
+        ?? (art === 'naehrsalz' ? 'Hefenährsalz' : art === 'aufzuckern' ? 'Haushaltszucker' : art === 'schwefeln' ? 'Kaliumpyrosulfit' : '')
+      const zuordnung = passendeVorratsZuordnung(this.stand, art, stoff, einheit, menge ?? undefined)
+      const vorrat = zeile.querySelector<HTMLElement>('[data-runde-zugabe-vorrat]')
+      if (vorrat) {
+        vorrat.textContent = zuordnung.hinweis
+        vorrat.classList.toggle('warnung', zuordnung.warnung)
+      }
+      const max = Number(zeile.dataset.zugabeMax)
+      const bisher = Number(zeile.dataset.zugabeBisher)
+      const maxWarnung = zeile.querySelector<HTMLElement>('[data-runde-zugabe-maxwarnung]')
+      if (maxWarnung) maxWarnung.hidden = !(Number.isFinite(max) && Number.isFinite(bisher) && bisher + (menge ?? 0) >= max)
+      zeile.classList.toggle('aktiv', aktiv)
+    })
+  }
+
+  private aktualisiereAutomatischeRundenBegruendungen(): void {
+    const zeit = isoAusDatetimeLocal(this.ui.rundenZeit)
+    for (const [chargeId, entwurf] of Object.entries(this.ui.rundenEntwuerfe)) {
+      const charge = this.stand.chargen.find(eintrag => eintrag.id === chargeId)
+      if (!charge) continue
+      for (const art of zugabeArtenFuerPhase(charge.phase)) {
+        const zugabe = entwurf.zugaben[art]
+        if (!zugabe?.begruendungAutomatisch) continue
+        zugabe.begruendung = zugabeVorschlag(this.stand, charge, art, zeit, this.ui.zuckerZielJeCharge[charge.id]).begruendung
+        if (charge.id === this.rundenCharge()?.id) {
+          const feld = this.root.querySelector<HTMLTextAreaElement>(`[data-zugabe-art="${art}"] [data-runde-zugabe-begruendung]`)
+          if (feld) feld.value = zugabe.begruendung
+        }
+      }
+    }
   }
 
   private wechsleRundenCharge(richtung: number): void {
@@ -1218,6 +1440,62 @@ export class WeinbegleiterApp {
     }, 1000)
   }
 
+  private rundenZugabenAusEntwurf(charge: Charge, entwurf: RundenEntwurf, zeit: string, geaendert: string): Ereignis[] | string {
+    const ereignisse: Ereignis[] = []
+    for (const art of zugabeArtenFuerPhase(charge.phase)) {
+      const zugabe = entwurf.zugaben[art]
+      if (!zugabe?.aktiv) continue
+      const rohwert = zugabe.menge.trim()
+      if (!rohwert) continue
+      const menge = parseDeZahl(rohwert)
+      if (menge === null || menge <= 0) return `${zugabeVorschlag(this.stand, charge, art, zeit).label}: Trage eine Menge größer als 0 ein.`
+      const vorschlag = zugabeVorschlag(this.stand, charge, art, zeit, this.ui.zuckerZielJeCharge[charge.id])
+      const stoff = zugabe.stoff.trim() || vorschlag.stoff
+      if (!stoff) return 'Sonstige Zugabe: Trage den Stoffnamen ein.'
+      const begruendung = zugabe.begruendungAutomatisch ? vorschlag.begruendung.trim() : zugabe.begruendung.trim() || vorschlag.begruendung.trim()
+      const vorrat = passendeVorratsZuordnung(this.stand, art, stoff, zugabe.einheit, menge)
+      ereignisse.push({
+        id: id('ereignis'),
+        zuletztGeaendert: geaendert,
+        chargeId: charge.id,
+        zeit,
+        art: vorschlag.ereignisArt,
+        stoff,
+        mengeWert: menge,
+        mengeEinheit: zugabe.einheit,
+        vorratId: vorrat.posten && vorrat.posten.mengeEinheit === zugabe.einheit ? vorrat.posten.id : undefined,
+        begruendung: begruendung || `Zugabe während der Runde am ${datumZeitFormat.format(new Date(zeit))}.`,
+      })
+    }
+    return ereignisse
+  }
+
+  private erledigeZugabeReminder(charge: Charge, zugaben: Ereignis[], geaendert: string): ReminderVorher[] {
+    const aenderungen: ReminderVorher[] = []
+    const neueArten = new Set(zugaben.map(ereignis => ereignis.art as RundenZugabeArt))
+    for (const reminder of faelligeZugabeReminder(this.stand, charge)) {
+      const art = zugabeArtFuerReminder(reminder)
+      if (!art || !neueArten.has(art) || !globalerReminderIstFuerAlleChargenErfasst(this.stand, reminder, art)) continue
+      aenderungen.push({
+        reminderId: reminder.id,
+        erledigt: reminder.erledigt,
+        faellig: reminder.faellig,
+      })
+      if (reminder.wiederholungTage !== undefined && reminder.wiederholungTage > 0) {
+        const naechsterTermin = new Date(reminder.faellig)
+        const referenz = Math.max(Date.now(), ...zugaben.map(ereignis => new Date(ereignis.zeit).getTime()))
+        do naechsterTermin.setDate(naechsterTermin.getDate() + reminder.wiederholungTage)
+        while (naechsterTermin.getTime() <= referenz)
+        reminder.faellig = naechsterTermin.toISOString()
+        reminder.erledigt = false
+      } else {
+        reminder.erledigt = true
+      }
+      markiereGeaendert(reminder, geaendert)
+    }
+    return aenderungen
+  }
+
   private async speichereRunde(formular: HTMLFormElement): Promise<void> {
     const charge = this.rundenCharge()
     if (!charge || charge.archiviert) return this.formularFehler('Wähle eine aktive Charge aus.')
@@ -1241,12 +1519,23 @@ export class WeinbegleiterApp {
       if ((definition.typ === 'volumen' || definition.typ === 'kopfraum') && wert !== null && wert < 0) return this.formularFehler(`${definition.label} muss mindestens 0 L betragen.`)
       neu.push({ id: id('messung'), zuletztGeaendert: geaendert, chargeId: charge.id, zeit, typ: definition.typ, wert, text: definition.art === 'auswahl' ? rohwert : undefined, methode: DICHTE_TYPEN.includes(definition.typ) ? feld?.methode ?? 'spindel' : undefined })
     }
-    const neueEreignisse: Ereignis[] = entwurf.untergestossen ? [{ id: id('ereignis'), zuletztGeaendert: geaendert, chargeId: charge.id, zeit, art: 'unterstossen', begruendung: 'Während der Runde am Gefäß untergestoßen.' }] : []
-    if (!neu.length && !neueEreignisse.length) return this.formularFehler('Trage mindestens einen Messwert ein oder markiere Untergestoßen. Leere Felder werden nicht gespeichert.')
+    const rundenZugaben = this.rundenZugabenAusEntwurf(charge, entwurf, zeit, geaendert)
+    if (typeof rundenZugaben === 'string') return this.formularFehler(rundenZugaben)
+    const neueEreignisse: Ereignis[] = [
+      ...(entwurf.untergestossen ? [{ id: id('ereignis'), zuletztGeaendert: geaendert, chargeId: charge.id, zeit, art: 'unterstossen' as const, begruendung: 'Während der Runde am Gefäß untergestoßen.' }] : []),
+      ...rundenZugaben,
+    ]
+    if (!neu.length && !neueEreignisse.length) return this.formularFehler('Trage mindestens einen Messwert ein, markiere eine Zugabe oder Untergestoßen. Leere Felder werden nicht gespeichert.')
+    try {
+      pruefeEreignisseMitVorrat(this.stand, neueEreignisse)
+    } catch (fehler) {
+      return this.formularFehler(fehler instanceof Error ? fehler.message : 'Die Vorratsbuchung konnte nicht geprüft werden.')
+    }
     this.stand.messungen.push(...neu)
-    this.stand.ereignisse.push(...neueEreignisse)
+    speichereEreignisseMitVorrat(this.stand, neueEreignisse)
     this.aktualisiereVolumenAusMessungen(neu)
-    const gespeichert: RundenSpeicherung = { chargeId: charge.id, zeit, typen: neu.map(messung => messung.typ), messungIds: neu.map(messung => messung.id), ereignisIds: neueEreignisse.map(ereignis => ereignis.id), ampelVorher, ampelNachher: ampelFuerCharge(this.stand, charge), volumenVorher }
+    const reminderAenderungen = this.erledigeZugabeReminder(charge, rundenZugaben, geaendert)
+    const gespeichert: RundenSpeicherung = { chargeId: charge.id, zeit, typen: neu.map(messung => messung.typ), messungIds: neu.map(messung => messung.id), ereignisIds: neueEreignisse.map(ereignis => ereignis.id), reminderAenderungen, ampelVorher, ampelNachher: ampelFuerCharge(this.stand, charge), volumenVorher }
     this.ui.rundenErgebnisse = [...this.ui.rundenErgebnisse.filter(ergebnis => ergebnis.chargeId !== charge.id), gespeichert]
     this.ui.rundenGespeichert = gespeichert
     this.ui.rundenUndoBis = Date.now() + 30_000
@@ -1260,11 +1549,18 @@ export class WeinbegleiterApp {
     if (!gespeichert || this.ui.rundenUndoBis === null || Date.now() >= this.ui.rundenUndoBis) return
     const loeschZeit = new Date().toISOString()
     const messungIds = new Set(gespeichert.messungIds)
-    const ereignisIds = new Set(gespeichert.ereignisIds)
     this.stand.messungen = this.stand.messungen.filter(messung => !messungIds.has(messung.id))
-    this.stand.ereignisse = this.stand.ereignisse.filter(ereignis => !ereignisIds.has(ereignis.id))
     gespeichert.messungIds.forEach(messungId => merkeLoeschung(this.stand, 'messungen', messungId, loeschZeit))
-    gespeichert.ereignisIds.forEach(ereignisId => merkeLoeschung(this.stand, 'ereignisse', ereignisId, loeschZeit))
+    gespeichert.ereignisIds.forEach(ereignisId => {
+      if (this.stand.ereignisse.some(ereignis => ereignis.id === ereignisId)) loescheEreignisMitVorrat(this.stand, ereignisId)
+    })
+    gespeichert.reminderAenderungen.forEach(vorher => {
+      const reminder = this.stand.reminder.find(eintrag => eintrag.id === vorher.reminderId)
+      if (!reminder) return
+      reminder.erledigt = vorher.erledigt
+      reminder.faellig = vorher.faellig
+      markiereGeaendert(reminder, loeschZeit)
+    })
     const charge = this.stand.chargen.find(eintrag => eintrag.id === gespeichert.chargeId)
     if (charge) {
       charge.volumenHistorie = gespeichert.volumenVorher.volumenHistorie.map(punkt => ({ ...punkt }))
@@ -1387,6 +1683,34 @@ export class WeinbegleiterApp {
     if (action === 'ics-einzel') return this.exportiereEinzelIcs(ziel.dataset.id ?? '')
     if (action === 'ics-alle') return this.exportiereAlleIcs()
     if (action === 'reminder-toggle') return this.toggleReminder(ziel.dataset.id ?? '')
+    if (action === 'behaelter-neu') {
+      this.ui.behaelterDialog = 'neu'
+      this.ui.behaelterId = null
+      this.render()
+      return this.root.querySelector<HTMLInputElement>('#behaelter-name')?.focus()
+    }
+    if (action === 'behaelter-bearbeiten') {
+      if (!this.stand.behaelter.some(behaelter => behaelter.id === ziel.dataset.id)) return
+      this.ui.behaelterDialog = 'bearbeiten'
+      this.ui.behaelterId = ziel.dataset.id ?? null
+      this.render()
+      return this.root.querySelector<HTMLInputElement>('#behaelter-name')?.focus()
+    }
+    if (action === 'behaelter-ausmustern') {
+      if (!this.stand.behaelter.some(behaelter => behaelter.id === ziel.dataset.id)) return
+      this.ui.behaelterDialog = 'ausmustern'
+      this.ui.behaelterId = ziel.dataset.id ?? null
+      this.render()
+      return this.root.querySelector<HTMLTextAreaElement>('#ausmustern-grund')?.focus()
+    }
+    if (action === 'behaelter-angekommen') return this.setzeBehaelterAngekommen(ziel.dataset.id ?? '')
+    if (action === 'behaelter-zurueckholen') return this.holeBehaelterZurueck(ziel.dataset.id ?? '')
+    if (action === 'dialog-schliessen') {
+      this.ui.behaelterDialog = null
+      this.ui.behaelterId = null
+      this.ui.lieferReminderId = null
+      return this.render()
+    }
     if (action === 'wiki-tag') { this.ui.wikiTag = ziel.dataset.tag || null; return this.render() }
     if (action === 'wiki-oeffnen') { this.ui.wikiId = ziel.dataset.id ?? null; this.ui.ansicht = 'wiki-seite'; this.schreibeHistory(); return this.render() }
     if (action === 'wiki-neu') { this.ui.wikiId = null; this.ui.ansicht = 'wiki-editor'; this.schreibeHistory(); return this.render() }
@@ -1413,6 +1737,9 @@ export class WeinbegleiterApp {
     if (formular.id === 'ereignis-form') return this.speichereEreignisse(formular)
     if (formular.id === 'ereignis-bearbeiten-form') return this.aktualisiereEreignis(formular)
     if (formular.id === 'gefaess-form') return this.speichereGefaess(formular)
+    if (formular.id === 'behaelter-verwalten-form') return this.speichereBehaelter(formular)
+    if (formular.id === 'behaelter-ausmustern-form') return this.mustereBehaelterAus(formular)
+    if (formular.id === 'lieferung-erledigen-form') return this.erledigeLieferung(formular)
     if (formular.id === 'reminder-form') return this.speichereReminder(formular)
     if (formular.id === 'wiki-form') return this.speichereWiki(formular)
     if (formular.id === 'sensor-form') return this.speichereSensor(formular, event.submitter as HTMLButtonElement | null)
@@ -1422,8 +1749,15 @@ export class WeinbegleiterApp {
 
   private async behandleAenderung(event: Event): Promise<void> {
     const ziel = event.target as HTMLInputElement | HTMLSelectElement
-    if (ziel.dataset.action === 'runden-zeit') { this.ui.rundenZeit = ziel.value; return }
-    if (ziel.closest('#runde-form')) this.sichereRundenEntwurf()
+    if (ziel.dataset.action === 'runden-zeit') {
+      this.ui.rundenZeit = ziel.value
+      this.aktualisiereAutomatischeRundenBegruendungen()
+      return
+    }
+    if (ziel.closest('#runde-form')) {
+      this.sichereRundenEntwurf()
+      this.aktualisiereRundenZugabeHinweise()
+    }
     if (ziel.closest('#mess-form')) this.sichereMessFormularEntwurf()
     if (ziel.dataset.action === 'mess-typ') { this.ui.messTyp = ziel.value as MessTyp; return this.render() }
     if (ziel.dataset.action === 'mess-methode') return this.aktualisiereRefraktometerHinweis()
@@ -1440,7 +1774,23 @@ export class WeinbegleiterApp {
 
   private behandleEingabe(event: Event): void {
     const ziel = event.target as HTMLInputElement
-    if (ziel.closest('#runde-form')) this.sichereRundenEntwurf()
+    if (ziel.closest('#runde-form')) {
+      if (ziel.matches('[data-runde-zugabe-menge]')) {
+        const zeile = ziel.closest<HTMLElement>('[data-runde-zugabe]')
+        const aktiv = zeile?.querySelector<HTMLInputElement>('[data-runde-zugabe-aktiv]')
+        if (aktiv) aktiv.checked = true
+      }
+      if (ziel.matches('[data-runde-zugabe-begruendung]')) {
+        const art = ziel.closest<HTMLElement>('[data-runde-zugabe]')?.dataset.zugabeArt as RundenZugabeArt | undefined
+        const charge = this.rundenCharge()
+        if (art && charge) {
+          const zugabe = this.rundenEntwurf(charge.id).zugaben[art]
+          if (zugabe) zugabe.begruendungAutomatisch = false
+        }
+      }
+      this.sichereRundenEntwurf()
+      this.aktualisiereRundenZugabeHinweise()
+    }
     if (ziel.closest('#mess-form')) this.sichereMessFormularEntwurf()
     if (ziel.closest('#rechner-form')) this.aktualisiereRechner()
     if (ziel.closest('#ereignis-form')) this.aktualisiereZugabeVorschau()
@@ -1453,6 +1803,14 @@ export class WeinbegleiterApp {
   }
 
   private behandleTaste(event: KeyboardEvent): void {
+    if (event.key === 'Escape' && (this.ui.behaelterDialog || this.ui.lieferReminderId)) {
+      event.preventDefault()
+      this.ui.behaelterDialog = null
+      this.ui.behaelterId = null
+      this.ui.lieferReminderId = null
+      this.render()
+      return
+    }
     if (event.key !== 'Enter' && event.key !== ' ') return
     const ziel = (event.target as HTMLElement).closest<HTMLElement>('[data-action][tabindex="0"]')
     if (!ziel) return
@@ -1758,6 +2116,9 @@ export class WeinbegleiterApp {
     if (istVolumenEreignis && (fuellLiter === null || fuellLiter < 0 || kopfraumLiter === null || kopfraumLiter < 0 || !behaelterId)) {
       return this.formularFehler('Füllvolumen, Kopfraum und Behälter nach dem Vorgang vollständig eintragen.')
     }
+    if (istVolumenEreignis && !this.behaelterFuerAuswahl(chargen[0]?.id).some(behaelter => behaelter.id === behaelterId)) {
+      return this.formularFehler('Das gewählte Gefäß ist nicht verfügbar.')
+    }
     const neu: Ereignis[] = chargen.map(charge => ({
       id: id('ereignis'), chargeId: charge.id, zeit, art, stoff, produkt,
       mengeWert: istZugabe && dosis !== null ? Math.round(dosis * (this.zugabeVolumen(charge) ?? 0) * 1000) / 1000 : undefined,
@@ -1796,6 +2157,9 @@ export class WeinbegleiterApp {
     const anlass = String(daten.get('anlass') ?? '').trim()
     if (fuellLiter === null || fuellLiter < 0 || kopfraumLiter === null || kopfraumLiter < 0 || !behaelterId || !anlass) {
       return this.zeigeStatus('fehler', 'Füllvolumen, Kopfraum, Behälter und Anlass vollständig eintragen.')
+    }
+    if (!this.behaelterFuerAuswahl(charge.id).some(behaelter => behaelter.id === behaelterId)) {
+      return this.zeigeStatus('fehler', 'Das gewählte Gefäß ist nicht verfügbar.')
     }
     fuegeVolumenPunktHinzu(this.stand, charge.id, {
       zeit: isoAusDatetimeLocal(daten.get('zeit')), fuellLiter, kopfraumLiter, behaelterId, anlass,
@@ -1965,6 +2329,7 @@ export class WeinbegleiterApp {
       const istOe = parseDeZahl(daten.get('istOe'))
       const zielOe = parseDeZahl(daten.get('zielOe'))
       if (istOe === null || zielOe === null) { ausgabe.innerHTML = '<div class="form-fehler">Ist- und Zielwert in °Oe eintragen.</div>'; return }
+      if (this.ui.chargeId) this.ui.zuckerZielJeCharge[this.ui.chargeId] = zielOe
       const ergebnis = zuckerFuerOechsle(volumen, istOe, zielOe)
       const alkohol = alkoholPotenzial(zielOe)
       const alkoholContainer = this.root.querySelector<HTMLElement>('#alkohol-potenzial')
@@ -2003,6 +2368,93 @@ export class WeinbegleiterApp {
     }
   }
 
+  private dialogFehler(text: string): void {
+    const feld = this.root.querySelector<HTMLElement>('#dialog-fehler')
+    if (!feld) return this.zeigeStatus('fehler', text)
+    feld.innerHTML = `<div class="form-fehler">${html(text)}</div>`
+    feld.closest('form')?.querySelector<HTMLElement>('input:invalid, textarea:invalid, select:invalid')?.focus()
+  }
+
+  private async speichereBehaelter(formular: HTMLFormElement): Promise<void> {
+    const daten = new FormData(formular)
+    const behaelterId = String(daten.get('id') ?? '')
+    const name = String(daten.get('name') ?? '').trim()
+    const bruttoLiter = parseDeZahl(daten.get('bruttoLiter'))
+    const material = String(daten.get('material') ?? '').trim()
+    const verschluss = String(daten.get('verschluss') ?? '').trim()
+    const vorhandenAb = String(daten.get('vorhandenAb') ?? '').trim()
+    if (!name || bruttoLiter === null || bruttoLiter <= 0 || !material || !verschluss) {
+      return this.dialogFehler('Name, Brutto-Liter, Material und Verschluss vollständig eintragen. Brutto-Liter muss größer als 0 sein.')
+    }
+    if (vorhandenAb && !/^\d{4}-\d{2}-\d{2}$/.test(vorhandenAb)) return this.dialogFehler('Erwartetes Datum im Format TT.MM.JJJJ eintragen.')
+    const geaendert = new Date().toISOString()
+    if (behaelterId) {
+      const behaelter = this.stand.behaelter.find(eintrag => eintrag.id === behaelterId)
+      if (!behaelter) return this.dialogFehler('Das Gefäß wurde nicht gefunden.')
+      Object.assign(behaelter, { name, bruttoLiter, material, verschluss })
+      if (vorhandenAb) behaelter.vorhandenAb = vorhandenAb
+      else delete behaelter.vorhandenAb
+      markiereGeaendert(behaelter, geaendert)
+    } else {
+      const behaelter: Behaelter = { id: id('behaelter'), zuletztGeaendert: geaendert, name, bruttoLiter, material, verschluss }
+      if (vorhandenAb) behaelter.vorhandenAb = vorhandenAb
+      this.stand.behaelter.push(behaelter)
+    }
+    this.ui.behaelterDialog = null
+    this.ui.behaelterId = null
+    await this.persistieren(behaelterId ? 'Gefäß aktualisiert.' : 'Gefäß angelegt.')
+  }
+
+  private async mustereBehaelterAus(formular: HTMLFormElement): Promise<void> {
+    const daten = new FormData(formular)
+    const behaelter = this.stand.behaelter.find(eintrag => eintrag.id === String(daten.get('id') ?? ''))
+    const grund = String(daten.get('grund') ?? '').trim()
+    if (!behaelter) return this.dialogFehler('Das Gefäß wurde nicht gefunden.')
+    if (!grund) return this.dialogFehler('Der Grund ist Pflicht. Das Gefäß wurde nicht ausgemustert.')
+    const geaendert = new Date().toISOString()
+    behaelter.ausgemustertAm = geaendert
+    behaelter.ausgemustertGrund = grund
+    markiereGeaendert(behaelter, geaendert)
+    this.ui.behaelterDialog = null
+    this.ui.behaelterId = null
+    await this.persistieren('Gefäß ausgemustert und in der Historie erhalten.')
+  }
+
+  private async setzeBehaelterAngekommen(behaelterId: string): Promise<void> {
+    const behaelter = this.stand.behaelter.find(eintrag => eintrag.id === behaelterId)
+    if (!behaelter?.vorhandenAb) return
+    delete behaelter.vorhandenAb
+    markiereGeaendert(behaelter)
+    await this.persistieren(`${behaelter.name} als angekommen gespeichert.`)
+  }
+
+  private async holeBehaelterZurueck(behaelterId: string): Promise<void> {
+    const behaelter = this.stand.behaelter.find(eintrag => eintrag.id === behaelterId)
+    if (!behaelter?.ausgemustertAm) return
+    delete behaelter.ausgemustertAm
+    delete behaelter.ausgemustertGrund
+    markiereGeaendert(behaelter)
+    await this.persistieren(`${behaelter.name} ist wieder verfügbar.`)
+  }
+
+  private async erledigeLieferung(formular: HTMLFormElement): Promise<void> {
+    const daten = new FormData(formular)
+    const reminder = this.stand.reminder.find(eintrag => eintrag.id === String(daten.get('reminderId') ?? ''))
+    if (!reminder) return this.dialogFehler('Der Liefertermin wurde nicht gefunden.')
+    const moeglicheIds = new Set(this.erwarteteBehaelterFuerReminder(reminder).map(behaelter => behaelter.id))
+    const angekommeneIds = new Set(daten.getAll('behaelterIds').map(String).filter(behaelterId => moeglicheIds.has(behaelterId)))
+    const geaendert = new Date().toISOString()
+    this.stand.behaelter.forEach(behaelter => {
+      if (!angekommeneIds.has(behaelter.id) || !behaelter.vorhandenAb) return
+      delete behaelter.vorhandenAb
+      markiereGeaendert(behaelter, geaendert)
+    })
+    reminder.erledigt = true
+    markiereGeaendert(reminder, geaendert)
+    this.ui.lieferReminderId = null
+    await this.persistieren(`${angekommeneIds.size} Gefäße als angekommen gespeichert; Termin erledigt.`)
+  }
+
   private async speichereReminder(formular: HTMLFormElement): Promise<void> {
     const daten = new FormData(formular)
     const reminder: Reminder = { id: id('reminder'), zuletztGeaendert: new Date().toISOString(), titel: String(daten.get('titel')), beschreibung: String(daten.get('beschreibung')), faellig: isoAusDatetimeLocal(daten.get('faellig')), erledigt: false, quelle: 'manuell' }
@@ -2013,6 +2465,12 @@ export class WeinbegleiterApp {
   private async toggleReminder(reminderId: string): Promise<void> {
     const reminder = this.stand.reminder.find(eintrag => eintrag.id === reminderId)
     if (!reminder) return
+    if (this.istLieferReminder(reminder)) {
+      this.ui.lieferReminderId = reminder.id
+      this.render()
+      this.root.querySelector<HTMLInputElement>('#lieferung-erledigen-form input[type="checkbox"]')?.focus()
+      return
+    }
     reminder.erledigt = !reminder.erledigt
     markiereGeaendert(reminder)
     await this.persistieren('Terminstatus gespeichert.')
@@ -2120,6 +2578,11 @@ export class WeinbegleiterApp {
     if (Math.abs(zielSumme - quellSumme) > 0.01) { ausgabe.innerHTML = `<div class="form-fehler">Zielsumme ${formatiereZahl(zielSumme, 3)} kg stimmt nicht mit ${formatiereZahl(quellSumme, 3)} kg Ausgangsmenge überein.</div>`; return false }
     const behaelterIds = daten.getAll('zielBehaelter').map(String).filter(Boolean)
     if (new Set(behaelterIds).size !== behaelterIds.length) { ausgabe.innerHTML = '<div class="form-fehler">Jeder Zielcharge muss ein anderer Behälter zugeordnet sein.</div>'; return false }
+    const quellIds = new Set(quellen.map(charge => charge.id))
+    const heute = this.lokalesIsoDatum(new Date())
+    const nutzbareBehaelterIds = new Set(this.stand.behaelter.filter(behaelter => behaelterVerfuegbar(behaelter, heute)
+      && !this.stand.chargen.some(charge => !charge.archiviert && !quellIds.has(charge.id) && charge.behaelterId === behaelter.id)).map(behaelter => behaelter.id))
+    if (behaelterIds.some(behaelterId => !nutzbareBehaelterIds.has(behaelterId))) { ausgabe.innerHTML = '<div class="form-fehler">Mindestens ein Zielgefäß ist nicht verfügbar.</div>'; return false }
     ausgabe.innerHTML = `<div class="erfolgbox">Freigegeben durch <code>vermischungErlaubt()</code>. Summe: ${formatiereZahl(quellSumme, 3)} kg.</div>`
     return true
   }

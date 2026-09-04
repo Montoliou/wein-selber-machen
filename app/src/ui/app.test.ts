@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { naehrsalzPlan } from '../domain/oenologie'
 import { erzeugeStartdaten } from '../startdaten'
 import { WeinbegleiterApp } from './app'
 import { layoutKlasse } from './layout'
@@ -21,6 +22,13 @@ function aendere(element: HTMLInputElement | HTMLSelectElement, wert?: string): 
 
 function starteRunde(root: HTMLElement): void {
   klicke(root.querySelector('.bottom-nav [data-action="runde-start"]'))
+}
+
+function lokalesIsoDatum(datum = new Date()): string {
+  const jahr = datum.getFullYear()
+  const monat = String(datum.getMonth() + 1).padStart(2, '0')
+  const tag = String(datum.getDate()).padStart(2, '0')
+  return `${jahr}-${monat}-${tag}`
 }
 
 async function warteAufRendern(): Promise<void> {
@@ -137,6 +145,194 @@ describe('Runde im DOM', () => {
     expect(stand.messungen.map(messung => messung.id)).toEqual(messungenVorher)
     expect(stand.ereignisse.map(ereignis => ereignis.id)).toEqual(ereignisseVorher)
   })
+
+  it('erzeugt aus einem leeren Zugabemengenfeld keine Zugabe', async () => {
+    const root = document.querySelector<HTMLElement>('#app')!
+    const stand = structuredClone(erzeugeStartdaten())
+    const ereignisseVorher = stand.ereignisse.length
+    new WeinbegleiterApp(root, stand, []).start()
+    starteRunde(root)
+    root.querySelector<HTMLInputElement>('[name="runde-temperatur"]')!.value = '21,4'
+    const menge = root.querySelector<HTMLInputElement>('[name="zugabe-naehrsalz-menge"]')!
+    menge.value = ''
+    menge.dispatchEvent(new Event('input', { bubbles: true }))
+
+    root.querySelector<HTMLFormElement>('#runde-form')!.dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true }))
+    await warteAufRendern()
+
+    expect(stand.ereignisse).toHaveLength(ereignisseVorher)
+    expect(stand.ereignisse.filter(ereignis => ereignis.art === 'naehrsalz')).toHaveLength(4)
+  })
+
+  it('speichert eine Zugabe mit Vorrat, Begründung und Rundenzeitpunkt', async () => {
+    const root = document.querySelector<HTMLElement>('#app')!
+    const stand = structuredClone(erzeugeStartdaten())
+    new WeinbegleiterApp(root, stand, []).start()
+    starteRunde(root)
+    aendere(root.querySelector<HTMLInputElement>('#runden-zeit')!, '2026-09-04T10:15')
+    const aktiv = root.querySelector<HTMLInputElement>('[name="zugabe-naehrsalz-aktiv"]')!
+    aktiv.checked = true
+    aendere(aktiv)
+    const begruendung = root.querySelector<HTMLTextAreaElement>('[name="zugabe-naehrsalz-begruendung"]')!
+    begruendung.value = ''
+    begruendung.dispatchEvent(new Event('input', { bubbles: true }))
+
+    root.querySelector<HTMLFormElement>('#runde-form')!.dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true }))
+    await warteAufRendern()
+
+    const zugabe = stand.ereignisse.filter(ereignis => ereignis.chargeId === 'charge-bottich-1' && ereignis.art === 'naehrsalz').at(-1)!
+    expect(zugabe.vorratId).toBe('vorrat-naehrsalz')
+    expect(zugabe.begruendung.trim().length).toBeGreaterThan(0)
+    expect(zugabe.begruendung).toContain('04.09.26')
+    expect(zugabe.zeit).toBe(new Date('2026-09-04T10:15').toISOString())
+  })
+
+  it('schlägt für 8,6 L exakt die Fachmenge je Nährsalzportion vor', () => {
+    const root = document.querySelector<HTMLElement>('#app')!
+    const stand = structuredClone(erzeugeStartdaten())
+    new WeinbegleiterApp(root, stand, []).start()
+    starteRunde(root)
+    klicke(root.querySelector('[data-action="runde-wechsel"][data-richtung="1"]'))
+
+    const menge = root.querySelector<HTMLInputElement>('[name="zugabe-naehrsalz-menge"]')!.value
+    expect(Number(menge.replace(',', '.'))).toBe(naehrsalzPlan(8.6).proPortion)
+    expect(root.querySelector('[data-zugabe-art="naehrsalz"]')?.textContent).toContain('Portion 2 von 3')
+  })
+
+  it('erledigt einen gemeinsamen Zugabe-Reminder nach allen Gefäßen und nennt ihn in der Zusammenfassung', async () => {
+    const root = document.querySelector<HTMLElement>('#app')!
+    const stand = structuredClone(erzeugeStartdaten())
+    const reminder = stand.reminder.find(eintrag => eintrag.id === 'rem-naehrsalz-2')!
+    reminder.faellig = '2026-09-01T08:00:00.000Z'
+    new WeinbegleiterApp(root, stand, []).start()
+    starteRunde(root)
+
+    for (let index = 0; index < 4; index += 1) {
+      const aktiv = root.querySelector<HTMLInputElement>('[name="zugabe-naehrsalz-aktiv"]')!
+      aktiv.checked = true
+      aendere(aktiv)
+      root.querySelector<HTMLFormElement>('#runde-form')!.dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true }))
+      await warteAufRendern()
+      if (index < 3) klicke(root.querySelector('[data-action="runde-weiter"]'))
+    }
+
+    expect(reminder.erledigt).toBe(true)
+    klicke(root.querySelector('[data-action="runde-weiter"]'))
+    expect(root.querySelector('.runden-zusammenfassung')?.textContent).toContain('Messungen und Zugaben')
+    expect(root.querySelector('.runden-zusammenfassung')?.textContent).toContain('Bottich 4')
+    expect(root.querySelector('.runden-zusammenfassung')?.textContent).toContain('ErledigtHefenährsalz Portion 2 von 3')
+  })
+
+  it('erledigt einen fälligen Zugabe-Reminder der aktuellen Charge', async () => {
+    const root = document.querySelector<HTMLElement>('#app')!
+    const stand = structuredClone(erzeugeStartdaten())
+    const reminder = {
+      id: 'rem-test-naehrsalz',
+      chargeId: 'charge-bottich-1',
+      faellig: '2026-09-01T08:00:00.000Z',
+      titel: 'Hefenährsalz Portion 2 von 3',
+      beschreibung: 'Am betroffenen Gefäß geben.',
+      erledigt: false,
+      quelle: 'manuell' as const,
+    }
+    stand.reminder.push(reminder)
+    new WeinbegleiterApp(root, stand, []).start()
+    starteRunde(root)
+    expect(root.querySelector('.runden-zugabe-reminder')?.textContent).toContain('Fällig: Hefenährsalz Portion 2 von 3')
+    const aktiv = root.querySelector<HTMLInputElement>('[name="zugabe-naehrsalz-aktiv"]')!
+    aktiv.checked = true
+    aendere(aktiv)
+
+    root.querySelector<HTMLFormElement>('#runde-form')!.dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true }))
+    await warteAufRendern()
+
+    expect(reminder.erledigt).toBe(true)
+  })
+
+  it('nimmt Zugabe, Vorratsbuchung und Reminder-Erledigung gemeinsam zurück', async () => {
+    const root = document.querySelector<HTMLElement>('#app')!
+    const stand = structuredClone(erzeugeStartdaten())
+    const reminder = {
+      id: 'rem-test-undo',
+      chargeId: 'charge-bottich-1',
+      faellig: '2026-09-01T08:00:00.000Z',
+      titel: 'Hefenährsalz Portion 2 von 3',
+      beschreibung: 'Am betroffenen Gefäß geben.',
+      erledigt: false,
+      quelle: 'manuell' as const,
+    }
+    stand.reminder.push(reminder)
+    const ereignisseVorher = stand.ereignisse.map(ereignis => ereignis.id)
+    const vorratVorher = stand.vorrat.find(posten => posten.id === 'vorrat-naehrsalz')!.mengeWert
+    new WeinbegleiterApp(root, stand, []).start()
+    starteRunde(root)
+    const aktiv = root.querySelector<HTMLInputElement>('[name="zugabe-naehrsalz-aktiv"]')!
+    aktiv.checked = true
+    aendere(aktiv)
+
+    root.querySelector<HTMLFormElement>('#runde-form')!.dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true }))
+    await warteAufRendern()
+    expect(reminder.erledigt).toBe(true)
+    expect(stand.vorrat.find(posten => posten.id === 'vorrat-naehrsalz')!.mengeWert).toBeLessThan(vorratVorher)
+    klicke(root.querySelector('[data-action="runde-undo"]'))
+    await warteAufRendern()
+
+    expect(stand.ereignisse.map(ereignis => ereignis.id)).toEqual(ereignisseVorher)
+    expect(stand.vorrat.find(posten => posten.id === 'vorrat-naehrsalz')!.mengeWert).toBe(vorratVorher)
+    expect(reminder.erledigt).toBe(false)
+  })
+
+  it('setzt einen wiederkehrenden Zugabe-Reminder weiter und stellt ihn bei Rücknahme wieder her', async () => {
+    const root = document.querySelector<HTMLElement>('#app')!
+    const stand = structuredClone(erzeugeStartdaten())
+    const faelligVorher = '2026-09-01T08:00:00.000Z'
+    const reminder = {
+      id: 'rem-test-wiederholung',
+      chargeId: 'charge-bottich-1',
+      faellig: faelligVorher,
+      titel: 'Hefenährsalz Portion 2 von 3',
+      beschreibung: 'Am betroffenen Gefäß geben.',
+      erledigt: false,
+      wiederholungTage: 1,
+      quelle: 'manuell' as const,
+    }
+    stand.reminder.push(reminder)
+    new WeinbegleiterApp(root, stand, []).start()
+    starteRunde(root)
+    const aktiv = root.querySelector<HTMLInputElement>('[name="zugabe-naehrsalz-aktiv"]')!
+    aktiv.checked = true
+    aendere(aktiv)
+
+    root.querySelector<HTMLFormElement>('#runde-form')!.dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true }))
+    await warteAufRendern()
+
+    expect(reminder.erledigt).toBe(false)
+    expect(new Date(reminder.faellig).getTime()).toBeGreaterThan(Date.now())
+    klicke(root.querySelector('[data-action="runde-undo"]'))
+    await warteAufRendern()
+    expect(reminder.erledigt).toBe(false)
+    expect(reminder.faellig).toBe(faelligVorher)
+  })
+
+  it('speichert ohne Vorratskopplung, wenn der passende Posten fehlt', async () => {
+    const root = document.querySelector<HTMLElement>('#app')!
+    const stand = structuredClone(erzeugeStartdaten())
+    stand.vorrat = stand.vorrat.filter(posten => posten.id !== 'vorrat-naehrsalz')
+    const vorratVorher = structuredClone(stand.vorrat)
+    new WeinbegleiterApp(root, stand, []).start()
+    starteRunde(root)
+    expect(root.querySelector('[data-zugabe-art="naehrsalz"] [data-runde-zugabe-vorrat]')?.textContent).toContain('Vorrat unverändert')
+    const aktiv = root.querySelector<HTMLInputElement>('[name="zugabe-naehrsalz-aktiv"]')!
+    aktiv.checked = true
+    aendere(aktiv)
+
+    root.querySelector<HTMLFormElement>('#runde-form')!.dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true }))
+    await warteAufRendern()
+
+    const zugabe = stand.ereignisse.filter(ereignis => ereignis.chargeId === 'charge-bottich-1' && ereignis.art === 'naehrsalz').at(-1)!
+    expect(zugabe.vorratId).toBeUndefined()
+    expect(stand.vorrat).toEqual(vorratVorher)
+  })
 })
 
 describe('Messerfassung im DOM', () => {
@@ -194,6 +390,149 @@ describe('Messerfassung im DOM', () => {
     expect(root.querySelector('.abgleich-zeile')?.textContent).toContain('Abgleich: noch nie')
     expect(root.querySelector('[data-action="sync-jetzt"]')?.textContent).toBe('Jetzt abgleichen')
     expect(root.querySelector('.abgleich-hinweis')?.textContent).toBe('Nicht abgeglichen')
+  })
+})
+
+describe('Gefäßverwaltung im DOM', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '<div id="app"></div>'
+    history.replaceState(null, '', '/')
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024 })
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: false })
+  })
+
+  it('zeigt ein ab heute vorhandenes Gefäß als frei und nur künftige Lieferungen als erwartet', () => {
+    const root = document.querySelector<HTMLElement>('#app')!
+    const stand = erzeugeStartdaten()
+    const heute = lokalesIsoDatum()
+    const morgen = new Date()
+    morgen.setDate(morgen.getDate() + 1)
+    stand.behaelter.push(
+      { id: 'test-heute', name: 'Testballon heute', bruttoLiter: 5, material: 'Glas', verschluss: 'Stopfen', vorhandenAb: heute },
+      { id: 'test-morgen', name: 'Testballon morgen', bruttoLiter: 5, material: 'Glas', verschluss: 'Stopfen', vorhandenAb: lokalesIsoDatum(morgen) },
+    )
+    new WeinbegleiterApp(root, stand, []).start()
+
+    klicke(root.querySelector('[data-action="nav"][data-view="mehr"]'))
+
+    expect(root.querySelector('[data-behaelter-id="test-heute"] .gefaess-zustand')?.textContent).toBe('frei')
+    expect(root.querySelector('[data-behaelter-id="test-morgen"] .gefaess-zustand')?.textContent).toContain('erwartet ab')
+  })
+
+  it('führt ein ausgemustertes Gefäß in keiner Zielauswahl', () => {
+    const root = document.querySelector<HTMLElement>('#app')!
+    const stand = erzeugeStartdaten()
+    const quelle = stand.chargen[0]!
+    quelle.phase = 'PRESS_GATE'
+    quelle.phaseSeit = new Date(Date.now() - 60_000).toISOString()
+    stand.messungen.push({ id: 'test-press-dichte-gefaess', chargeId: quelle.id, zeit: new Date().toISOString(), typ: 'oechsle', wert: 8, methode: 'spindel' })
+    const ausgemustert = stand.behaelter.find(behaelter => behaelter.id === 'ballon-1')!
+    ausgemustert.ausgemustertAm = new Date().toISOString()
+    ausgemustert.ausgemustertGrund = 'Im Transport zerbrochen'
+    history.replaceState(null, '', `/#gate/${quelle.id}`)
+    new WeinbegleiterApp(root, stand, []).start()
+
+    const formular = root.querySelector<HTMLFormElement>('#press-teilung-form')!
+    expect(formular).not.toBeNull()
+    expect(formular.querySelector('option[value="ballon-1"]')).toBeNull()
+  })
+
+  it('lehnt Ausmustern ohne Grund ab', async () => {
+    const root = document.querySelector<HTMLElement>('#app')!
+    const stand = erzeugeStartdaten()
+    const behaelter = stand.behaelter.find(eintrag => eintrag.id === 'ballon-1')!
+    new WeinbegleiterApp(root, stand, []).start()
+    klicke(root.querySelector('[data-action="nav"][data-view="mehr"]'))
+    klicke(root.querySelector('[data-action="behaelter-ausmustern"][data-id="ballon-1"]'))
+
+    root.querySelector<HTMLFormElement>('#behaelter-ausmustern-form')!.dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true }))
+    await Promise.resolve()
+
+    expect(behaelter.ausgemustertAm).toBeUndefined()
+    expect(behaelter.ausgemustertGrund).toBeUndefined()
+    expect(root.querySelector('#dialog-fehler')?.textContent).toContain('Grund ist Pflicht')
+
+    root.querySelector<HTMLTextAreaElement>('#ausmustern-grund')!.value = 'Im Transport zerbrochen'
+    root.querySelector<HTMLFormElement>('#behaelter-ausmustern-form')!.dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true }))
+    await warteAufRendern()
+    expect(behaelter.ausgemustertGrund).toBe('Im Transport zerbrochen')
+    expect(behaelter.ausgemustertAm).toBeDefined()
+
+    klicke(root.querySelector('[data-action="behaelter-zurueckholen"][data-id="ballon-1"]'))
+    await warteAufRendern()
+    expect(behaelter.ausgemustertAm).toBeUndefined()
+    expect(behaelter.ausgemustertGrund).toBeUndefined()
+  })
+
+  it('legt ein Gefäß an und bearbeitet seine Stammdaten', async () => {
+    const root = document.querySelector<HTMLElement>('#app')!
+    const stand = erzeugeStartdaten()
+    new WeinbegleiterApp(root, stand, []).start()
+    klicke(root.querySelector('[data-action="nav"][data-view="mehr"]'))
+    klicke(root.querySelector('[data-action="behaelter-neu"]'))
+    root.querySelector<HTMLInputElement>('#behaelter-name')!.value = 'Testballon'
+    root.querySelector<HTMLInputElement>('#behaelter-liter')!.value = '7,5'
+    root.querySelector<HTMLInputElement>('#behaelter-material')!.value = 'Glas'
+    root.querySelector<HTMLInputElement>('#behaelter-verschluss')!.value = 'Stopfen'
+    root.querySelector<HTMLFormElement>('#behaelter-verwalten-form')!.dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true }))
+    await warteAufRendern()
+
+    const angelegt = stand.behaelter.find(behaelter => behaelter.name === 'Testballon')!
+    expect(angelegt.bruttoLiter).toBe(7.5)
+    klicke(root.querySelector(`[data-action="behaelter-bearbeiten"][data-id="${angelegt.id}"]`))
+    root.querySelector<HTMLInputElement>('#behaelter-name')!.value = 'Testballon groß'
+    root.querySelector<HTMLInputElement>('#behaelter-liter')!.value = '8'
+    root.querySelector<HTMLFormElement>('#behaelter-verwalten-form')!.dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true }))
+    await warteAufRendern()
+
+    expect(angelegt.name).toBe('Testballon groß')
+    expect(angelegt.bruttoLiter).toBe(8)
+  })
+
+  it('entfernt bei Angekommen das erwartete Lieferdatum', async () => {
+    const root = document.querySelector<HTMLElement>('#app')!
+    const stand = erzeugeStartdaten()
+    const behaelter = stand.behaelter.find(eintrag => eintrag.id === 'ballon-klein-1')!
+    new WeinbegleiterApp(root, stand, []).start()
+    klicke(root.querySelector('[data-action="nav"][data-view="mehr"]'))
+
+    klicke(root.querySelector('[data-action="behaelter-angekommen"][data-id="ballon-klein-1"]'))
+    await warteAufRendern()
+
+    expect(behaelter.vorhandenAb).toBeUndefined()
+    expect(root.querySelector('[data-behaelter-id="ballon-klein-1"] .gefaess-zustand')?.textContent).toBe('frei')
+  })
+
+  it('löst einen fälligen Liefertermin mit vorausgewählter Gefäßliste ein', async () => {
+    const root = document.querySelector<HTMLElement>('#app')!
+    const stand = erzeugeStartdaten()
+    const heute = lokalesIsoDatum()
+    const angekommen = stand.behaelter.find(behaelter => behaelter.id === 'ballon-3')!
+    const nichtAngekommen = stand.behaelter.find(behaelter => behaelter.id === 'ballon-4')!
+    angekommen.vorhandenAb = heute
+    nichtAngekommen.vorhandenAb = heute
+    const reminder = stand.reminder.find(eintrag => eintrag.id === 'rem-ballons')!
+    const faellig = new Date()
+    faellig.setHours(0, 0, 0, 0)
+    reminder.faellig = faellig.toISOString()
+    reminder.beschreibung = 'Zwei Gärballons werden heute erwartet.'
+    new WeinbegleiterApp(root, stand, []).start()
+    klicke(root.querySelector('[data-action="nav"][data-view="termine"]'))
+
+    klicke(root.querySelector('[data-action="reminder-toggle"][data-id="rem-ballons"]'))
+    const formular = root.querySelector<HTMLFormElement>('#lieferung-erledigen-form')!
+    const auswahl = [...formular.querySelectorAll<HTMLInputElement>('input[name="behaelterIds"]')]
+    const erwarteteIds = stand.behaelter.filter(behaelter => behaelter.vorhandenAb && behaelter.vorhandenAb <= heute).map(behaelter => behaelter.id).sort()
+    expect(auswahl.map(feld => feld.value).sort()).toEqual(erwarteteIds)
+    expect(auswahl.every(feld => feld.checked)).toBe(true)
+    auswahl.find(feld => feld.value === nichtAngekommen.id)!.checked = false
+
+    formular.dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true }))
+    await warteAufRendern()
+
+    expect(angekommen.vorhandenAb).toBeUndefined()
+    expect(nichtAngekommen.vorhandenAb).toBe(heute)
+    expect(reminder.erledigt).toBe(true)
   })
 })
 

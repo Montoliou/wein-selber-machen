@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Weinbegleiter — iPad v3</title>
+<style>
+:root{--bg:#14100f;--fl:#1e1917;--fl2:#272120;--rand:#392f2c;--text:#f0e9e5;--t2:#a89a93;--t3:#7a6c65;
+ --wein:#8e1f36;--weinh:#c4415c;--gold:#c8a55b;--gruen:#3f8a5a;--gelb:#c9a227;--orange:#cd6a24;--rot:#b4232f;
+ --r:16px;--f:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{background:var(--bg);color:var(--text);font-family:var(--f);font-size:17px;line-height:1.45;overflow:hidden}
+.mockbar{position:fixed;top:0;left:0;right:0;z-index:50;display:flex;gap:6px;align-items:center;padding:6px 10px;
+ background:rgba(200,165,91,.12);border-bottom:1px dashed rgba(200,165,91,.45);font-size:12px;color:var(--t2)}
+.mockbar b{color:var(--gold);margin-right:6px}
+.mockbar button{padding:5px 11px;border-radius:99px;border:1px solid var(--rand);background:var(--fl2);color:var(--text);font:600 12px var(--f);cursor:pointer}
+.mockbar button.an{background:var(--wein);border-color:var(--wein);color:#fff}
+.screen{display:none;position:absolute;inset:34px 0 0 0}.screen.an{display:block}
+
+/* ═══ RUNDE ═══ */
+.runde{display:grid;grid-template-rows:auto 1fr;height:100%}
+.r-top{display:flex;align-items:center;gap:14px;padding:12px 24px;border-bottom:1px solid var(--rand);background:var(--fl)}
+.r-top .t{font-size:14px;color:var(--t2)}.r-top .t b{color:var(--text)}
+.r-top .dots{margin-left:auto;display:flex;gap:7px}
+.r-top .dots i{width:9px;height:9px;border-radius:99px;background:var(--rand)}
+.r-top .dots i.an{background:var(--gold)}.r-top .dots i.ok{background:var(--gruen)}
+.r-top .abbr{margin-left:18px;color:var(--t2);font-size:14px;cursor:pointer}
+.r-body{position:relative;display:grid;grid-template-columns:1fr 1.2fr;gap:0;overflow:hidden}
+.pfeil{position:absolute;top:50%;transform:translateY(-50%);width:54px;height:96px;display:grid;place-items:center;
+ font-size:30px;color:var(--t3);cursor:pointer;z-index:2;border-radius:14px}
+.pfeil:active{background:var(--fl2)}.pfeil.l{left:6px}.pfeil.r{right:6px}
+.r-links{padding:28px 30px 28px 66px;display:flex;flex-direction:column;gap:20px;border-right:1px solid var(--rand)}
+.r-rechts{padding:28px 66px 28px 30px;display:flex;flex-direction:column;gap:14px;overflow-y:auto}
+.gefaess .nr{font-size:64px;font-weight:800;letter-spacing:-.03em;line-height:1}
+.gefaess .nm{font-size:22px;font-weight:650;margin-top:2px}
+.gefaess .meta{font-size:15px;color:var(--t2);margin-top:4px}
+.ampel{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:8px 14px;border-radius:99px;margin-top:10px}
+.a-gruen{background:rgba(63,138,90,.18);color:#7fd39c}.a-gelb{background:rgba(201,162,39,.18);color:#e0c05a}
+.ampel i{width:9px;height:9px;border-radius:99px;background:currentColor}
+.zuletzt{background:var(--fl);border:1px solid var(--rand);border-radius:var(--r);padding:16px 18px}
+.zuletzt h4{font-size:11.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--t3);margin-bottom:10px}
+.zuletzt .z{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--rand);font-size:16px}
+.zuletzt .z:last-child{border:0}.zuletzt .z span{color:var(--t2)}.zuletzt .z b{font-variant-numeric:tabular-nums}
+.zuletzt .z b .tr{color:var(--t3);font-weight:500;margin-left:6px;font-size:13px}
+.feld{display:grid;grid-template-columns:1fr auto;align-items:center;gap:14px;background:var(--fl);border:1px solid var(--rand);border-radius:var(--r);padding:14px 18px}
+.feld .lb b{font-size:18px;font-weight:650;display:block}.feld .lb small{font-size:13px;color:var(--t3)}
+.feld input{width:150px;padding:14px 16px;border-radius:12px;border:1.5px solid var(--rand);background:var(--fl2);color:var(--text);font:600 26px var(--f);text-align:right;font-variant-numeric:tabular-nums}
+.feld input:focus{outline:none;border-color:var(--weinh)}
+.feld input.leer{color:var(--t3)}
+.feld .einh{font-size:16px;color:var(--t2);width:44px}
+.feld .ir{display:flex;align-items:center;gap:8px}
+.feld select{padding:14px 40px 14px 16px;border-radius:12px;border:1.5px solid var(--rand);background:var(--fl2);color:var(--text);font:600 18px var(--f);min-width:230px;appearance:none;
+ background-image:linear-gradient(45deg,transparent 50%,var(--t2) 50%),linear-gradient(135deg,var(--t2) 50%,transparent 50%);background-position:calc(100% - 20px) 50%,calc(100% - 14px) 50%;background-size:6px 6px;background-repeat:no-repeat}
+.methode{display:flex;gap:8px;margin-top:-4px;padding-left:4px}
+.methode span{font-size:13px;padding:6px 12px;border-radius:99px;border:1px solid var(--rand);color:var(--t2)}
+.methode span.an{background:var(--fl2);color:var(--text);border-color:var(--t3)}
+.weitere{color:var(--gold);font-size:14px;font-weight:600;padding:4px 6px;cursor:pointer}
+.speichern{margin-top:auto;padding:20px;border-radius:16px;border:0;background:var(--wein);color:#fff;font:700 21px var(--f);cursor:pointer}
+.nach{display:none;flex-direction:column;gap:14px}
+.r-rechts.gespeichert .eingabe{display:none}.r-rechts.gespeichert .nach{display:flex}
+.befund{background:rgba(63,138,90,.12);border:1px solid rgba(63,138,90,.45);border-radius:var(--r);padding:18px 20px}
+.befund .kopf{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#7fd39c}
+.befund .kopf i{width:10px;height:10px;border-radius:99px;background:currentColor}
+.befund p{margin-top:8px;font-size:17px}
+.befund small{display:block;margin-top:6px;color:var(--t2);font-size:14px}
+.weiter{padding:22px;border-radius:16px;border:0;background:var(--wein);color:#fff;font:700 22px var(--f);cursor:pointer}
+.rueck{background:none;border:0;color:var(--t2);font:600 15px var(--f);padding:6px;cursor:pointer;text-align:left}
+.rueck b{color:var(--gold)}
+
+/* ═══ HEUTE ═══ */
+.heute{display:grid;grid-template-columns:1.45fr 1fr;gap:20px;padding:18px 24px 24px;height:100%;overflow:auto}
+.sb{display:flex;background:var(--fl);border:1px solid var(--rand);border-radius:var(--r);overflow:hidden}
+.sb div{flex:1;padding:14px 8px;text-align:center;border-right:1px solid var(--rand)}
+.sb div:last-child{border:0}
+.sb b{display:block;font-size:26px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.1}
+.sb span{display:block;font-size:10.5px;color:var(--t3);letter-spacing:.07em;text-transform:uppercase;margin-top:3px}
+.sb .gut b{color:#7fd39c}.sb .warn b{color:var(--gold)}
+.karte{background:var(--fl);border:1px solid var(--rand);border-radius:var(--r);padding:18px 20px}
+.karte h3{font-size:16px;font-weight:650}
+.kurve-kopf{display:flex;align-items:baseline;gap:12px;margin-bottom:6px}
+.legende{margin-left:auto;display:flex;gap:14px;font-size:12.5px;color:var(--t2)}
+.legende i{display:inline-block;width:18px;height:3px;border-radius:2px;vertical-align:middle;margin-right:5px}
+svg.kurve{width:100%;height:340px;display:block}
+.pf{fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.prog{fill:none;stroke:var(--t3);stroke-width:1.5;stroke-dasharray:5 5;opacity:.7}
+.achse{stroke:var(--rand)}.ax{fill:var(--t3);font-size:11px;font-family:var(--f)}
+.pressband{fill:rgba(63,138,90,.14)}.presslabel{fill:#7fd39c;font-size:11px;font-weight:700;font-family:var(--f);letter-spacing:.05em}
+details.erk{border-top:1px solid var(--rand);margin-top:10px;padding-top:9px}
+details.erk summary{list-style:none;cursor:pointer;color:var(--gold);font-size:13.5px;font-weight:600}
+details.erk summary::-webkit-details-marker{display:none}
+.rechts{display:flex;flex-direction:column;gap:14px}
+.aktion{display:flex;gap:14px;align-items:center}
+.aktion .ic{font-size:30px}.aktion b{display:block;font-size:17px}.aktion small{color:var(--t2);font-size:14px}
+.btn{display:block;width:100%;padding:16px;border-radius:14px;border:0;background:var(--wein);color:#fff;font:700 18px var(--f);cursor:pointer;margin-top:12px}
+.klima{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.klima div{background:var(--fl2);border:1px solid var(--rand);border-radius:12px;padding:12px 14px}
+.klima b{display:block;font-size:24px;font-weight:700;font-variant-numeric:tabular-nums}
+.klima span{font-size:11px;color:var(--t3);letter-spacing:.06em;text-transform:uppercase}
+.klima small{display:block;font-size:12px;color:var(--t2);margin-top:2px}
+.reihe{display:grid;grid-template-columns:auto 1fr auto auto auto;gap:14px;align-items:center;padding:11px 0;border-bottom:1px solid var(--rand);font-size:15px}
+.reihe:last-child{border:0}
+.reihe .p{width:10px;height:10px;border-radius:99px;background:var(--gruen)}
+.reihe b{font-weight:650}.reihe small{color:var(--t3);font-size:12.5px;display:block}
+.reihe .v{font-variant-numeric:tabular-nums;text-align:right}.reihe .v em{font-style:normal;color:var(--t3);font-size:12px;margin-left:4px}
+.reihe .tr{color:var(--t3);font-size:13px}
+h2{font-size:11.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--t3);margin:4px 0 8px}
+</style></head><body>
+
+<div class="mockbar"><b>Mockup v3 · iPad</b>
+  <button class="an" onclick="zeig('runde',this)">Runde</button>
+  <button onclick="zeig('heute',this)">Heute</button>
+  <span style="margin-left:14px;color:var(--t3)">Querformat 1024 px · echte Daten vom 04.09.</span>
+</div>
+
+<!-- ══════════ RUNDE ══════════ -->
+<div class="screen an" id="s-runde"><div class="runde">
+  <div class="r-top">
+    <div class="t"><b>Runde</b> · 04.09.2026, 08:05 · Gärung, Tag 3</div>
+    <div class="dots"><i class="ok"></i><i class="an"></i><i></i><i></i></div>
+    <div class="abbr">Abbrechen</div>
+  </div>
+  <div class="r-body">
+    <div class="pfeil l">‹</div><div class="pfeil r">›</div>
+
+    <div class="r-links">
+      <div class="gefaess">
+        <div class="nr">2<span style="font-size:22px;color:var(--t3);font-weight:600;margin-left:10px">von 4</span></div>
+        <div class="nm">Bottich 2</div>
+        <div class="meta">12,3 kg · 8,6 L erwartet · Gärung seit 02.09.</div>
+        <span class="ampel a-gruen"><i></i>Normal</span>
+      </div>
+      <div class="zuletzt">
+        <h4>Zuletzt · gestern 20:00</h4>
+        <div class="z"><span>Temperatur</span><b>22,5 °C<span class="tr">↑ von 21,4</span></b></div>
+        <div class="z"><span>Mostgewicht</span><b>70 °Oe<span class="tr">gestern 08:52</span></b></div>
+        <div class="z"><span>Geruch</span><b>sauber / fruchtig</b></div>
+        <div class="z"><span>Gärung</span><b>stark</b></div>
+      </div>
+      <div style="font-size:13.5px;color:var(--t3)">Wischen oder Pfeile: nächster Bottich. Nichts springt von allein.</div>
+    </div>
+
+    <div class="r-rechts" id="rechts">
+      <div class="eingabe" style="display:contents">
+        <div class="feld"><div class="lb"><b>Temperatur</b><small>18–28 °C</small></div>
+          <div class="ir"><input value="22,8" inputmode="decimal"><span class="einh">°C</span></div></div>
+        <div class="feld"><div class="lb"><b>Mostgewicht</b><small>entgaste Probe</small></div>
+          <div class="ir"><input value="58" inputmode="decimal"><span class="einh">°Oe</span></div></div>
+        <div class="methode"><span class="an">Spindel</span><span>Refraktometer</span><span>Sonstige</span></div>
+        <div class="feld"><div class="lb"><b>Geruch</b></div>
+          <select><option>sauber / fruchtig</option><option>hefig</option><option>reduktiv / dumpf</option><option>faule Eier (H₂S)</option><option>essigstichig</option></select></div>
+        <div class="feld"><div class="lb"><b>Gäraktivität</b></div>
+          <select><option>keine</option><option>schwach</option><option selected>mittel</option><option>stark</option><option>sehr stark</option></select></div>
+        <div class="weitere">› Weitere Messgrößen · Unterstoßen vermerken</div>
+        <button class="speichern" onclick="document.getElementById('rechts').classList.add('gespeichert')">4 Werte speichern</button>
+      </div>
+      <div class="nach">
+        <div class="befund">
+          <div class="kopf"><i></i>Normal · gespeichert</div>
+          <p>Mostgewicht von 70 auf 58 °Oe in 24 Stunden — die Gärung liegt auf Plan. Temperatur 22,8 °C, unkritisch.</p>
+          <small>Pressfenster voraussichtlich 08.09.</small>
+        </div>
+        <button class="weiter">Weiter → Bottich 3</button>
+        <button class="rueck">↶ Letzte Eingabe zurücknehmen <b>· 27 s</b></button>
+        <div style="font-size:13.5px;color:var(--t3);margin-top:auto">Nach Bottich 4: Zusammenfassung der Runde — was erfasst, welche Ampel sich änderte, was fällig ist.</div>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<!-- ══════════ HEUTE ══════════ -->
+<div class="screen" id="s-heute"><div class="heute">
+  <div>
+    <div class="sb">
+      <div class="gut"><b>4</b><span>Chargen</span></div>
+      <div class="gut"><b>grün</b><span>Ampel</span></div>
+      <div><b>Tag 3</b><span>Gärung</span></div>
+      <div class="warn"><b>2</b><span>fällig</span></div>
+      <div><b>21,3°</b><span>Keller</span></div>
+    </div>
+    <div class="karte" style="margin-top:14px">
+      <div class="kurve-kopf"><h3>Gärverlauf</h3>
+        <div class="legende"><span><i style="background:#c4415c"></i>B1</span><span><i style="background:#e08a5c"></i>B2</span><span><i style="background:#c8a55b"></i>B3</span><span><i style="background:#8a9cc4"></i>B4</span></div></div>
+      <svg class="kurve" viewBox="0 0 640 340" preserveAspectRatio="none">
+        <rect class="pressband" x="40" y="262" width="580" height="26"/><text class="presslabel" x="46" y="280">PRESSFENSTER · SG ≤ 1,010</text>
+        <line class="achse" x1="40" y1="30" x2="40" y2="300"/><line class="achse" x1="40" y1="300" x2="620" y2="300"/>
+        <text class="ax" x="6" y="52">90</text><text class="ax" x="6" y="116">70</text><text class="ax" x="6" y="180">50</text><text class="ax" x="6" y="244">30</text><text class="ax" x="10" y="304">10</text>
+        <text class="ax" x="40" y="322">02.09.</text><text class="ax" x="200" y="322">04.09.</text><text class="ax" x="360" y="322">06.09.</text><text class="ax" x="520" y="322">08.09.</text>
+        <path class="prog" d="M136,77 L200,120 L280,166 L360,208 L440,243 L520,268"/>
+        <path class="pf" stroke="#c4415c" d="M86,74 L96,74 L200,120"/>
+        <path class="pf" stroke="#e08a5c" d="M86,71 L152,113 L200,145" opacity=".9"/>
+        <path class="pf" stroke="#c8a55b" d="M86,72 L154,113" opacity=".9"/>
+        <path class="pf" stroke="#8a9cc4" d="M86,68 L156,100" opacity=".9"/>
+        <g fill="#c4415c"><circle cx="86" cy="74" r="3.5"/><circle cx="200" cy="120" r="3.5"/></g>
+        <g fill="#e08a5c"><circle cx="152" cy="113" r="3.5"/><circle cx="200" cy="145" r="3.5"/></g>
+        <circle fill="#c8a55b" cx="154" cy="113" r="3.5"/><circle fill="#8a9cc4" cx="156" cy="100" r="3.5"/>
+      </svg>
+      <details class="erk"><summary>› Worauf du bei der Kurve achtest</summary></details>
+    </div>
+  </div>
+  <div class="rechts">
+    <div class="karte" style="border-color:rgba(200,165,91,.45)">
+      <div class="aktion"><div class="ic">🍇</div><div><b>Morgenrunde fällig</b><small>4 Bottiche · Temperatur, Dichte, Geruch · zuletzt gestern 20:00</small></div></div>
+      <button class="btn">Runde starten</button>
+    </div>
+    <div class="karte">
+      <h2>Kellerklima</h2>
+      <div class="klima">
+        <div><span>Temperatur</span><b>21,3 °C</b><small>Sensor · 07:45</small></div>
+        <div><span>Feuchte</span><b>63 %</b><small>Batterie 100 %</small></div>
+      </div>
+    </div>
+    <div class="karte">
+      <h2>Chargen</h2>
+      <div class="reihe"><i class="p"></i><div><b>Bottich 1</b><small>13,1 kg</small></div><div class="v">68<em>°Oe</em></div><div class="v">22,2<em>°C</em></div><div class="tr">↓14</div></div>
+      <div class="reihe"><i class="p"></i><div><b>Bottich 2</b><small>12,3 kg</small></div><div class="v">70<em>°Oe</em></div><div class="v">22,5<em>°C</em></div><div class="tr">↓12</div></div>
+      <div class="reihe"><i class="p"></i><div><b>Bottich 3</b><small>12,5 kg</small></div><div class="v">70<em>°Oe</em></div><div class="v">22,3<em>°C</em></div><div class="tr">↓11</div></div>
+      <div class="reihe"><i class="p"></i><div><b>Bottich 4</b><small>10,6 kg</small></div><div class="v">74<em>°Oe</em></div><div class="v">22,0<em>°C</em></div><div class="tr">↓9</div></div>
+    </div>
+    <div class="karte">
+      <h2>Fällig</h2>
+      <div class="reihe" style="grid-template-columns:auto 1fr"><b style="color:var(--gold)">heute</b><div>Hefenährsalz Portion 2 · 0,90 / 0,85 / 0,90 / 0,75 g</div></div>
+      <div class="reihe" style="grid-template-columns:auto 1fr"><b>Fr 06.</b><div>Nährsalz Portion 3 · vor SG 1,025</div></div>
+    </div>
+  </div>
+</div></div>
+
+<script>
+function zeig(id,b){document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('an',s.id==='s-'+id));
+ document.querySelectorAll('.mockbar button').forEach(x=>x.classList.remove('an'));b.classList.add('an');}
+</script></body></html>

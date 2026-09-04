@@ -487,6 +487,13 @@ Ballon**, sondern ein Gefäß mit Kopfraum, bis er durch ist.
 Kommt die Presse erst Sonntag: **Dienstag 08.09.** statt Montagabend. Bottich 1 steht
 dann vier Tage auf der Maische — vertretbar, solange Deckel zu und Hut nass bleibt.
 
-**Doppelmessung:** Bottich 4 hat zwei Temperaturwerte (22,7 und 22,8 °C). Gleicher
-Fehler wie am 03.09. bei Bottich 3 — offenbar reproduzierbar, gehört in den nächsten
-Handoff.
+**Zwei Temperaturwerte bei Bottich 4** (22,7 und 22,8 °C) — **kein Fehler.** Andi hat
+nachgebessert, weil das Thermometer noch einen Strich weitergesprungen ist. Gültig ist
+der spätere Wert, **22,8 °C**.
+
+Der Befund liegt woanders: **Die App kennt keine Korrektur.** Wer einen gerade
+eingegebenen Wert richtigstellen will, legt einen zweiten daneben — und die Auswertung
+sieht danach zwei Messungen statt einer korrigierten. Das ist harmlos, solange die Werte
+dicht beieinander liegen, aber es verfälscht jede Reihe, sobald sich jemand vertippt.
+Gebraucht wird ein „korrigieren", das den alten Wert ersetzt und ihn dabei im
+Prüfpfad behält — löschen darf es ihn nicht. Merkposten für einen Handoff, nicht dringend.

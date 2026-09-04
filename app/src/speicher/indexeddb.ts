@@ -6,6 +6,13 @@ const DB_VERSION = 2
 const STAND_STORE = 'datenstand'
 const FOTO_STORE = 'fotos'
 const STAND_KEY = 'aktiv'
+const SYNC_SAMMLUNGEN = ['chargen', 'behaelter', 'messungen', 'ereignisse', 'reminder', 'wiki', 'klima', 'vorrat'] as const
+
+function brauchtMigration(stand: AppDatenstand): boolean {
+  if (stand.version !== APP_DATEN_VERSION || !Array.isArray(stand.geloescht) || !stand.sensor.zuletztGeaendert) return true
+  return SYNC_SAMMLUNGEN.some(sammlung => stand[sammlung].some(datensatz =>
+    !datensatz.id || !datensatz.zuletztGeaendert))
+}
 
 function oeffneDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -38,7 +45,7 @@ export async function ladeDatenstand(): Promise<AppDatenstand | null> {
   }
   if (!stand) return null
   const migriert = migriereDatenstand(stand)
-  if (stand.version !== APP_DATEN_VERSION) await speichereDatenstand(migriert)
+  if (brauchtMigration(stand)) await speichereDatenstand(migriert)
   return migriert
 }
 

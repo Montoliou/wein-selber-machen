@@ -56,4 +56,16 @@ describe('Messerfassung im DOM', () => {
     expect(stand.messungen).toHaveLength(anzahlVorher)
     expect(root.querySelector('#erfassen-fehler')?.textContent).toContain('mindestens einen Messwert')
   })
+
+  it('zeigt unter Mehr den Abgleichsstand und den manuellen Knopf', () => {
+    const root = document.querySelector<HTMLElement>('#app')!
+    const stand = erzeugeStartdaten()
+    new WeinbegleiterApp(root, stand, []).start()
+
+    klicke(root.querySelector('[data-action="nav"][data-view="mehr"]'))
+
+    expect(root.querySelector('.abgleich-zeile')?.textContent).toContain('Abgleich: noch nie')
+    expect(root.querySelector('[data-action="sync-jetzt"]')?.textContent).toBe('Jetzt abgleichen')
+    expect(root.querySelector('.abgleich-hinweis')?.textContent).toBe('Nicht abgeglichen')
+  })
 })

@@ -125,8 +125,11 @@ export async function ladeSensorverlauf(konfig: SensorKonfig): Promise<SensorVer
 }
 
 export function alsKlimapunkt(wert: SensorMesswert, quelle: Klimapunkt['quelle']): Klimapunkt {
+  const zeit = new Date().toISOString()
   return {
-    zeit: new Date().toISOString(),
+    id: `klima-${crypto.randomUUID()}`,
+    zuletztGeaendert: zeit,
+    zeit,
     temperatur: wert.temperatur,
     feuchte: wert.feuchte,
     batterie: wert.batterie,

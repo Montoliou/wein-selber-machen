@@ -331,7 +331,10 @@ button.tag { min-height: 44px; cursor: pointer; }
 .klima-wert strong { display: block; font-size: 26px; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
 .klima-wert small { color: var(--text-3); font-size: 11px; letter-spacing: .05em; text-transform: uppercase; }
 .batteriewarnung { margin-bottom: 0; }
-.fassung { margin: 24px 0 8px; color: var(--text-3); font-size: 12px; text-align: center; font-variant-numeric: tabular-nums; }
+.fassung { display: grid; gap: 7px; margin: 24px 0 8px; color: var(--text-3); font-size: 12px; text-align: center; font-variant-numeric: tabular-nums; }
+.abgleich-zeile { display: flex; align-items: center; justify-content: center; gap: 10px; color: var(--text-2); }
+.abgleich-zeile .btn { margin: 0; }
+.abgleich-hinweis { min-height: 16px; color: var(--text-3); font-size: 11px; }
 .foto-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
 .foto-grid img { width: 100%; aspect-ratio: 1; object-fit: cover; border: 1px solid var(--border); border-radius: 10px; }
 .ziel-zeile { display: grid; grid-template-columns: minmax(0, 1.3fr) 76px minmax(0, 1fr); gap: 8px; align-items: end; margin-bottom: 8px; }

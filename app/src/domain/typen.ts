@@ -79,6 +79,7 @@ export type MessMethode = 'spindel' | 'refraktometer' | 'sonstige'
 
 export interface Messung {
   id: string
+  zuletztGeaendert?: string // ISO; wird von der Speicherschicht garantiert
   chargeId: string
   zeit: string          // ISO
   typ: MessTyp
@@ -103,6 +104,7 @@ export const EREIGNIS_LABEL: Record<EreignisArt, string> = {
 
 export interface Ereignis {
   id: string
+  zuletztGeaendert?: string // ISO; wird von der Speicherschicht garantiert
   chargeId: string
   zeit: string
   art: EreignisArt
@@ -117,6 +119,7 @@ export interface Ereignis {
 
 export interface Behaelter {
   id: string
+  zuletztGeaendert?: string // ISO; wird von der Speicherschicht garantiert
   name: string
   bruttoLiter: number
   material: string
@@ -135,6 +138,7 @@ export interface VolumenPunkt {
 
 export interface Charge {
   id: string
+  zuletztGeaendert?: string // ISO; wird von der Speicherschicht garantiert
   jahrgang: number
   name: string
   typ: ChargenTyp
@@ -158,6 +162,7 @@ export interface Charge {
 
 export interface Reminder {
   id: string
+  zuletztGeaendert?: string // ISO; wird von der Speicherschicht garantiert
   chargeId?: string
   faellig: string          // ISO
   titel: string
@@ -170,6 +175,7 @@ export interface Reminder {
 
 export interface WikiSeite {
   id: string
+  zuletztGeaendert?: string // ISO; wird von der Speicherschicht garantiert
   slug: string
   titel: string
   inhalt: string           // Markdown-Teilmenge
@@ -178,6 +184,8 @@ export interface WikiSeite {
 }
 
 export interface Klimapunkt {
+  id: string
+  zuletztGeaendert?: string // ISO; wird von der Speicherschicht garantiert
   zeit: string
   temperatur: number
   feuchte?: number
@@ -186,6 +194,7 @@ export interface Klimapunkt {
 }
 
 export interface SensorKonfig {
+  zuletztGeaendert?: string // ISO; wird von der Speicherschicht garantiert
   aktiv: boolean
   adapter: 'shelly-cloud' | 'govee' | 'generisch-json'
   url: string
@@ -214,12 +223,22 @@ export interface Datenstand {
   klima: Klimapunkt[]
   sensor: SensorKonfig
   vorrat: Vorratsposten[]
+  geloescht?: Grabstein[]
 }
 
 export interface Vorratsposten {
   id: string
+  zuletztGeaendert?: string // ISO; wird von der Speicherschicht garantiert
   name: string
   mengeWert: number
   mengeEinheit: string
   notiz?: string
+}
+
+export type SyncSammlung = 'chargen' | 'behaelter' | 'messungen' | 'ereignisse' | 'reminder' | 'wiki' | 'klima' | 'vorrat'
+
+export interface Grabstein {
+  id: string
+  sammlung: SyncSammlung
+  zeit: string // ISO
 }

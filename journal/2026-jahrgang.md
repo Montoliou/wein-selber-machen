@@ -355,3 +355,29 @@ Das ist genau die Reibung, die Andi am selben Morgen gemeldet hat: Das Formular 
 messgrößen-zentriert, er arbeitet chargen-zentriert, und beim Wechsel der Messgröße
 springt die Auswahl zurück. **Die Lücken sind das Symptom, nicht Andis Nachlässigkeit** —
 und der beste Beleg dafür, dass Handoff H3 nötig ist.
+
+
+---
+
+## 04.09.2026 — Datenverlust auf dem iPad, rekonstruiert
+
+Beim Abgleich der beiden Geräte stellte sich heraus: Die iPad-Sicherung enthielt
+**nur den Startdatensatz**. Die am 03.09. vormittags dort erfassten Werte waren weg.
+
+**Ursache:** der Schritt „Website-Daten löschen" aus einer Aktualisierungsanleitung
+von Claude. Er löscht die IndexedDB und damit den gesamten Bestand. Die Anleitung
+enthielt zwar den Hinweis, vorher zu sichern — aber sie führte an einer Stelle vorbei,
+an der ein Fehlgriff alles kostet.
+
+**Wiederhergestellt** aus diesem Journal und den Screenshots vom 03.09.: sieben
+Messungen, in der Sicherung `outputs/weinbegleiter-stand-2026-09-04.json` als
+rekonstruiert gekennzeichnet.
+
+**Die Lehre ist nicht neu, sondern dieselbe wie 2025:** Was nur an einer Stelle steht,
+ist nicht gesichert. Dass die Werte wieder da sind, liegt ausschließlich daran, dass sie
+parallel im Journal standen. Der Geräteabgleich aus H5 behebt die Ursache.
+
+**Nebenbefund für H5:** Die Kennungen des Startdatensatzes sind fortlaufend nummeriert
+und verschieben sich, wenn `startdaten.ts` sich ändert. Ein Abgleich über die Kennung
+kann dadurch unverwandte Datensätze zusammenführen — auf den beiden Geräten stand
+`e-42` für zwei verschiedene Ereignisse. Gehört im Review von PR #5 geprüft.

@@ -388,3 +388,15 @@ Abgleich über die Kennung darf sich darauf nicht verlassen — im Review von PR
 
 Bei allen vier Bottichen zweimal untergestoßen: vormittags zu den Messzeiten
 (08:44 / 08:46 / 08:57 / 09:01) und abends um 20:00.
+
+## 04.09.2026 — Geräteabgleich live
+
+Seit 08:53 gleichen MacBook, iPhone und iPad denselben Stand über `montolio.de/wein/sync.php`
+ab. Der kanonische Serverstand ist der bereinigte Stand vom 04.09. (50 Messungen, 28 Ereignisse)
+plus zwei unschädliche Grabsteine aus der Abnahme. Abnahme auf Produktion: ein frisches Gerät mit
+Token holt den Serverstand statt zu säen — 4 Bottiche, 50 Messungen, 28 Ereignisse, Sensor
+eingerichtet, „Abgleich: 04.09.26, 08:56".
+
+**Was das für das Journal heißt:** Ab jetzt gibt es eine Wahrheit, und sie liegt auf dem Server.
+Dieses Journal bleibt die Begründungsschicht — warum etwas entschieden wurde —, nicht mehr der
+Ersatz für fehlende Daten. Das Hin- und Herschieben von JSON-Dateien ist vorbei.

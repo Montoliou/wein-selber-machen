@@ -235,6 +235,11 @@ anlegen und am Ende per Grabstein löschen. Grabsteine für nie existierende ids
 harmlos. So lief die Abnahme am 04.09.: leerer Server → A; B → A∪B; B löscht → weg;
 veraltetes A → bleibt weg.
 
+**Testlehre vom 04.09.:** Nie einen Token aus dem Gedächtnis in eine Test-URL tippen — der
+erste Live-Test scheiterte an einem falsch erinnerten Token (403) und sah aus wie ein Codefehler.
+Token immer aus `proxy/ENDPUNKT.txt` lesen; wenn er in eine Browser-Adresse muss, über eine
+lokale Weiterleitungsseite, damit er nicht im Chat landet. Und: macOS hat kein `timeout`.
+
 **iOS-Falle vom 04.09.:** Home-Bildschirm-App und Safari haben getrennte Datenbanken.
 Ein Export aus Safari zeigt einen frischen Startdatensatz, nicht die echten Daten.
 Mit dem Abgleich ist das erledigt — beide Instanzen holen denselben Serverstand.

@@ -474,9 +474,18 @@ Alarm, aber beobachten: Bleibt er unter 15 °Oe/Tag, wärmer stellen.
 Bottich 1 am 06.09. abends, Bottich 2 und 3 am 07.09., Bottich 4 erst am 08.09.
 
 Gepresst wird trotzdem an **einem** Tag (Entscheidung vom 30.08.: Arbeitsaufwand neben
-dem Beruf). **Zieltag ist der 07.09.** Bottich 1 steht dann zwei Tage länger auf der
-Maische — unkritisch, solange Deckel zu und Hut nass. Bottich 4 wird bei etwa 15 °Oe
-gepresst und vergärt im Gefäß zu Ende, was durch das entstehende CO₂ sogar schützt.
+dem Beruf). Die Wochentage entscheiden mit: **06.09. ist Sonntag, 07.09. ein Montag.**
+Fünf Korbfüllungen sind zwei bis drei Stunden — an einem Arbeitstagabend wird das
+gehetzt, und Hetze am Presstag ist teuer.
+
+**Empfehlung: Sonntag 06.09.**, sofern die Presse bis Samstag da und über Nacht
+gewässert ist. Bottich 1 ist dann im Fenster, Bottich 2 und 3 knapp davor, Bottich 4
+bei etwa 25 °Oe. Früh gepresster Most ist kein Fehler — die Restgärung läuft im Gefäß
+weiter und das entstehende CO₂ schützt. Auflage für Bottich 4: **kein randvoller
+Ballon**, sondern ein Gefäß mit Kopfraum, bis er durch ist.
+
+Kommt die Presse erst Sonntag: **Dienstag 08.09.** statt Montagabend. Bottich 1 steht
+dann vier Tage auf der Maische — vertretbar, solange Deckel zu und Hut nass bleibt.
 
 **Doppelmessung:** Bottich 4 hat zwei Temperaturwerte (22,7 und 22,8 °C). Gleicher
 Fehler wie am 03.09. bei Bottich 3 — offenbar reproduzierbar, gehört in den nächsten

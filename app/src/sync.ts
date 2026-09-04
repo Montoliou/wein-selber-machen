@@ -188,4 +188,30 @@ export async function gleicheMitServerAb(stand: AppDatenstand): Promise<AppDaten
   }
 }
 
+/**
+ * Ein Stand ohne Inhalt, aber mit gueltigem Kopf (Version, Jahrgang, Sensor).
+ * Damit fragt ein neues Geraet den Server, OHNE ihm etwas unterzuschieben:
+ * Vereinigung mit leeren Sammlungen liefert den Serverstand unveraendert.
+ */
+export function alsSonde(stand: AppDatenstand): AppDatenstand {
+  return { ...stand, chargen: [], behaelter: [], messungen: [], ereignisse: [], reminder: [], wiki: [], klima: [], vorrat: [], geloescht: [] }
+}
+
+/**
+ * Holt den kanonischen Stand, falls das Geraet einen Token hat und der Server
+ * schon Daten traegt. Sonst null - dann darf lokal gesaeet werden.
+ * Grund siehe main.ts: ein Startdatensatz darf nie gegen einen bestehenden
+ * Serverstand gemischt werden.
+ */
+export async function holeKanonischenStand(sonde: AppDatenstand): Promise<AppDatenstand | null> {
+  if (!gespeicherterSyncToken() && !tokenAusSensor(sonde.sensor)) return null
+  if (navigator.onLine === false) return null
+  try {
+    const stand = await gleicheMitServerAb(sonde)
+    return stand.chargen.length > 0 ? stand : null
+  } catch {
+    return null
+  }
+}
+
 export { SYNC_SAMMLUNGEN }

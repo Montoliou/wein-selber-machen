@@ -67,3 +67,24 @@ describe('Geräteabgleich', () => {
     expect(zusammen.sensor).toEqual(geraetB.sensor)
   })
 })
+
+
+import { alsSonde as _alsSonde, fuehreDatenstaendeZusammen as _zusammen } from '../sync'
+import { erzeugeStartdaten as _seed } from '../startdaten'
+import { migriereDatenstand as _migriere } from './modell'
+
+describe('Sonde vor dem Säen (Befund 04.09.2026)', () => {
+  it('ist ein leerer, gültiger Stand und liefert im Abgleich den Serverstand unverändert', () => {
+    const server = _migriere(_seed())
+    const sonde = _alsSonde(server)
+    expect(sonde.chargen).toHaveLength(0)
+    expect(sonde.messungen).toHaveLength(0)
+    expect(sonde.ereignisse).toHaveLength(0)
+    expect(sonde.version).toBe(server.version)
+    expect(sonde.jahrgang).toBe(server.jahrgang)
+    const ergebnis = _zusammen(sonde, server)
+    expect(ergebnis.chargen.map(c => c.id).sort()).toEqual(server.chargen.map(c => c.id).sort())
+    expect(ergebnis.messungen).toHaveLength(server.messungen.length)
+    expect(ergebnis.ereignisse).toHaveLength(server.ereignisse.length)
+  })
+})

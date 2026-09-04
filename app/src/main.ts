@@ -1,7 +1,7 @@
 import { erzeugeStartdaten } from './startdaten'
 import { ladeDatenstand, ladeFotos, speichereDatenstand } from './speicher/indexeddb'
 import { migriereDatenstand } from './speicher/modell'
-import { uebernehmeSyncTokenAusUrl } from './sync'
+import { alsSonde, holeKanonischenStand, uebernehmeSyncTokenAusUrl } from './sync'
 import { WeinbegleiterApp } from './ui/app'
 import './ui/styles.css'
 
@@ -11,7 +11,15 @@ async function starteApp(): Promise<void> {
   if (!root) throw new Error('App-Container fehlt.')
   let stand = await ladeDatenstand()
   if (!stand) {
-    stand = migriereDatenstand(erzeugeStartdaten())
+    // Reihenfolge ist entscheidend. Ein neues Geraet darf sich NICHT zuerst einen
+    // Startdatensatz anlegen und den dann gegen den Server mischen: Die Kennungen des
+    // Startdatensatzes sind fortlaufend nummeriert und verschieben sich zwischen
+    // Fassungen. Beim Zusammenfuehren gewinnt dann der juengere Zeitstempel, und ein
+    // fremder Datensatz gleicher Kennung geht still verloren. Befund vom 04.09.2026:
+    // e-42 stand auf zwei Geraeten fuer zwei verschiedene Ereignisse.
+    // Deshalb: erst den kanonischen Stand holen. Nur wenn es keinen gibt, saeen.
+    const frisch = migriereDatenstand(erzeugeStartdaten())
+    stand = (await holeKanonischenStand(alsSonde(frisch))) ?? frisch
     await speichereDatenstand(stand)
   }
   const fotos = await ladeFotos()

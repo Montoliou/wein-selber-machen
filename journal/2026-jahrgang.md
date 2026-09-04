@@ -426,3 +426,23 @@ in der Runde.
 den Haken „Untergestoßen" vor, nicht Zugaben mit Menge. Andi hat ersatzweise nur den Termin
 abgehakt; die vier Ereignisse und der Vorratsabgang fehlten und wurden von Hand über den
 Sync-Endpunkt nachgetragen. Lücke in meinem Spec, nicht im Bau. Behoben durch Handoff H7.
+
+### Ballon-Lieferung verspätet (04.09.2026)
+
+Die für heute angekündigten Ballons (4 × 5 L) sind nicht gekommen, die kleinen (2 × 3 L)
+ebenfalls nicht. **Für den Presstag ist das folgenlos.**
+
+Nach dem Pressen kommt die Nachgärung, nicht der Ausbau. Solange die Hefe arbeitet, liegt
+CO₂ über dem Wein und schützt ihn — Kopfraum ist in dieser Phase tolerabel. Die
+Kopfraum-Regel R-KOPFRAUM greift erst beim Ausbau, also **nach dem ersten Abstich**.
+
+Gepresst wird deshalb in die dann leeren, gereinigten 20-L-Gärbottiche: Vorlauf (~22,7 L)
+auf zwei, Presswein (~11,3 L) auf einen, jeweils mit Gärstopfen. Der vierte bleibt Reserve.
+
+**Der echte Stichtag ist der erste Abstich, rund eine Woche nach dem Pressen — also
+12.–14.09.** Bis dahin müssen die Ballons da sein. Kapazität dann: 6 × 5 L + 2 × 3 L
+= 36 L brutto gegen etwa 30–31 L Wein nach Abzug des Grobtrubs. Passt, mit Reserve zum
+Auffüllen bis in den Hals.
+
+Kippt die Lieferung über den 11.09., muss lokal beschafft werden — dann rechtzeitig
+entscheiden, nicht am Abstichtag.

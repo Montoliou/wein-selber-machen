@@ -53,6 +53,7 @@ type ErfassenModus = 'messung' | 'ereignis'
 type MessErfassungModus = 'charge' | 'messgroesse'
 type DesktopKurveTyp = 'gaerung' | 'temperatur' | 'kellerklima'
 type DesktopZeitraum = 'sieben-tage' | 'gaerung' | 'alles'
+type RundenZugabeArt = 'naehrsalz' | 'aufzuckern' | 'schwefeln' | 'sonstiges'
 
 interface MessEntwurf {
   eingabe: string
@@ -66,7 +67,42 @@ interface MessRundeErfolg {
 
 interface RundenEntwurf {
   messwerte: Partial<Record<MessTyp, MessEntwurf>>
+  zugaben: Partial<Record<RundenZugabeArt, RundenZugabeEntwurf>>
   untergestossen: boolean
+}
+
+interface RundenZugabeEntwurf {
+  aktiviert: boolean
+  menge: string
+  einheit: string
+  stoff: string
+  begruendung: string
+}
+
+interface RundenZugabeVorschlag {
+  art: RundenZugabeArt
+  label: string
+  stoff: string
+  menge: string
+  einheit: string
+  herkunft: string
+  portion?: number
+}
+
+interface RundenZugabeSpeicherung {
+  art: RundenZugabeArt
+  label: string
+  stoff: string
+  mengeWert: number
+  mengeEinheit: string
+}
+
+interface RundenReminderAenderung {
+  id: string
+  titel: string
+  vorherFaellig: string
+  vorherErledigt: boolean
+  folgetermin?: string
 }
 
 interface RundenSpeicherung {
@@ -75,6 +111,9 @@ interface RundenSpeicherung {
   typen: MessTyp[]
   messungIds: string[]
   ereignisIds: string[]
+  zugaben: RundenZugabeSpeicherung[]
+  untergestossen: boolean
+  reminderAenderungen: RundenReminderAenderung[]
   ampelVorher: Ampel
   ampelNachher: Ampel
   volumenVorher: {
@@ -103,6 +142,20 @@ const ZUGABE_ARTEN: EreignisArt[] = ['schwefeln', 'aufzuckern', 'naehrsalz', 'he
 const VOLUMEN_EREIGNIS_ARTEN: EreignisArt[] = ['pressen', 'abstich', 'umfuellen', 'auffuellen']
 const VORRAT_NACH_ART: Partial<Record<EreignisArt, string>> = {
   schwefeln: 'vorrat-kps', aufzuckern: 'vorrat-zucker', naehrsalz: 'vorrat-naehrsalz', hefe: 'vorrat-hefe',
+}
+const RUNDEN_ZUGABEN_NACH_PHASE: Partial<Record<Phase, RundenZugabeArt[]>> = {
+  AKTIVE_GAERUNG: ['naehrsalz', 'aufzuckern'],
+  NACHGAERUNG: ['naehrsalz', 'aufzuckern'],
+  AUSBAU: ['schwefeln'],
+  STABILITAETS_GATE: ['schwefeln'],
+  SUESSE_GATE: ['schwefeln'],
+  ABFUELL_GATE: ['schwefeln'],
+}
+const RUNDEN_ZUGABE_META: Record<RundenZugabeArt, { label: string; stoff: string; ereignisArt: EreignisArt }> = {
+  naehrsalz: { label: 'Hefenährsalz', stoff: 'Hefenährsalz', ereignisArt: 'naehrsalz' },
+  aufzuckern: { label: 'Haushaltszucker', stoff: 'Haushaltszucker', ereignisArt: 'aufzuckern' },
+  schwefeln: { label: 'Kaliumpyrosulfit', stoff: 'Kaliumpyrosulfit', ereignisArt: 'schwefeln' },
+  sonstiges: { label: 'Sonstige Zugabe', stoff: '', ereignisArt: 'sonstiges' },
 }
 const MONATE = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez']
 const BUILD_ZEIT_FORMAT = new Intl.DateTimeFormat('de-DE', {
@@ -178,6 +231,7 @@ interface UiZustand {
   rundenEntwuerfe: Record<string, RundenEntwurf>
   rundenErgebnisse: RundenSpeicherung[]
   rundenGespeichert: RundenSpeicherung | null
+  rundenZugabeReminderIds: string[]
   rundenUndoBis: number | null
   rundenAbgeschlossen: boolean
   gateCheckIndex: number
@@ -232,6 +286,7 @@ export class WeinbegleiterApp {
       rundenEntwuerfe: {},
       rundenErgebnisse: [],
       rundenGespeichert: null,
+      rundenZugabeReminderIds: [],
       rundenUndoBis: null,
       rundenAbgeschlossen: false,
       gateCheckIndex: 0,
@@ -473,8 +528,17 @@ export class WeinbegleiterApp {
   }
 
   private reminderVerlangtRunde(reminder: Reminder): boolean {
+    if (this.rundenReminderZugabeArt(reminder)) return true
     if (reminder.wiederholungTage !== undefined) return true
     return /kontroll|runde|tresterhut|untersto|oberfl|geruch|temperatur|dichte|mostgewicht/i.test(`${reminder.titel} ${reminder.beschreibung}`)
+  }
+
+  private rundenReminderZugabeArt(reminder: Reminder): RundenZugabeArt | null {
+    const text = `${reminder.titel} ${reminder.beschreibung}`
+    if (/hefenährsalz|naehrsalz|nährsalz/i.test(text)) return 'naehrsalz'
+    if (/haushaltszucker|aufzucker|zuckerzugabe/i.test(text)) return 'aufzuckern'
+    if (/kaliumpyrosulfit|\bkps\b|schwefel/i.test(text)) return 'schwefeln'
+    return null
   }
 
   private aktuelleBatterie(): number | undefined {
@@ -618,6 +682,10 @@ export class WeinbegleiterApp {
     this.ui.rundenEntwuerfe = {}
     this.ui.rundenErgebnisse = []
     this.ui.rundenGespeichert = null
+    const rundenZeit = new Date(isoAusDatetimeLocal(this.ui.rundenZeit)).getTime()
+    this.ui.rundenZugabeReminderIds = this.stand.reminder
+      .filter(reminder => !reminder.erledigt && new Date(reminder.faellig).getTime() <= rundenZeit && Boolean(this.rundenReminderZugabeArt(reminder)))
+      .map(reminder => reminder.id)
     this.ui.rundenUndoBis = null
     this.ui.rundenAbgeschlossen = false
   }
@@ -634,13 +702,159 @@ export class WeinbegleiterApp {
   }
 
   private rundenEntwurf(chargeId: string): RundenEntwurf {
-    return this.ui.rundenEntwuerfe[chargeId] ?? { messwerte: {}, untergestossen: false }
+    return this.ui.rundenEntwuerfe[chargeId] ?? { messwerte: {}, zugaben: {}, untergestossen: false }
   }
 
   private rundenDefinitionen(charge: Charge): { primaer: MessDefinition[]; weitere: MessDefinition[] } {
     const primaerTypen = RUNDEN_PRIMAER[charge.phase] ?? PHASEN_MESS_TYPEN[charge.phase] ?? ['temperatur', 'geruch']
     const primaer = primaerTypen.map(typ => MESS_DEFINITIONEN.find(definition => definition.typ === typ)).filter((definition): definition is MessDefinition => Boolean(definition))
     return { primaer, weitere: MESS_DEFINITIONEN.filter(definition => !primaerTypen.includes(definition.typ)) }
+  }
+
+  private rundenZugabeArten(charge: Charge): RundenZugabeArt[] {
+    return [...(RUNDEN_ZUGABEN_NACH_PHASE[charge.phase] ?? []), 'sonstiges']
+  }
+
+  private letztesZuckerziel(chargeId: string): number | null {
+    const ereignisse = this.stand.ereignisse
+      .filter(ereignis => ereignis.chargeId === chargeId && ereignis.art === 'aufzuckern')
+      .sort((a, b) => b.zeit.localeCompare(a.zeit))
+    for (const ereignis of ereignisse) {
+      const text = ereignis.begruendung
+      const treffer = /(?:ziel(?:wert)?\s*:?|\bauf)\s*(\d+(?:[,.]\d+)?)\s*°?\s*oe\b/i.exec(text)
+      if (!treffer?.[1]) continue
+      const ziel = Number(treffer[1].replace(',', '.'))
+      if (Number.isFinite(ziel)) return ziel
+    }
+    return null
+  }
+
+  private letzteDichteInOechsle(chargeId: string): number | null {
+    const messung = this.stand.messungen
+      .filter(eintrag => eintrag.chargeId === chargeId && DICHTE_KURVEN_TYPEN.includes(eintrag.typ) && eintrag.methode !== 'refraktometer')
+      .sort((a, b) => b.zeit.localeCompare(a.zeit))[0]
+    return this.dichteInOechsle(messung) ?? null
+  }
+
+  private rundenZugabeVorschlag(charge: Charge, art: RundenZugabeArt): RundenZugabeVorschlag {
+    const meta = RUNDEN_ZUGABE_META[art]
+    if (art === 'naehrsalz') {
+      const portion = this.stand.ereignisse.filter(ereignis => ereignis.chargeId === charge.id && ereignis.art === 'naehrsalz').length + 1
+      if (charge.erwarteteWeinLiter === undefined) {
+        return { art, ...meta, menge: '', einheit: 'g', portion, herkunft: `Portion ${portion} von ${NAEHRSALZ_PORTIONEN} · Fehlt: erwartete Weinmenge` }
+      }
+      const ergebnis = naehrsalzPlan(charge.erwarteteWeinLiter)
+      return {
+        art, ...meta, menge: formatiereZahl(ergebnis.proPortion, 3), einheit: 'g', portion,
+        herkunft: `Portion ${portion} von ${NAEHRSALZ_PORTIONEN} · Höchstmenge ${NAEHRSALZ_MAX_G_PRO_100L} g je 100 L auf ${formatiereZahl(charge.erwarteteWeinLiter)} L`,
+      }
+    }
+    if (art === 'aufzuckern') {
+      const volumen = this.zugabeVolumen(charge)
+      const istOe = this.letzteDichteInOechsle(charge.id)
+      const zielOe = this.letztesZuckerziel(charge.id)
+      const fehlend = [
+        volumen === undefined ? 'Rechenvolumen' : '',
+        istOe === null ? 'letztes Mostgewicht aus Spindel oder SG' : '',
+        zielOe === null ? 'zuletzt verwendetes Mostgewicht-Ziel' : '',
+      ].filter(Boolean)
+      if (fehlend.length || volumen === undefined || istOe === null || zielOe === null) {
+        return { art, ...meta, menge: '', einheit: 'g', herkunft: `Fehlt: ${fehlend.join(', ')}` }
+      }
+      const ergebnis = zuckerFuerOechsle(volumen, istOe, zielOe)
+      return {
+        art, ...meta, menge: ergebnis.wert > 0 ? formatiereZahl(ergebnis.wert, 3) : '', einheit: 'g',
+        herkunft: `${ergebnis.formel} · Ziel ${formatiereZahl(zielOe)} °Oe aus der letzten Aufzuckerung${ergebnis.wert > 0 ? '' : ' · keine Zugabe nötig'}`,
+      }
+    }
+    if (art === 'schwefeln') {
+      const volumen = this.zugabeVolumen(charge)
+      const ph = this.letzteMessung(charge.id, 'ph')?.wert ?? null
+      const frei = this.letzteMessung(charge.id, 'so2_frei')?.wert ?? null
+      const fehlend = [volumen === undefined ? 'Füllvolumen' : '', ph === null ? 'letzter pH-Wert' : '', frei === null ? 'letzter freier SO₂' : ''].filter(Boolean)
+      if (fehlend.length || volumen === undefined || ph === null || frei === null) {
+        return { art, ...meta, menge: '', einheit: 'g', herkunft: `Fehlt: ${fehlend.join(', ')}` }
+      }
+      const ergebnis = schwefelDosierung(volumen, ph, frei).kpsGramm
+      return {
+        art, ...meta, menge: ergebnis.wert > 0 ? formatiereZahl(ergebnis.wert, 3) : '', einheit: 'g',
+        herkunft: `${ergebnis.formel} · letzter pH ${formatiereZahl(ph, 2)} · letzter freier SO₂ ${formatiereZahl(frei)} mg/L${ergebnis.wert > 0 ? '' : ' · keine Zugabe nötig'}`,
+      }
+    }
+    return { art, ...meta, menge: '', einheit: 'g', herkunft: 'Menge und Einheit werden am Gefäß eingetragen.' }
+  }
+
+  private rundenZugabeBegruendung(vorschlag: RundenZugabeVorschlag, stoff = vorschlag.stoff): string {
+    const zeit = datumZeitFormat.format(new Date(isoAusDatetimeLocal(this.ui.rundenZeit)))
+    const portion = vorschlag.portion === undefined ? '' : `, Portion ${vorschlag.portion} von ${NAEHRSALZ_PORTIONEN}`
+    const name = stoff.trim() || vorschlag.label
+    return `Ich habe ${name}${portion} während der Runde am ${zeit} gegeben. Mengenherkunft: ${vorschlag.herkunft}.`
+  }
+
+  private rundenVorratZuordnung(art: RundenZugabeArt, stoff: string, einheit: string): { vorratId?: string; hinweis: string; warnung: boolean } {
+    const meta = RUNDEN_ZUGABE_META[art]
+    const erwarteteId = VORRAT_NACH_ART[meta.ereignisArt]
+    const normiert = stoff.trim().toLocaleLowerCase('de-DE')
+    const posten = erwarteteId
+      ? this.stand.vorrat.find(eintrag => eintrag.id === erwarteteId)
+      : normiert ? this.stand.vorrat.find(eintrag => eintrag.name.trim().toLocaleLowerCase('de-DE') === normiert) : undefined
+    if (!posten) {
+      const hinweis = art === 'sonstiges' && !normiert
+        ? 'Vorrat wird nach Stoffname und Einheit zugeordnet.'
+        : 'Kein passender Vorratsposten. Die Zugabe bleibt speicherbar; der Bestand bleibt unverändert.'
+      return { hinweis, warnung: Boolean(normiert || erwarteteId) }
+    }
+    if (posten.mengeEinheit !== einheit) {
+      return { hinweis: `Einheit passt nicht: Vorrat in ${posten.mengeEinheit}, Zugabe in ${einheit}. Die Zugabe bleibt speicherbar; der Bestand bleibt unverändert.`, warnung: true }
+    }
+    return { vorratId: posten.id, hinweis: `Vorrat gekoppelt: ${posten.name} · ${formatiereZahl(posten.mengeWert)} ${posten.mengeEinheit} vorhanden.`, warnung: false }
+  }
+
+  private rundenReminderFuerZugabe(charge: Charge, art: RundenZugabeArt): Reminder[] {
+    const ids = new Set(this.ui.rundenZugabeReminderIds)
+    return this.stand.reminder.filter(reminder => ids.has(reminder.id)
+      && (!reminder.chargeId || reminder.chargeId === charge.id)
+      && this.rundenReminderZugabeArt(reminder) === art)
+  }
+
+  private rundenReminderSchonErledigt(reminderId: string): boolean {
+    return this.ui.rundenErgebnisse.some(ergebnis => ergebnis.reminderAenderungen.some(aenderung => aenderung.id === reminderId))
+  }
+
+  private naehrsalzWarnung(charge: Charge): string {
+    if (charge.erwarteteWeinLiter === undefined) return ''
+    const plan = naehrsalzPlan(charge.erwarteteWeinLiter)
+    const summe = this.stand.ereignisse
+      .filter(ereignis => ereignis.chargeId === charge.id && ereignis.art === 'naehrsalz')
+      .reduce((gesamt, ereignis) => gesamt + (ereignis.mengeWert ?? 0), 0)
+    if (summe < plan.gesamtMax) return ''
+    const regelbefund = befundeFuerCharge(this.stand, { ...charge, fuellLiter: charge.fuellLiter ?? charge.erwarteteWeinLiter })
+      .find(befund => befund.regelId === 'R-NAEHRSALZ-MAX')
+    const text = regelbefund
+      ? `${regelbefund.titel}. ${regelbefund.massnahme ?? regelbefund.text}`
+      : `Die fachlich berechnete Höchstmenge von ${formatiereZahl(plan.gesamtMax)} g ist erreicht.`
+    return `<div class="runden-zugabe-max" role="alert"><strong>Warnung:</strong> ${this.fachtext(text)} Eine weitere Zugabe bleibt möglich.</div>`
+  }
+
+  private renderRundenZugaben(charge: Charge, entwurf: RundenEntwurf): string {
+    const abschnittId = `runden-zugaben-${charge.id}`
+    return `<section class="runden-zugaben" aria-labelledby="${html(abschnittId)}"><div class="runden-zugaben-kopf"><h2 id="${html(abschnittId)}">Zugaben</h2><span>Nur „gegeben“ markierte Mengen werden gespeichert.</span></div>${this.rundenZugabeArten(charge).map(art => this.renderRundenZugabe(charge, art, entwurf)).join('')}</section>`
+  }
+
+  private renderRundenZugabe(charge: Charge, art: RundenZugabeArt, entwurf: RundenEntwurf): string {
+    const vorschlag = this.rundenZugabeVorschlag(charge, art)
+    const gespeichert = entwurf.zugaben[art]
+    const aktiviert = gespeichert?.aktiviert ?? false
+    const menge = gespeichert?.menge ?? vorschlag.menge
+    const einheit = gespeichert?.einheit ?? vorschlag.einheit
+    const stoff = gespeichert?.stoff ?? vorschlag.stoff
+    const begruendung = gespeichert?.begruendung ?? this.rundenZugabeBegruendung(vorschlag, stoff)
+    const vorrat = this.rundenVorratZuordnung(art, stoff, einheit)
+    const reminder = this.rundenReminderFuerZugabe(charge, art)
+    const basisId = `runde-zugabe-${charge.id}-${art}`
+    const einheiten = ['g', 'ml', 'L', 'Beutel']
+    const reminderZeilen = reminder.map(eintrag => `<div class="runden-zugabe-faellig"><strong>Fällig: ${html(eintrag.titel)}</strong>${this.rundenReminderSchonErledigt(eintrag.id) ? '<small>Durch eine Zugabe in dieser Runde bereits erledigt.</small>' : '<small>Diese Zugabe erledigt den Termin automatisch.</small>'}</div>`).join('')
+    return `<article class="runden-zugabe" data-runde-zugabe-art="${art}">${reminderZeilen}<div class="runden-zugabe-zeile"><label class="runden-zugabe-check" for="${html(basisId)}-aktiv"><input id="${html(basisId)}-aktiv" name="zugabe-${art}-aktiviert" type="checkbox" data-runde-zugabe-aktiv ${aktiviert ? 'checked' : ''}><span><strong>${html(vorschlag.label)}</strong><small>gegeben</small></span></label><div class="runden-zugabe-menge"><label class="sr-only" for="${html(basisId)}-menge">Menge ${html(vorschlag.label)}</label><input id="${html(basisId)}-menge" name="zugabe-${art}-menge" data-runde-zugabe-menge inputmode="decimal" value="${html(menge)}"><label class="sr-only" for="${html(basisId)}-einheit">Einheit ${html(vorschlag.label)}</label><select id="${html(basisId)}-einheit" name="zugabe-${art}-einheit" data-runde-zugabe-einheit>${einheiten.map(option => `<option value="${option}" ${option === einheit ? 'selected' : ''}>${option}</option>`).join('')}</select></div></div>${art === 'sonstiges' ? `<label for="${html(basisId)}-stoff">Stoffname</label><input id="${html(basisId)}-stoff" name="zugabe-${art}-stoff" data-runde-zugabe-stoff value="${html(stoff)}" placeholder="zum Beispiel Milchsäurebakterien">` : `<input type="hidden" data-runde-zugabe-stoff value="${html(stoff)}">`}<div class="runden-zugabe-herkunft ${vorschlag.herkunft.startsWith('Fehlt:') || vorschlag.herkunft.includes('· Fehlt:') ? 'fehlt' : ''}">${html(vorschlag.herkunft)}</div><div class="runden-zugabe-vorrat ${vorrat.warnung ? 'warnung' : ''}" data-runden-vorrat-hinweis>${html(vorrat.hinweis)}</div>${art === 'naehrsalz' ? this.naehrsalzWarnung(charge) : ''}<details class="runden-zugabe-grund"><summary>Begründung bearbeiten</summary><label class="sr-only" for="${html(basisId)}-grund">Begründung ${html(vorschlag.label)}</label><textarea id="${html(basisId)}-grund" name="zugabe-${art}-begruendung" data-runde-zugabe-begruendung>${html(begruendung)}</textarea><small>Bleibt das Feld leer, setzt die App den vorbelegten Kontext wieder ein.</small></details></article>`
   }
 
   private renderRunde(): string {

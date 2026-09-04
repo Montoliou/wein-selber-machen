@@ -446,3 +446,38 @@ Auffüllen bis in den Hals.
 
 Kippt die Lieferung über den 11.09., muss lokal beschafft werden — dann rechtzeitig
 entscheiden, nicht am Abstichtag.
+
+### Abendrunde 04.09.2026, 21:43
+
+| | Temperatur | Mostgewicht | Δ seit 10:32 |
+|---|---|---|---|
+| Bottich 1 | 23,1 °C | 46 °Oe | −12 (25,7/Tag) |
+| Bottich 2 | 23,3 °C | 40 °Oe | −9 (19,3/Tag) |
+| Bottich 3 | 23,0 °C | 40 °Oe | −8 (17,1/Tag) |
+| Bottich 4 | 22,7 °C | 46 °Oe | −6 (12,9/Tag) |
+
+Hefenährsalz Portion 3 gegeben (0,90 / 0,85 / 0,90 / 0,75 g). **Damit ist die
+Höchstmenge von 30 g je 100 L ausgeschöpft — keine weitere Stickstoffgabe mehr.**
+
+**Nicht in den Daten:** Die Zugabe steht nur hier im Journal. Die Runde kann Zugaben
+weiterhin nicht erfassen (H7 ist neu eingestellt, nicht gebaut), und der Schreibzugriff
+auf den Server war mir heute Abend vom Berechtigungsfilter verwehrt. Nachzutragen,
+sobald H7 live ist: vier Ereignisse `naehrsalz` um 21:43 und der Vorratsabgang von
+3,40 g (53,2 g → 49,8 g).
+
+**Bottich 4 fällt zurück.** 12,9 °Oe/Tag gegen 25,7 bei Bottich 1. Er ist der kleinste
+(10,58 kg), hatte das niedrigste Startmostgewicht und ist mit 22,7 °C der kühlste — die
+Reihenfolge der Temperaturen ist exakt die Reihenfolge der Gärgeschwindigkeit. Kein
+Alarm, aber beobachten: Bleibt er unter 15 °Oe/Tag, wärmer stellen.
+
+**Presstermin, mit 40 % Aufschlag für die Verlangsamung zum Gärende:**
+Bottich 1 am 06.09. abends, Bottich 2 und 3 am 07.09., Bottich 4 erst am 08.09.
+
+Gepresst wird trotzdem an **einem** Tag (Entscheidung vom 30.08.: Arbeitsaufwand neben
+dem Beruf). **Zieltag ist der 07.09.** Bottich 1 steht dann zwei Tage länger auf der
+Maische — unkritisch, solange Deckel zu und Hut nass. Bottich 4 wird bei etwa 15 °Oe
+gepresst und vergärt im Gefäß zu Ende, was durch das entstehende CO₂ sogar schützt.
+
+**Doppelmessung:** Bottich 4 hat zwei Temperaturwerte (22,7 und 22,8 °C). Gleicher
+Fehler wie am 03.09. bei Bottich 3 — offenbar reproduzierbar, gehört in den nächsten
+Handoff.

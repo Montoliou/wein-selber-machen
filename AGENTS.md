@@ -207,3 +207,41 @@ die falschen Dateien.
 **Alarmschwellen im Gerät** (nicht in der App): Obergrenze Temperatur steht auf 28 °C für
 die Gärung. **Am Presstag auf 18 °C senken** — im Ausbau ist 28 °C keine Warnung mehr,
 sondern längst zu spät. Genau daran ist der 2025er im warmen Keller gestorben.
+
+## Geräteabgleich (04.09.2026, H5 live)
+
+**Warum:** Andi am 03.09.: „Wir haben keine Datensynchronität zwischen MacBook, iPhone
+und iPad. Das ist ein Bug, kein Feature." Ich hatte den Sync am 02.09. als H2 zugesagt
+und dann liegen lassen — das war mein Fehler, keine Designentscheidung.
+
+**Wie:** `proxy/sync.php` auf montolio.de/wein/, Konfiguration `proxy/sync-config.php`
+(gitignoriert, gleicher Token wie der Kellersensor). Kanonische Datei liegt AUSSERHALB des
+Web-Verzeichnisses (`dirname(__DIR__,2)/weinbegleiter-sync/sync.json`), Schreiben unter
+flock, temporäre Datei + rename, letzte zehn Fassungen als `sync-<zeit>.json`. **Keine
+Datenbank** — Vereinigungsmenge über ids, bei gleicher id gewinnt `zuletztGeaendert`,
+Löschungen als Grabsteine in `geloescht`. Die App gleicht beim Start, nach jedem Speichern
+und beim Online-Gehen ab; offline bleibt alles benutzbar. Unter „Mehr": „Abgleich: <Zeit>"
+und „Jetzt abgleichen".
+
+**Neues Gerät einrichten:** einmalig `https://www.montolio.de/wein/?sync-token=<Token>`
+öffnen (Token aus `proxy/ENDPUNKT.txt`). Die App speichert ihn lokal und entfernt ihn aus
+der Adresszeile. Danach holt sie den kanonischen Stand, statt einen Startdatensatz zu säen.
+
+**Die Falle, die ich beim Review gefunden habe:** Die Kennungen des Startdatensatzes sind
+fortlaufend nummeriert (`m-27`, `e-42`) und verschieben sich, sobald `startdaten.ts` sich
+ändert. Ein frisches Gerät, das erst sät und dann mischt, verliert still fremde Datensätze
+gleicher Kennung — am 04.09. stand `e-42` auf zwei Geräten für zwei verschiedene
+Ereignisse. Fix im Branch: **erst kanonischen Stand holen, nur ohne Server säen.**
+Langfristig gehören inhaltsabgeleitete Seed-Kennungen her; solange nichts am Seed geändert
+wird, ist es ungefährlich.
+
+**Fotos** sind bewusst nicht im Abgleich (README „Offene Punkte").
+
+**Testen ohne Produktion zu verschmutzen:** Wegwerf-Datensätze mit eindeutigen ids
+anlegen und am Ende per Grabstein löschen. Grabsteine für nie existierende ids sind
+harmlos. So lief die Abnahme am 04.09.: leerer Server → A; B → A∪B; B löscht → weg;
+veraltetes A → bleibt weg.
+
+**iOS-Falle vom 04.09.:** Home-Bildschirm-App und Safari haben getrennte Datenbanken.
+Ein Export aus Safari zeigt einen frischen Startdatensatz, nicht die echten Daten.
+Mit dem Abgleich ist das erledigt — beide Instanzen holen denselben Serverstand.

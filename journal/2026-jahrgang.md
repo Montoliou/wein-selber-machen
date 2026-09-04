@@ -400,3 +400,29 @@ eingerichtet, „Abgleich: 04.09.26, 08:56".
 **Was das für das Journal heißt:** Ab jetzt gibt es eine Wahrheit, und sie liegt auf dem Server.
 Dieses Journal bleibt die Begründungsschicht — warum etwas entschieden wurde —, nicht mehr der
 Ersatz für fehlende Daten. Das Hin- und Herschieben von JSON-Dateien ist vorbei.
+
+## 04.09.2026 — Vormittagsrunde, Nährsalz Portion 2
+
+Runde um 10:32 über alle vier Bottiche, jeweils Tresterhut untergestoßen.
+
+| | Temperatur | Mostgewicht | Geruch | Gärung |
+|---|---|---|---|---|
+| Bottich 1 | 22,9 °C | 58 °Oe | sauber / fruchtig | mittel |
+| Bottich 2 | 22,8 °C | 49 °Oe | sauber / fruchtig | mittel |
+| Bottich 3 | 22,8 °C | 48 °Oe | sauber / fruchtig | mittel |
+| Bottich 4 | 22,4 °C | 52 °Oe | sauber / fruchtig | mittel |
+
+**Nährsalz Portion 2** in derselben Runde gegeben: 0,90 / 0,85 / 0,90 / 0,75 g,
+je Bottich in Most gelöst und untergerührt. Vorrat damit 53,2 g.
+
+**Gärtempo verdoppelt:** gestern 11–15 °Oe/Tag, heute **19–21 °Oe/Tag**. Das ist der
+Höhepunkt. Fortgeschrieben erreichen die Bottiche SG 1,010 am **06.–07.09.**
+
+**Daraus folgt:** Portion 3 muss rein, **bevor die Spindel unter 1,025 fällt** — für
+Bottich 3 in gut einem Tag, für die übrigen 1,2 bis 1,7 Tage. Spätestens morgen früh
+in der Runde.
+
+**Befund zur App:** Die Zugabe konnte in der Runde nicht erfasst werden — H6 sieht dort nur
+den Haken „Untergestoßen" vor, nicht Zugaben mit Menge. Andi hat ersatzweise nur den Termin
+abgehakt; die vier Ereignisse und der Vorratsabgang fehlten und wurden von Hand über den
+Sync-Endpunkt nachgetragen. Lücke in meinem Spec, nicht im Bau. Behoben durch Handoff H7.

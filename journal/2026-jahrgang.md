@@ -497,3 +497,43 @@ sieht danach zwei Messungen statt einer korrigierten. Das ist harmlos, solange d
 dicht beieinander liegen, aber es verfälscht jede Reihe, sobald sich jemand vertippt.
 Gebraucht wird ein „korrigieren", das den alten Wert ersetzt und ihn dabei im
 Prüfpfad behält — löschen darf es ihn nicht. Merkposten für einen Handoff, nicht dringend.
+
+### 05.09.2026 — Geruchsbefund Bottich 2, Presse verzögert sich
+
+**Morgenrunde 09:20:** 36 / 30 / 30 / 34 °Oe bei 23,2 / 23,1 / 22,9 / 22,8 °C.
+Bottich 4 hat aufgeholt — von 12,9 auf 24,8 °Oe/Tag, jetzt der schnellste. Das Nährsalz
+hat gewirkt. Neuer Nachzügler ist Bottich 1 mit 36 °Oe.
+
+**Befund:** Bottich 2 riecht stechender als die anderen. Andi ausdrücklich: *kein
+Nagellack, noch fruchtig, aber nicht mehr so sanft wie die Tage zuvor.*
+
+**Drei Erklärungen, zwei davon harmlos:**
+1. **CO₂.** Über einer Maische in der Hauptgärung steht eine Schicht Kohlendioxid. Die
+   sticht in Nase und Augen und riecht nach nichts. Wahrscheinlichste Ursache.
+2. **Normale Gärentwicklung.** Der weiche Traubenduft der ersten Tage weicht dem
+   schärferen Gäraroma. Das ist Verlauf, kein Fehler.
+3. **Beginnende flüchtige Säure.** Acetobacter braucht Sauerstoff — und die Deckel liegen
+   seit dem Anstellen nur lose auf. Das wäre der ernste Fall, denn ein Essigstich ist
+   **nicht rückführbar** (Regel R-ESSIG, RED).
+
+**Der Test, der es entscheidet:** Probe ins Glas, zwei bis drei Minuten stehen lassen,
+mehrfach schwenken — das treibt das CO₂ aus. Dann erneut riechen, und **direkt gegen
+Bottich 3 vergleichen**, mit demselben Verfahren. Verschwunden = CO₂. Bleibt es scharf
+oder wird sauer, dazu ein Schluck zum Schmecken: dann ist es Essig.
+
+**„essigstichig" wird erst nach bestandenem Glastest eingetragen** — der Wert setzt die
+Ampel auf RED und sperrt die Charge.
+
+**Sofort, unabhängig vom Ergebnis:** Deckel richtig schließen mit Gärstopfen statt lose
+auflegen. Hut weiter zweimal täglich unterstoßen. Spindel und Kelle zwischen Bottich 2
+und den übrigen spülen.
+
+**Presse kommt frühestens Montag**, mit Wässern also Pressen am 08.09. — drei Tage später
+als geplant. **Das ist kein Grund zu warten**, denn der Vorlauf braucht überhaupt keine
+Presse: Er wird mit dem Schlauchheber abgezogen. Das sind rund zwei Drittel der Menge
+und der beste Teil.
+
+**Entscheidung hängt am Glastest:**
+- CO₂ bestätigt → warten ist vertretbar, sofern die Deckel zu sind. Pressen 08.09.
+- Essigton bestätigt → **Bottich 2 am Sonntag vorziehen**, Vorlauf abziehen, Trester
+  durchs Sieb. Isolieren, nicht mit den anderen vermischen. Der Rest kann warten.

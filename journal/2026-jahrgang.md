@@ -512,9 +512,8 @@ Nagellack, noch fruchtig, aber nicht mehr so sanft wie die Tage zuvor.*
    sticht in Nase und Augen und riecht nach nichts. Wahrscheinlichste Ursache.
 2. **Normale Gärentwicklung.** Der weiche Traubenduft der ersten Tage weicht dem
    schärferen Gäraroma. Das ist Verlauf, kein Fehler.
-3. **Beginnende flüchtige Säure.** Acetobacter braucht Sauerstoff — und die Deckel liegen
-   seit dem Anstellen nur lose auf. Das wäre der ernste Fall, denn ein Essigstich ist
-   **nicht rückführbar** (Regel R-ESSIG, RED).
+3. **Beginnende flüchtige Säure.** Der ernste Fall, denn ein Essigstich ist **nicht
+   rückführbar** (Regel R-ESSIG, RED).
 
 **Der Test, der es entscheidet:** Probe ins Glas, zwei bis drei Minuten stehen lassen,
 mehrfach schwenken — das treibt das CO₂ aus. Dann erneut riechen, und **direkt gegen
@@ -524,9 +523,14 @@ oder wird sauer, dazu ein Schluck zum Schmecken: dann ist es Essig.
 **„essigstichig" wird erst nach bestandenem Glastest eingetragen** — der Wert setzt die
 Ampel auf RED und sperrt die Charge.
 
-**Sofort, unabhängig vom Ergebnis:** Deckel richtig schließen mit Gärstopfen statt lose
-auflegen. Hut weiter zweimal täglich unterstoßen. Spindel und Kelle zwischen Bottich 2
-und den übrigen spülen.
+**Sofort, unabhängig vom Ergebnis:** Hut weiter zweimal täglich unterstoßen. Spindel und
+Kelle zwischen Bottich 2 und den übrigen spülen.
+
+**Korrektur meiner Annahme:** Ich hatte zweimal geschrieben, die Deckel lägen seit dem
+Anstellen lose auf, und daraus einen Sauerstoffeintrag als Risikofaktor abgeleitet. Falsch —
+**die Deckel sind seit Tag 2 fest verschlossen.** Die Notiz vom 02.09. („Deckel liegen
+locker auf") galt nur für den Anstelltag. Damit fällt die plausibelste Ursache für einen
+Essigstich weg, noch bevor der Glastest gelaufen ist.
 
 **Presse kommt frühestens Montag**, mit Wässern also Pressen am 08.09. — drei Tage später
 als geplant. **Das ist kein Grund zu warten**, denn der Vorlauf braucht überhaupt keine
@@ -537,3 +541,20 @@ und der beste Teil.
 - CO₂ bestätigt → warten ist vertretbar, sofern die Deckel zu sind. Pressen 08.09.
 - Essigton bestätigt → **Bottich 2 am Sonntag vorziehen**, Vorlauf abziehen, Trester
   durchs Sieb. Isolieren, nicht mit den anderen vermischen. Der Rest kann warten.
+
+**Ergebnis des Glastests (09:56):** Kein scharfer Geruch mehr. Nur Trauben und Hefe,
+Geschmack sauer-fruchtig. **Es war CO₂.** Kein Befund, keine Maßnahme.
+
+**Foto Bottich 2** (`Claude_Fotos/Bottich2.HEIC`, 05.09. 09:56): lachsrosa, stark trüb,
+mit einem stehenden Kranz feiner Bläschen am Glasrand. Trübung ist Hefe in Schwebe und
+mitten in der Gärung normal; der Bläschenkranz belegt die laufende CO₂-Bildung. **Keine
+Kahmhaut, kein Film, kein Schimmel** — genau das lässt sich auf einem Foto verlässlich
+ausschließen, eine Gesundheitsdiagnose dagegen nicht.
+
+**Beiläufiger Befund:** Bei 30 °Oe stehen noch rund 75 g Zucker im Liter, und es schmeckt
+trotzdem sauer statt süß. Das bestätigt die hohe Säure, die aus der frühen Lese am 30.08.
+zu erwarten war. Der am 02.09. angedachte biologische Säureabbau nach der Gärung wird
+damit wahrscheinlicher — und die Entscheidung, **nach Gärende nicht sofort zu schwefeln**,
+bleibt richtig.
+
+**Entscheidung:** Auf die Presse warten. Presstag **Dienstag 08.09.**

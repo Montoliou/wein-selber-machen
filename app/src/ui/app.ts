@@ -42,6 +42,15 @@ import { alsCsv, alsMarkdown, alsSicherung, baueZip, fotoAusSicherung, istSicher
 import { dateiname, datetimeLocalWert, datumFormat, datumZeitFormat, formatiereZahl, html, id, isoAusDatetimeLocal, kurzDatumFormat, parseDeZahl, zahlFormat } from './format'
 import { icon } from './icons'
 import { layoutKlasse, type LayoutKlasse } from './layout'
+import {
+  faelligeZugabeReminder,
+  globalerReminderIstFuerAlleChargenErfasst,
+  passendeVorratsZuordnung,
+  zugabeArtFuerReminder,
+  zugabeArtenFuerPhase,
+  zugabeVorschlag,
+  type RundenZugabeArt,
+} from './runden-zugaben'
 
 declare const __BUILD_TIMESTAMP__: string
 declare const __BUILD_COMMIT__: string
@@ -64,9 +73,25 @@ interface MessRundeErfolg {
   typen: MessTyp[]
 }
 
+interface RundenZugabeEntwurf {
+  aktiv: boolean
+  menge: string
+  einheit: string
+  stoff: string
+  begruendung: string
+  begruendungAutomatisch: boolean
+}
+
 interface RundenEntwurf {
   messwerte: Partial<Record<MessTyp, MessEntwurf>>
   untergestossen: boolean
+  zugaben: Partial<Record<RundenZugabeArt, RundenZugabeEntwurf>>
+}
+
+interface ReminderVorher {
+  reminderId: string
+  erledigt: boolean
+  faellig: string
 }
 
 interface RundenSpeicherung {
@@ -75,6 +100,7 @@ interface RundenSpeicherung {
   typen: MessTyp[]
   messungIds: string[]
   ereignisIds: string[]
+  reminderAenderungen: ReminderVorher[]
   ampelVorher: Ampel
   ampelNachher: Ampel
   volumenVorher: {
@@ -180,6 +206,7 @@ interface UiZustand {
   rundenGespeichert: RundenSpeicherung | null
   rundenUndoBis: number | null
   rundenAbgeschlossen: boolean
+  zuckerZielJeCharge: Record<string, number>
   gateCheckIndex: number
   desktopKurveTyp: DesktopKurveTyp
   desktopZeitraum: DesktopZeitraum
@@ -234,6 +261,7 @@ export class WeinbegleiterApp {
       rundenGespeichert: null,
       rundenUndoBis: null,
       rundenAbgeschlossen: false,
+      zuckerZielJeCharge: {},
       gateCheckIndex: 0,
       desktopKurveTyp: 'gaerung',
       desktopZeitraum: 'gaerung',
@@ -634,7 +662,27 @@ export class WeinbegleiterApp {
   }
 
   private rundenEntwurf(chargeId: string): RundenEntwurf {
-    return this.ui.rundenEntwuerfe[chargeId] ?? { messwerte: {}, untergestossen: false }
+    const vorhanden = this.ui.rundenEntwuerfe[chargeId]
+    if (vorhanden) return vorhanden
+    const charge = this.stand.chargen.find(eintrag => eintrag.id === chargeId)
+    const zugaben: Partial<Record<RundenZugabeArt, RundenZugabeEntwurf>> = {}
+    if (charge) {
+      const zeit = isoAusDatetimeLocal(this.ui.rundenZeit)
+      for (const art of zugabeArtenFuerPhase(charge.phase)) {
+        const vorschlag = zugabeVorschlag(this.stand, charge, art, zeit, this.ui.zuckerZielJeCharge[charge.id])
+        zugaben[art] = {
+          aktiv: false,
+          menge: vorschlag.menge,
+          einheit: vorschlag.einheit,
+          stoff: vorschlag.stoff,
+          begruendung: vorschlag.begruendung,
+          begruendungAutomatisch: true,
+        }
+      }
+    }
+    const entwurf = { messwerte: {}, untergestossen: false, zugaben }
+    this.ui.rundenEntwuerfe[chargeId] = entwurf
+    return entwurf
   }
 
   private rundenDefinitionen(charge: Charge): { primaer: MessDefinition[]; weitere: MessDefinition[] } {
@@ -656,7 +704,7 @@ export class WeinbegleiterApp {
     return `<section class="runde-screen" aria-labelledby="runde-titel"><header class="runde-kopf"><label class="runden-zeit" for="runden-zeit"><strong id="runde-titel">Runde</strong><input id="runden-zeit" type="datetime-local" value="${html(this.ui.rundenZeit)}" data-action="runden-zeit" aria-label="Zeitpunkt der gesamten Runde" ${this.ui.rundenErgebnisse.length ? 'disabled title="Nach der ersten Speicherung gilt dieser Zeitpunkt für die gesamte Runde."' : ''}></label><div class="runden-punkte" aria-label="Gefäß ${this.ui.rundenIndex + 1} von ${this.ui.rundenChargeIds.length}">${this.ui.rundenChargeIds.map((chargeId, index) => `<i class="${this.ui.rundenErgebnisse.some(ergebnis => ergebnis.chargeId === chargeId) ? 'ok' : ''} ${index === this.ui.rundenIndex ? 'aktiv' : ''}"></i>`).join('')}</div><span class="runden-abgleich ${nichtAbgeglichen ? 'offen' : ''}"><i></i>${this.syncLaeuft ? 'Abgleich läuft' : nichtAbgeglichen ? 'Nicht abgeglichen' : 'Lokal bereit'}</span><button class="runde-abbrechen" type="button" data-action="runde-abbrechen">Abbrechen</button></header><div class="runde-inhalt" data-runde-wischbereich>
       <button class="runde-pfeil runde-pfeil-links" type="button" data-action="runde-wechsel" data-richtung="-1" aria-label="Vorheriges Gefäß" ${this.ui.rundenIndex === 0 ? 'disabled' : ''}>‹</button>
       <div class="runde-links"><div class="runde-gefaess"><div class="runde-nummer">${this.ui.rundenIndex + 1}<span>von ${this.ui.rundenChargeIds.length}</span></div><h1>${html(charge.name)}</h1><p>${charge.mengeKg === undefined ? 'Menge offen' : `${formatiereZahl(charge.mengeKg)} kg`} · ${charge.erwarteteWeinLiter === undefined ? 'Ausbeute offen' : `${formatiereZahl(charge.erwarteteWeinLiter)} L erwartet`} · ${html(PHASEN_LABEL[charge.phase])}</p>${this.renderAmpel(ampel)}</div>${this.renderRundenZuletzt(charge, primaer)}<p class="wisch-hinweis">Wischen oder Pfeile wechseln das Gefäß. Ein Feld reagiert erst bei einer deutlichen Wischstrecke.</p></div>
-      <div class="runde-rechts">${gespeichert ? this.renderRundenBefund(charge, gespeichert, naechste) : `<form id="runde-form"><div class="runden-felder">${primaer.map(definition => this.renderRundenFeld(charge, definition, entwurf)).join('')}</div><details class="runden-weitere"><summary><span aria-hidden="true">›</span>Weitere Messgrößen</summary><div class="runden-felder">${weitere.map(definition => this.renderRundenFeld(charge, definition, entwurf)).join('')}</div></details>${['AKTIVE_GAERUNG', 'PRESS_GATE'].includes(charge.phase) && charge.typ === 'maische' ? `<label class="unterstossen"><input type="checkbox" name="untergestossen" data-runde-untergestossen ${entwurf.untergestossen ? 'checked' : ''}><span>Untergestoßen</span><small>legt ein Ereignis mit dem Rundenzeitpunkt an</small></label>` : ''}<div id="erfassen-fehler" role="alert"></div><button class="btn btn-haupt runde-speichern" type="submit">Ausgefüllte Werte speichern</button><p class="hint">Leere Felder erzeugen keinen Datensatz. Alle Eingaben verwenden den Zeitpunkt oben.</p></form>`}</div>
+      <div class="runde-rechts">${gespeichert ? this.renderRundenBefund(charge, gespeichert, naechste) : `<form id="runde-form"><div class="runden-felder">${primaer.map(definition => this.renderRundenFeld(charge, definition, entwurf)).join('')}</div><details class="runden-weitere"><summary><span aria-hidden="true">›</span>Weitere Messgrößen</summary><div class="runden-felder">${weitere.map(definition => this.renderRundenFeld(charge, definition, entwurf)).join('')}</div></details>${this.renderRundenZugaben(charge, entwurf)}${['AKTIVE_GAERUNG', 'PRESS_GATE'].includes(charge.phase) && charge.typ === 'maische' ? `<label class="unterstossen"><input type="checkbox" name="untergestossen" data-runde-untergestossen ${entwurf.untergestossen ? 'checked' : ''}><span>Untergestoßen</span><small>legt ein Ereignis mit dem Rundenzeitpunkt an</small></label>` : ''}<div id="erfassen-fehler" role="alert"></div><button class="btn btn-haupt runde-speichern" type="submit">Ausgefüllte Werte speichern</button><p class="hint">Leere und nicht markierte Felder erzeugen keinen Datensatz. Alle Eingaben verwenden den Zeitpunkt oben.</p></form>`}</div>
       <button class="runde-pfeil runde-pfeil-rechts" type="button" data-action="runde-wechsel" data-richtung="1" aria-label="Nächstes Gefäß" ${this.ui.rundenIndex >= this.ui.rundenChargeIds.length - 1 ? 'disabled' : ''}>›</button>
     </div></section>`
   }
@@ -670,6 +718,48 @@ export class WeinbegleiterApp {
     const methode = DICHTE_TYPEN.includes(definition.typ) ? `<label class="runden-methode" for="runde-methode-${definition.typ}"><span>Messmethode</span><select id="runde-methode-${definition.typ}" name="methode-${definition.typ}" data-runde-methode data-mess-typ="${definition.typ}"><option value="spindel" ${wert.methode === 'spindel' ? 'selected' : ''}>Spindel</option><option value="refraktometer" ${wert.methode === 'refraktometer' ? 'selected' : ''}>Refraktometer</option><option value="sonstige" ${wert.methode === 'sonstige' ? 'selected' : ''}>Sonstige</option></select></label>` : ''
     const label = definition.typ === 'volumen' ? 'Füllstand' : definition.label
     return `<div class="runden-feld"><div class="runden-feld-label"><label for="${html(feldId)}">${html(label)}</label>${definition.hinweis ? `<small>${html(definition.hinweis)}</small>` : ''}</div>${feld}${methode}</div>`
+  }
+
+  private renderRundenZugaben(charge: Charge, entwurf: RundenEntwurf): string {
+    const zeit = isoAusDatetimeLocal(this.ui.rundenZeit)
+    const erinnerungen = faelligeZugabeReminder(this.stand, charge)
+    const erinnerungsZeilen = erinnerungen.map(reminder => {
+      const art = zugabeArtFuerReminder(reminder)
+      const zugabe = art ? entwurf.zugaben[art] : undefined
+      const menge = zugabe?.menge.trim() ? ` · ${html(zugabe.menge)} ${html(zugabe.einheit)}` : ''
+      return `<div class="runden-zugabe-reminder"><strong>Fällig: ${html(reminder.titel)}</strong><span>${html(charge.name)}${menge}</span></div>`
+    }).join('')
+    const zeilen = zugabeArtenFuerPhase(charge.phase).map(art => {
+      const vorschlag = zugabeVorschlag(this.stand, charge, art, zeit, this.ui.zuckerZielJeCharge[charge.id])
+      const zugabe = entwurf.zugaben[art] ?? {
+        aktiv: false,
+        menge: vorschlag.menge,
+        einheit: vorschlag.einheit,
+        stoff: vorschlag.stoff,
+        begruendung: vorschlag.begruendung,
+        begruendungAutomatisch: true,
+      }
+      return this.renderRundenZugabe(vorschlag, zugabe)
+    }).join('')
+    return `<section class="runden-zugaben" aria-labelledby="runden-zugaben-titel"><div class="runden-zugaben-kopf"><h2 id="runden-zugaben-titel">Zugaben</h2><span>Nur „Zugegeben“ wird protokolliert</span></div>${erinnerungsZeilen}<div class="runden-zugabe-liste">${zeilen}</div></section>`
+  }
+
+  private renderRundenZugabe(vorschlag: ReturnType<typeof zugabeVorschlag>, zugabe: RundenZugabeEntwurf): string {
+    const menge = parseDeZahl(zugabe.menge)
+    const vorrat = passendeVorratsZuordnung(this.stand, vorschlag.art, zugabe.stoff, zugabe.einheit, menge ?? undefined)
+    const gesamtNachEingabe = (vorschlag.bisherGesamt ?? 0) + (menge ?? 0)
+    const maxErreicht = vorschlag.gesamtMax !== undefined && gesamtNachEingabe >= vorschlag.gesamtMax
+    const feldId = `runden-zugabe-${vorschlag.art}`
+    const stoffFeld = vorschlag.art === 'sonstiges'
+      ? `<label class="runden-zugabe-stoff" for="${feldId}-stoff"><span>Stoffname</span><input id="${feldId}-stoff" name="zugabe-${vorschlag.art}-stoff" data-runde-zugabe-stoff value="${html(zugabe.stoff)}"></label>`
+      : `<strong class="runden-zugabe-name">${html(vorschlag.label)}</strong>`
+    const einheit = vorschlag.art === 'sonstiges'
+      ? `<select name="zugabe-${vorschlag.art}-einheit" data-runde-zugabe-einheit aria-label="Einheit für sonstige Zugabe">${['g', 'kg', 'ml', 'L', 'Beutel'].map(option => `<option value="${option}" ${option === zugabe.einheit ? 'selected' : ''}>${option}</option>`).join('')}</select>`
+      : `<span>${html(zugabe.einheit)}</span>`
+    return `<article class="runden-zugabe ${zugabe.aktiv ? 'aktiv' : ''}" data-runde-zugabe data-zugabe-art="${vorschlag.art}"${vorschlag.gesamtMax === undefined ? '' : ` data-zugabe-max="${vorschlag.gesamtMax}" data-zugabe-bisher="${vorschlag.bisherGesamt ?? 0}"`}>
+      <label class="runden-zugabe-aktiv"><input type="checkbox" name="zugabe-${vorschlag.art}-aktiv" data-runde-zugabe-aktiv ${zugabe.aktiv ? 'checked' : ''}><span>Zugegeben</span></label>
+      <div class="runden-zugabe-inhalt">${stoffFeld}<div class="runden-zugabe-menge"><label for="${feldId}">Menge</label><div><input id="${feldId}" name="zugabe-${vorschlag.art}-menge" data-runde-zugabe-menge inputmode="decimal" value="${html(zugabe.menge)}">${einheit}</div></div><p class="runden-zugabe-herkunft">${html(vorschlag.herkunft)}</p><p class="runden-zugabe-vorrat ${vorrat.warnung ? 'warnung' : ''}" data-runde-zugabe-vorrat>${html(vorrat.hinweis)}</p><div class="warnbox runden-zugabe-max" data-runde-zugabe-maxwarnung ${maxErreicht ? '' : 'hidden'}>Die erfasste Gesamtmenge erreicht oder überschreitet die Höchstmenge aus naehrsalzPlan(). Die Zugabe bleibt möglich; R-NAEHRSALZ-MAX bleibt unverändert die Regelquelle.</div><details class="runden-zugabe-begruendung"><summary>Begründung ansehen oder ändern</summary><textarea name="zugabe-${vorschlag.art}-begruendung" data-runde-zugabe-begruendung aria-label="Begründung für ${html(vorschlag.label)}">${html(zugabe.begruendung)}</textarea></details></div>
+    </article>`
   }
 
   private renderRundenZuletzt(charge: Charge, definitionen: MessDefinition[]): string {
@@ -698,12 +788,25 @@ export class WeinbegleiterApp {
       : 'Die Regelengine meldet für die gespeicherten Werte keine Abweichung.'
     const istLetzteSpeicherung = this.ui.rundenGespeichert === gespeichert
     const sekunden = !istLetzteSpeicherung || this.ui.rundenUndoBis === null ? 0 : Math.max(0, Math.ceil((this.ui.rundenUndoBis - Date.now()) / 1000))
-    return `<div class="runden-nachher"><div class="runden-befund befund-${ampel.toLowerCase()}" role="status"><div>${this.renderAmpel(ampel)}<strong>Gespeichert</strong></div><p>${this.fachtext(befund?.text ?? normalText)}</p>${befund?.massnahme ? `<small>${this.fachtext(befund.massnahme)}</small>` : ''}</div><button class="btn btn-haupt runde-weiter" type="button" data-action="runde-weiter">${naechste ? `Weiter → ${html(naechste.name)}` : 'Weiter → Zusammenfassung'}</button>${sekunden > 0 ? `<button class="runde-undo" type="button" data-action="runde-undo">Letzte Eingabe zurücknehmen <strong>· ${sekunden} s</strong></button>` : istLetzteSpeicherung ? '<p class="hint">Die Rücknahmefrist ist abgelaufen.</p>' : ''}<p class="hint">${gespeichert.typen.length ? gespeichert.typen.map(typ => this.messLabel(typ)).join(', ') : 'Unterstoßen'} · ${datumZeitFormat.format(new Date(gespeichert.zeit))}</p></div>`
+    const protokoll = this.rundenProtokollText(gespeichert)
+    return `<div class="runden-nachher"><div class="runden-befund befund-${ampel.toLowerCase()}" role="status"><div>${this.renderAmpel(ampel)}<strong>Gespeichert</strong></div><p>${this.fachtext(befund?.text ?? normalText)}</p>${befund?.massnahme ? `<small>${this.fachtext(befund.massnahme)}</small>` : ''}</div><button class="btn btn-haupt runde-weiter" type="button" data-action="runde-weiter">${naechste ? `Weiter → ${html(naechste.name)}` : 'Weiter → Zusammenfassung'}</button>${sekunden > 0 ? `<button class="runde-undo" type="button" data-action="runde-undo">Letzte Eingabe zurücknehmen <strong>· ${sekunden} s</strong></button>` : istLetzteSpeicherung ? '<p class="hint">Die Rücknahmefrist ist abgelaufen.</p>' : ''}<p class="hint">${html(protokoll || 'Keine Werte')} · ${datumZeitFormat.format(new Date(gespeichert.zeit))}</p></div>`
+  }
+
+  private rundenProtokollText(ergebnis: RundenSpeicherung): string {
+    const ereignisse = ergebnis.ereignisIds
+      .map(ereignisId => this.stand.ereignisse.find(ereignis => ereignis.id === ereignisId))
+      .filter((ereignis): ereignis is Ereignis => Boolean(ereignis))
+    const teile = ergebnis.typen.map(typ => this.messLabel(typ))
+    if (ereignisse.some(ereignis => ereignis.art === 'unterstossen')) teile.push('Untergestoßen')
+    teile.push(...ereignisse.filter(ereignis => ereignis.mengeWert !== undefined).map(ereignis => `${EREIGNIS_LABEL[ereignis.art]} ${formatiereZahl(ereignis.mengeWert!)} ${ereignis.mengeEinheit ?? ''}`.trim()))
+    return teile.join(', ')
   }
 
   private renderRundenZusammenfassung(): string {
     const offene = this.stand.reminder.filter(reminder => !reminder.erledigt).sort((a, b) => a.faellig.localeCompare(b.faellig))
-    return `<section class="runden-zusammenfassung" aria-labelledby="runden-abschluss"><div><span class="abschluss-merker">Runde abgeschlossen</span><h1 id="runden-abschluss">${this.ui.rundenErgebnisse.length} Gefäße erfasst</h1><p>${datumZeitFormat.format(new Date(isoAusDatetimeLocal(this.ui.rundenZeit)))}</p></div><div class="abschluss-grid"><div class="karte"><h2>Erfasste Werte</h2>${this.ui.rundenErgebnisse.map(ergebnis => { const charge = this.stand.chargen.find(eintrag => eintrag.id === ergebnis.chargeId); return `<div class="abschluss-zeile"><strong>${html(charge?.name ?? ergebnis.chargeId)}</strong><span>${ergebnis.typen.map(typ => this.messLabel(typ)).join(', ')}${ergebnis.ereignisIds.length ? `${ergebnis.typen.length ? ' · ' : ''}Untergestoßen` : ''}</span></div>` }).join('') || '<div class="leer">Keine Werte gespeichert.</div>'}</div><div class="karte"><h2>Ampelwechsel</h2>${this.ui.rundenErgebnisse.filter(ergebnis => ergebnis.ampelVorher !== ergebnis.ampelNachher).map(ergebnis => `<div class="abschluss-zeile"><strong>${html(this.stand.chargen.find(charge => charge.id === ergebnis.chargeId)?.name ?? ergebnis.chargeId)}</strong><span>${html(AMPEL_LABEL[ergebnis.ampelVorher])} → ${html(AMPEL_LABEL[ergebnis.ampelNachher])}</span></div>`).join('') || '<div class="leer">Keine Ampel hat gewechselt.</div>'}</div><div class="karte"><h2>Fällig</h2>${offene.slice(0, 5).map(reminder => `<div class="abschluss-zeile"><strong>${datumFormat.format(new Date(reminder.faellig))}</strong><span>${html(reminder.titel)}</span></div>`).join('') || '<div class="leer">Nichts offen.</div>'}</div></div><button class="btn btn-haupt" type="button" data-action="runde-beenden">Zu Heute</button></section>`
+    const geaenderteReminderIds = [...new Set(this.ui.rundenErgebnisse.flatMap(ergebnis => ergebnis.reminderAenderungen.map(aenderung => aenderung.reminderId)))]
+    const geaenderteReminder = geaenderteReminderIds.map(reminderId => this.stand.reminder.find(reminder => reminder.id === reminderId)).filter((reminder): reminder is Reminder => Boolean(reminder))
+    return `<section class="runden-zusammenfassung" aria-labelledby="runden-abschluss"><div><span class="abschluss-merker">Runde abgeschlossen</span><h1 id="runden-abschluss">${this.ui.rundenErgebnisse.length} Gefäße erfasst</h1><p>${datumZeitFormat.format(new Date(isoAusDatetimeLocal(this.ui.rundenZeit)))}</p></div><div class="abschluss-grid"><div class="karte"><h2>Messungen und Zugaben</h2>${this.ui.rundenErgebnisse.map(ergebnis => { const charge = this.stand.chargen.find(eintrag => eintrag.id === ergebnis.chargeId); return `<div class="abschluss-zeile"><strong>${html(charge?.name ?? ergebnis.chargeId)}</strong><span>${html(this.rundenProtokollText(ergebnis) || 'Keine Werte')}</span></div>` }).join('') || '<div class="leer">Keine Werte gespeichert.</div>'}</div><div class="karte"><h2>Ampelwechsel</h2>${this.ui.rundenErgebnisse.filter(ergebnis => ergebnis.ampelVorher !== ergebnis.ampelNachher).map(ergebnis => `<div class="abschluss-zeile"><strong>${html(this.stand.chargen.find(charge => charge.id === ergebnis.chargeId)?.name ?? ergebnis.chargeId)}</strong><span>${html(AMPEL_LABEL[ergebnis.ampelVorher])} → ${html(AMPEL_LABEL[ergebnis.ampelNachher])}</span></div>`).join('') || '<div class="leer">Keine Ampel hat gewechselt.</div>'}</div><div class="karte"><h2>Termine</h2>${geaenderteReminder.map(reminder => `<div class="abschluss-zeile"><strong>${reminder.wiederholungTage === undefined ? 'Erledigt' : 'Weitergeführt'}</strong><span>${html(reminder.titel)}${reminder.wiederholungTage === undefined ? '' : ` · nächster Termin ${datumFormat.format(new Date(reminder.faellig))}`}</span></div>`).join('') || '<div class="leer">Keine Termine durch Zugaben erledigt.</div>'}${offene.slice(0, 3).map(reminder => `<div class="abschluss-zeile"><strong>Offen · ${datumFormat.format(new Date(reminder.faellig))}</strong><span>${html(reminder.titel)}</span></div>`).join('')}</div></div><button class="btn btn-haupt" type="button" data-action="runde-beenden">Zu Heute</button></section>`
   }
 
   private renderDesktopSidebar(): string {
@@ -1170,7 +1273,60 @@ export class WeinbegleiterApp {
       entwurf.messwerte[typ] = { eingabe: entwurf.messwerte[typ]?.eingabe ?? '', methode: feld.value as MessMethode }
     })
     entwurf.untergestossen = Boolean(formular.querySelector<HTMLInputElement>('[data-runde-untergestossen]')?.checked)
+    formular.querySelectorAll<HTMLElement>('[data-runde-zugabe]').forEach(zeile => {
+      const art = zeile.dataset.zugabeArt as RundenZugabeArt | undefined
+      if (!art) return
+      const vorhanden = entwurf.zugaben[art]
+      entwurf.zugaben[art] = {
+        aktiv: Boolean(zeile.querySelector<HTMLInputElement>('[data-runde-zugabe-aktiv]')?.checked),
+        menge: zeile.querySelector<HTMLInputElement>('[data-runde-zugabe-menge]')?.value ?? vorhanden?.menge ?? '',
+        einheit: zeile.querySelector<HTMLSelectElement>('[data-runde-zugabe-einheit]')?.value ?? vorhanden?.einheit ?? 'g',
+        stoff: zeile.querySelector<HTMLInputElement>('[data-runde-zugabe-stoff]')?.value ?? vorhanden?.stoff ?? '',
+        begruendung: zeile.querySelector<HTMLTextAreaElement>('[data-runde-zugabe-begruendung]')?.value ?? vorhanden?.begruendung ?? '',
+        begruendungAutomatisch: vorhanden?.begruendungAutomatisch ?? true,
+      }
+    })
     this.ui.rundenEntwuerfe[charge.id] = entwurf
+  }
+
+  private aktualisiereRundenZugabeHinweise(): void {
+    this.root.querySelectorAll<HTMLElement>('[data-runde-zugabe]').forEach(zeile => {
+      const art = zeile.dataset.zugabeArt as RundenZugabeArt | undefined
+      if (!art) return
+      const aktiv = Boolean(zeile.querySelector<HTMLInputElement>('[data-runde-zugabe-aktiv]')?.checked)
+      const menge = parseDeZahl(zeile.querySelector<HTMLInputElement>('[data-runde-zugabe-menge]')?.value ?? null)
+      const einheit = zeile.querySelector<HTMLSelectElement>('[data-runde-zugabe-einheit]')?.value ?? 'g'
+      const stoff = zeile.querySelector<HTMLInputElement>('[data-runde-zugabe-stoff]')?.value
+        ?? (art === 'naehrsalz' ? 'Hefenährsalz' : art === 'aufzuckern' ? 'Haushaltszucker' : art === 'schwefeln' ? 'Kaliumpyrosulfit' : '')
+      const zuordnung = passendeVorratsZuordnung(this.stand, art, stoff, einheit, menge ?? undefined)
+      const vorrat = zeile.querySelector<HTMLElement>('[data-runde-zugabe-vorrat]')
+      if (vorrat) {
+        vorrat.textContent = zuordnung.hinweis
+        vorrat.classList.toggle('warnung', zuordnung.warnung)
+      }
+      const max = Number(zeile.dataset.zugabeMax)
+      const bisher = Number(zeile.dataset.zugabeBisher)
+      const maxWarnung = zeile.querySelector<HTMLElement>('[data-runde-zugabe-maxwarnung]')
+      if (maxWarnung) maxWarnung.hidden = !(Number.isFinite(max) && Number.isFinite(bisher) && bisher + (menge ?? 0) >= max)
+      zeile.classList.toggle('aktiv', aktiv)
+    })
+  }
+
+  private aktualisiereAutomatischeRundenBegruendungen(): void {
+    const zeit = isoAusDatetimeLocal(this.ui.rundenZeit)
+    for (const [chargeId, entwurf] of Object.entries(this.ui.rundenEntwuerfe)) {
+      const charge = this.stand.chargen.find(eintrag => eintrag.id === chargeId)
+      if (!charge) continue
+      for (const art of zugabeArtenFuerPhase(charge.phase)) {
+        const zugabe = entwurf.zugaben[art]
+        if (!zugabe?.begruendungAutomatisch) continue
+        zugabe.begruendung = zugabeVorschlag(this.stand, charge, art, zeit, this.ui.zuckerZielJeCharge[charge.id]).begruendung
+        if (charge.id === this.rundenCharge()?.id) {
+          const feld = this.root.querySelector<HTMLTextAreaElement>(`[data-zugabe-art="${art}"] [data-runde-zugabe-begruendung]`)
+          if (feld) feld.value = zugabe.begruendung
+        }
+      }
+    }
   }
 
   private wechsleRundenCharge(richtung: number): void {
@@ -1218,6 +1374,62 @@ export class WeinbegleiterApp {
     }, 1000)
   }
 
+  private rundenZugabenAusEntwurf(charge: Charge, entwurf: RundenEntwurf, zeit: string, geaendert: string): Ereignis[] | string {
+    const ereignisse: Ereignis[] = []
+    for (const art of zugabeArtenFuerPhase(charge.phase)) {
+      const zugabe = entwurf.zugaben[art]
+      if (!zugabe?.aktiv) continue
+      const rohwert = zugabe.menge.trim()
+      if (!rohwert) continue
+      const menge = parseDeZahl(rohwert)
+      if (menge === null || menge <= 0) return `${zugabeVorschlag(this.stand, charge, art, zeit).label}: Trage eine Menge größer als 0 ein.`
+      const vorschlag = zugabeVorschlag(this.stand, charge, art, zeit, this.ui.zuckerZielJeCharge[charge.id])
+      const stoff = zugabe.stoff.trim() || vorschlag.stoff
+      if (!stoff) return 'Sonstige Zugabe: Trage den Stoffnamen ein.'
+      const begruendung = zugabe.begruendungAutomatisch ? vorschlag.begruendung.trim() : zugabe.begruendung.trim() || vorschlag.begruendung.trim()
+      const vorrat = passendeVorratsZuordnung(this.stand, art, stoff, zugabe.einheit, menge)
+      ereignisse.push({
+        id: id('ereignis'),
+        zuletztGeaendert: geaendert,
+        chargeId: charge.id,
+        zeit,
+        art: vorschlag.ereignisArt,
+        stoff,
+        mengeWert: menge,
+        mengeEinheit: zugabe.einheit,
+        vorratId: vorrat.posten && vorrat.posten.mengeEinheit === zugabe.einheit ? vorrat.posten.id : undefined,
+        begruendung: begruendung || `Zugabe während der Runde am ${datumZeitFormat.format(new Date(zeit))}.`,
+      })
+    }
+    return ereignisse
+  }
+
+  private erledigeZugabeReminder(charge: Charge, zugaben: Ereignis[], geaendert: string): ReminderVorher[] {
+    const aenderungen: ReminderVorher[] = []
+    const neueArten = new Set(zugaben.map(ereignis => ereignis.art as RundenZugabeArt))
+    for (const reminder of faelligeZugabeReminder(this.stand, charge)) {
+      const art = zugabeArtFuerReminder(reminder)
+      if (!art || !neueArten.has(art) || !globalerReminderIstFuerAlleChargenErfasst(this.stand, reminder, art)) continue
+      aenderungen.push({
+        reminderId: reminder.id,
+        erledigt: reminder.erledigt,
+        faellig: reminder.faellig,
+      })
+      if (reminder.wiederholungTage !== undefined && reminder.wiederholungTage > 0) {
+        const naechsterTermin = new Date(reminder.faellig)
+        const referenz = Math.max(Date.now(), ...zugaben.map(ereignis => new Date(ereignis.zeit).getTime()))
+        do naechsterTermin.setDate(naechsterTermin.getDate() + reminder.wiederholungTage)
+        while (naechsterTermin.getTime() <= referenz)
+        reminder.faellig = naechsterTermin.toISOString()
+        reminder.erledigt = false
+      } else {
+        reminder.erledigt = true
+      }
+      markiereGeaendert(reminder, geaendert)
+    }
+    return aenderungen
+  }
+
   private async speichereRunde(formular: HTMLFormElement): Promise<void> {
     const charge = this.rundenCharge()
     if (!charge || charge.archiviert) return this.formularFehler('Wähle eine aktive Charge aus.')
@@ -1241,12 +1453,23 @@ export class WeinbegleiterApp {
       if ((definition.typ === 'volumen' || definition.typ === 'kopfraum') && wert !== null && wert < 0) return this.formularFehler(`${definition.label} muss mindestens 0 L betragen.`)
       neu.push({ id: id('messung'), zuletztGeaendert: geaendert, chargeId: charge.id, zeit, typ: definition.typ, wert, text: definition.art === 'auswahl' ? rohwert : undefined, methode: DICHTE_TYPEN.includes(definition.typ) ? feld?.methode ?? 'spindel' : undefined })
     }
-    const neueEreignisse: Ereignis[] = entwurf.untergestossen ? [{ id: id('ereignis'), zuletztGeaendert: geaendert, chargeId: charge.id, zeit, art: 'unterstossen', begruendung: 'Während der Runde am Gefäß untergestoßen.' }] : []
-    if (!neu.length && !neueEreignisse.length) return this.formularFehler('Trage mindestens einen Messwert ein oder markiere Untergestoßen. Leere Felder werden nicht gespeichert.')
+    const rundenZugaben = this.rundenZugabenAusEntwurf(charge, entwurf, zeit, geaendert)
+    if (typeof rundenZugaben === 'string') return this.formularFehler(rundenZugaben)
+    const neueEreignisse: Ereignis[] = [
+      ...(entwurf.untergestossen ? [{ id: id('ereignis'), zuletztGeaendert: geaendert, chargeId: charge.id, zeit, art: 'unterstossen' as const, begruendung: 'Während der Runde am Gefäß untergestoßen.' }] : []),
+      ...rundenZugaben,
+    ]
+    if (!neu.length && !neueEreignisse.length) return this.formularFehler('Trage mindestens einen Messwert ein, markiere eine Zugabe oder Untergestoßen. Leere Felder werden nicht gespeichert.')
+    try {
+      pruefeEreignisseMitVorrat(this.stand, neueEreignisse)
+    } catch (fehler) {
+      return this.formularFehler(fehler instanceof Error ? fehler.message : 'Die Vorratsbuchung konnte nicht geprüft werden.')
+    }
     this.stand.messungen.push(...neu)
-    this.stand.ereignisse.push(...neueEreignisse)
+    speichereEreignisseMitVorrat(this.stand, neueEreignisse)
     this.aktualisiereVolumenAusMessungen(neu)
-    const gespeichert: RundenSpeicherung = { chargeId: charge.id, zeit, typen: neu.map(messung => messung.typ), messungIds: neu.map(messung => messung.id), ereignisIds: neueEreignisse.map(ereignis => ereignis.id), ampelVorher, ampelNachher: ampelFuerCharge(this.stand, charge), volumenVorher }
+    const reminderAenderungen = this.erledigeZugabeReminder(charge, rundenZugaben, geaendert)
+    const gespeichert: RundenSpeicherung = { chargeId: charge.id, zeit, typen: neu.map(messung => messung.typ), messungIds: neu.map(messung => messung.id), ereignisIds: neueEreignisse.map(ereignis => ereignis.id), reminderAenderungen, ampelVorher, ampelNachher: ampelFuerCharge(this.stand, charge), volumenVorher }
     this.ui.rundenErgebnisse = [...this.ui.rundenErgebnisse.filter(ergebnis => ergebnis.chargeId !== charge.id), gespeichert]
     this.ui.rundenGespeichert = gespeichert
     this.ui.rundenUndoBis = Date.now() + 30_000
@@ -1260,11 +1483,18 @@ export class WeinbegleiterApp {
     if (!gespeichert || this.ui.rundenUndoBis === null || Date.now() >= this.ui.rundenUndoBis) return
     const loeschZeit = new Date().toISOString()
     const messungIds = new Set(gespeichert.messungIds)
-    const ereignisIds = new Set(gespeichert.ereignisIds)
     this.stand.messungen = this.stand.messungen.filter(messung => !messungIds.has(messung.id))
-    this.stand.ereignisse = this.stand.ereignisse.filter(ereignis => !ereignisIds.has(ereignis.id))
     gespeichert.messungIds.forEach(messungId => merkeLoeschung(this.stand, 'messungen', messungId, loeschZeit))
-    gespeichert.ereignisIds.forEach(ereignisId => merkeLoeschung(this.stand, 'ereignisse', ereignisId, loeschZeit))
+    gespeichert.ereignisIds.forEach(ereignisId => {
+      if (this.stand.ereignisse.some(ereignis => ereignis.id === ereignisId)) loescheEreignisMitVorrat(this.stand, ereignisId)
+    })
+    gespeichert.reminderAenderungen.forEach(vorher => {
+      const reminder = this.stand.reminder.find(eintrag => eintrag.id === vorher.reminderId)
+      if (!reminder) return
+      reminder.erledigt = vorher.erledigt
+      reminder.faellig = vorher.faellig
+      markiereGeaendert(reminder, loeschZeit)
+    })
     const charge = this.stand.chargen.find(eintrag => eintrag.id === gespeichert.chargeId)
     if (charge) {
       charge.volumenHistorie = gespeichert.volumenVorher.volumenHistorie.map(punkt => ({ ...punkt }))
@@ -1422,8 +1652,15 @@ export class WeinbegleiterApp {
 
   private async behandleAenderung(event: Event): Promise<void> {
     const ziel = event.target as HTMLInputElement | HTMLSelectElement
-    if (ziel.dataset.action === 'runden-zeit') { this.ui.rundenZeit = ziel.value; return }
-    if (ziel.closest('#runde-form')) this.sichereRundenEntwurf()
+    if (ziel.dataset.action === 'runden-zeit') {
+      this.ui.rundenZeit = ziel.value
+      this.aktualisiereAutomatischeRundenBegruendungen()
+      return
+    }
+    if (ziel.closest('#runde-form')) {
+      this.sichereRundenEntwurf()
+      this.aktualisiereRundenZugabeHinweise()
+    }
     if (ziel.closest('#mess-form')) this.sichereMessFormularEntwurf()
     if (ziel.dataset.action === 'mess-typ') { this.ui.messTyp = ziel.value as MessTyp; return this.render() }
     if (ziel.dataset.action === 'mess-methode') return this.aktualisiereRefraktometerHinweis()
@@ -1440,7 +1677,23 @@ export class WeinbegleiterApp {
 
   private behandleEingabe(event: Event): void {
     const ziel = event.target as HTMLInputElement
-    if (ziel.closest('#runde-form')) this.sichereRundenEntwurf()
+    if (ziel.closest('#runde-form')) {
+      if (ziel.matches('[data-runde-zugabe-menge]')) {
+        const zeile = ziel.closest<HTMLElement>('[data-runde-zugabe]')
+        const aktiv = zeile?.querySelector<HTMLInputElement>('[data-runde-zugabe-aktiv]')
+        if (aktiv) aktiv.checked = true
+      }
+      if (ziel.matches('[data-runde-zugabe-begruendung]')) {
+        const art = ziel.closest<HTMLElement>('[data-runde-zugabe]')?.dataset.zugabeArt as RundenZugabeArt | undefined
+        const charge = this.rundenCharge()
+        if (art && charge) {
+          const zugabe = this.rundenEntwurf(charge.id).zugaben[art]
+          if (zugabe) zugabe.begruendungAutomatisch = false
+        }
+      }
+      this.sichereRundenEntwurf()
+      this.aktualisiereRundenZugabeHinweise()
+    }
     if (ziel.closest('#mess-form')) this.sichereMessFormularEntwurf()
     if (ziel.closest('#rechner-form')) this.aktualisiereRechner()
     if (ziel.closest('#ereignis-form')) this.aktualisiereZugabeVorschau()
@@ -1965,6 +2218,7 @@ export class WeinbegleiterApp {
       const istOe = parseDeZahl(daten.get('istOe'))
       const zielOe = parseDeZahl(daten.get('zielOe'))
       if (istOe === null || zielOe === null) { ausgabe.innerHTML = '<div class="form-fehler">Ist- und Zielwert in °Oe eintragen.</div>'; return }
+      if (this.ui.chargeId) this.ui.zuckerZielJeCharge[this.ui.chargeId] = zielOe
       const ergebnis = zuckerFuerOechsle(volumen, istOe, zielOe)
       const alkohol = alkoholPotenzial(zielOe)
       const alkoholContainer = this.root.querySelector<HTMLElement>('#alkohol-potenzial')

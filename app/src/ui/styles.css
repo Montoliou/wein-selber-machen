@@ -435,6 +435,37 @@ button.tag { min-height: 44px; cursor: pointer; }
 .runden-weitere summary { display: flex; min-height: 44px; align-items: center; gap: 6px; color: var(--gold); cursor: pointer; font-size: 13px; font-weight: 700; list-style: none; }
 .runden-weitere summary::-webkit-details-marker { display: none; }
 .runden-weitere[open] summary span { transform: rotate(90deg); }
+.runden-zugaben { display: grid; gap: 9px; margin: 18px 0 10px; padding-top: 16px; border-top: 1px solid var(--border); }
+.runden-zugaben-kopf { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.runden-zugaben-kopf h2 { margin: 0; color: var(--text); font-size: 18px; letter-spacing: 0; text-transform: none; }
+.runden-zugaben-kopf span { color: var(--text-3); font-size: 11px; text-align: right; }
+.runden-zugabe-reminder { display: flex; min-height: 48px; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 12px; border: 1px solid rgba(216, 184, 110, .5); border-radius: 12px; background: rgba(216, 184, 110, .11); }
+.runden-zugabe-reminder strong { color: var(--gold); font-size: 13px; }
+.runden-zugabe-reminder span { color: var(--text-2); font-size: 12px; font-variant-numeric: tabular-nums; text-align: right; }
+.runden-zugabe-liste { display: grid; gap: 8px; }
+.runden-zugabe { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 12px; padding: 13px 14px; border: 1px solid var(--border); border-radius: 15px; background: var(--surface); transition: border-color .18s, background .18s; }
+.runden-zugabe.aktiv { border-color: rgba(212, 78, 105, .72); background: rgba(159, 41, 66, .1); }
+.runden-zugabe-aktiv { display: flex; min-height: 48px; align-items: center; gap: 8px; margin: 0; color: var(--text-2); cursor: pointer; }
+.runden-zugabe-aktiv input { width: 24px; height: 24px; min-height: 24px; flex: none; }
+.runden-zugabe-aktiv span { font-size: 12px; font-weight: 700; }
+.runden-zugabe-inhalt { display: grid; min-width: 0; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 7px 14px; }
+.runden-zugabe-name { font-size: 15px; }
+.runden-zugabe-stoff { display: grid; gap: 4px; margin: 0; }
+.runden-zugabe-stoff span { color: var(--text-3); font-size: 10px; }
+.runden-zugabe-stoff input { min-height: 44px; padding: 8px 10px; }
+.runden-zugabe-menge { display: grid; grid-template-columns: auto; gap: 3px; }
+.runden-zugabe-menge > label { margin: 0; color: var(--text-3); font-size: 10px; }
+.runden-zugabe-menge > div { display: flex; align-items: center; gap: 7px; }
+.runden-zugabe-menge input { width: 104px; min-height: 48px; padding: 8px 10px; font-size: 20px; font-weight: 720; text-align: right; font-variant-numeric: tabular-nums; }
+.runden-zugabe-menge select { width: 92px; min-height: 48px; padding: 8px; }
+.runden-zugabe-menge span { width: 30px; color: var(--text-2); }
+.runden-zugabe-herkunft, .runden-zugabe-vorrat { grid-column: 1 / -1; margin: 0; color: var(--text-3); font-size: 11px; line-height: 1.4; }
+.runden-zugabe-vorrat { color: #84d29b; }
+.runden-zugabe-vorrat.warnung { color: #f3b173; }
+.runden-zugabe-max { grid-column: 1 / -1; margin: 1px 0 0; }
+.runden-zugabe-begruendung { grid-column: 1 / -1; }
+.runden-zugabe-begruendung summary { display: flex; min-height: 44px; align-items: center; color: var(--gold); cursor: pointer; font-size: 11px; font-weight: 700; }
+.runden-zugabe-begruendung textarea { min-height: 96px; font-size: 14px; }
 .unterstossen { display: grid; grid-template-columns: 26px 1fr; min-height: 58px; align-items: center; column-gap: 10px; margin: 8px 0; padding: 10px 14px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); color: var(--text); }
 .unterstossen input { grid-row: 1 / 3; width: 24px; height: 24px; }
 .unterstossen span { font-weight: 700; }
@@ -582,6 +613,11 @@ button.tag { min-height: 44px; cursor: pointer; }
 #app[data-layout="telefon"] .runden-feld { grid-template-columns: 1fr; }
 #app[data-layout="telefon"] .runden-eingabeblock input, #app[data-layout="telefon"] .runden-feld > select { width: 100%; min-width: 0; }
 #app[data-layout="telefon"] .runden-methode { grid-template-columns: 1fr; }
+#app[data-layout="telefon"] .runden-zugaben-kopf, #app[data-layout="telefon"] .runden-zugabe-reminder { align-items: flex-start; flex-direction: column; }
+#app[data-layout="telefon"] .runden-zugaben-kopf span, #app[data-layout="telefon"] .runden-zugabe-reminder span { text-align: left; }
+#app[data-layout="telefon"] .runden-zugabe { grid-template-columns: 1fr; }
+#app[data-layout="telefon"] .runden-zugabe-aktiv { min-height: 44px; }
+#app[data-layout="telefon"] .runden-zugabe-inhalt { grid-template-columns: minmax(0, 1fr) auto; }
 #app[data-layout="telefon"] .runde-pfeil { position: fixed; top: 50%; width: 38px; }
 #app[data-layout="telefon"] .abschluss-grid, #app[data-layout="telefon"] .press-spalten { grid-template-columns: 1fr; }
 
@@ -591,3 +627,5 @@ button.tag { min-height: 44px; cursor: pointer; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation: none !important; transition: none !important; }
 }
+
+[hidden] { display: none !important; }

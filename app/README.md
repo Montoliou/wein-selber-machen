@@ -90,8 +90,18 @@ Der erste Start legt drei Ausgangschargen, den Behälter- und Materialbestand, T
 
 Unter „Mehr“ stehen Markdown-, CSV-, JSON- und ZIP-Export bereit. Die JSON-Vollsicherung kann wieder importiert werden und enthält auch Fotos. Der ZIP-Export enthält zusätzlich einzelne Fotodateien. Termine lassen sich einzeln oder gesammelt als `.ics` mit `VALARM` laden; die App erzeugt keine eigenen Push-Benachrichtigungen.
 
+## Gefäße verwalten
+
+Unter „Mehr“ listet die App jedes Gefäß als frei, belegt, erwartet oder ausgemustert. Dort lassen sich Gefäße anlegen und bearbeiten. „Angekommen“ entfernt das erwartete Lieferdatum. „Ausmustern“ verlangt einen Grund und erhält den Datensatz, damit bestehende Volumenpunkte und Ereignisse weiter auf dieselbe Gefäß-ID zeigen. Ausgemusterte Gefäße können zurückgeholt werden.
+
+Alle Gefäßauswahlen und die Zustandsanzeige rufen `behaelterVerfuegbar()` aus `src/domain/regeln.ts` auf. Ein Lieferdatum am heutigen Tag gilt deshalb als verfügbar; „erwartet ab …“ erscheint nur bei einem Datum in der Zukunft.
+
+Ein fälliger Liefertermin öffnet beim Erledigen eine Liste der bis zu diesem Termin erwarteten Gefäße. Alle Einträge sind vorausgewählt. Die App entfernt `vorhandenAb` nur bei den ausgewählten Gefäßen und setzt anschließend den Termin auf erledigt.
+
 ## Offene Punkte
 
 Fotos bleiben gerätelokal. Sie liegen als Blobs in einem eigenen IndexedDB-Store und sind ausdrücklich nicht Bestandteil des Geräteabgleichs. Ein späterer Fotoabgleich braucht eine eigene Größen-, Übertragungs- und Konfliktstrategie.
 
-H6 bringt keine weiteren offenen Punkte mit. Der Schreibtisch, die Runde, „Heute“ und der Press-Gate-Fluss verwenden ausschließlich die seit H2 bis H5 vorhandenen Datenstrukturen und Fachfunktionen.
+`Reminder` hat noch kein Feld, das einen Termin direkt mit einer Gefäßlieferung verknüpft. Die UI erkennt Liefertermine deshalb an Lieferwörtern in Titel oder Beschreibung und ordnet die Gefäße über `vorhandenAb <= Termindatum` zu. Eine spätere typisierte Verknüpfung würde diese Texterkennung ersetzen; dafür müsste das derzeit gesperrte Domänenmodell erweitert werden.
+
+H6 bis H8 bringen darüber hinaus keine offenen Punkte mit. Der Schreibtisch, die Runde, „Heute“, der Press-Gate-Fluss, die Zugaben und die Gefäßverwaltung verwenden die vorhandenen Datenstrukturen und Fachfunktionen.

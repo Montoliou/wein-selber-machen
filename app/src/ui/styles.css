@@ -384,6 +384,31 @@ button.tag { min-height: 44px; cursor: pointer; }
 .termin-oeffnen { display: grid; width: 100%; gap: 2px; padding: 0; border: 0; background: transparent; color: inherit; text-align: left; }
 .termin-oeffnen strong { font-size: 14.5px; }
 .termin-oeffnen small { color: var(--text-2); font-size: 12.5px; }
+.gefaess-liste { padding-top: 0; padding-bottom: 0; }
+.gefaess-eintrag { padding: 14px 0; border-bottom: 1px solid var(--border); }
+.gefaess-eintrag:last-child { border-bottom: 0; }
+.gefaess-kopf { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 8px 16px; }
+.gefaess-kopf strong, .gefaess-kopf small { display: block; }
+.gefaess-kopf strong { font-size: 15px; }
+.gefaess-kopf small { margin-top: 2px; color: var(--text-3); font-size: 11.5px; }
+.gefaess-zustand { max-width: 32ch; padding: 4px 8px; overflow-wrap: anywhere; border: 1px solid var(--border); border-radius: 999px; color: var(--text-2); font-size: 11px; font-weight: 700; text-align: right; }
+.gefaess-zustand.verfuegbar { border-color: rgba(95, 168, 118, .48); color: #84d29b; }
+.gefaess-zustand.erwartet { border-color: rgba(216, 184, 110, .48); color: var(--gold); }
+.gefaess-zustand.ausgemustert { border-color: rgba(227, 84, 96, .48); color: #ff9ca4; }
+.gefaess-aktionen { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 6px; }
+.dialog-hintergrund { position: fixed; z-index: 120; inset: 0; display: grid; place-items: center; padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom)); overflow-y: auto; background: rgba(0, 0, 0, .62); backdrop-filter: blur(5px); }
+.dialog-karte { width: min(100%, 620px); max-height: calc(100dvh - 32px); padding: 20px; overflow-y: auto; border: 1px solid var(--border); border-radius: 18px; background: var(--surface); box-shadow: 0 24px 80px rgba(0, 0, 0, .55); animation: dialog-eintritt 180ms ease-out; }
+.dialog-karte > h2 { margin: 0 0 8px; color: var(--text); font-size: 20px; letter-spacing: -.01em; text-transform: none; }
+.dialog-karte > p { margin: 0 0 14px; color: var(--text-2); font-size: 13.5px; }
+.dialog-aktionen { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+.lieferung-auswahl { display: grid; gap: 0; margin: 0; padding: 0; border: 0; }
+.lieferung-auswahl legend { margin-bottom: 6px; font-weight: 700; }
+.lieferung-auswahl label { display: flex; min-height: 52px; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); cursor: pointer; }
+.lieferung-auswahl label:last-child { border-bottom: 0; }
+.lieferung-auswahl input { flex: none; }
+.lieferung-auswahl span, .lieferung-auswahl strong, .lieferung-auswahl small { display: block; }
+.lieferung-auswahl small { margin-top: 1px; color: var(--text-3); font-size: 11.5px; }
+@keyframes dialog-eintritt { from { opacity: .5; transform: translateY(8px) scale(.985); } to { opacity: 1; transform: none; } }
 
 /* Runde: volle Arbeitsflaeche ohne App-Navigation. */
 .runden-main { min-height: 100dvh; }
@@ -620,6 +645,9 @@ button.tag { min-height: 44px; cursor: pointer; }
 #app[data-layout="telefon"] .runden-zugabe-inhalt { grid-template-columns: minmax(0, 1fr) auto; }
 #app[data-layout="telefon"] .runde-pfeil { position: fixed; top: 50%; width: 38px; }
 #app[data-layout="telefon"] .abschluss-grid, #app[data-layout="telefon"] .press-spalten { grid-template-columns: 1fr; }
+#app[data-layout="telefon"] .gefaess-kopf { grid-template-columns: 1fr; }
+#app[data-layout="telefon"] .gefaess-zustand { width: fit-content; max-width: 100%; text-align: left; }
+#app[data-layout="telefon"] .dialog-aktionen { grid-template-columns: 1fr; }
 
 #app[data-layout="schreibtisch"] .seite { max-width: none; padding-right: 24px; padding-left: 24px; }
 #app[data-layout="schreibtisch"] .runden-main .runde-screen { height: 100dvh; }

@@ -279,3 +279,31 @@ gegenprüfen. So lief die H6-Abnahme; der Server blieb bei 50 Messungen.
 ein `resize`-Ereignis auszulösen. Die Layoutklasse wirkt dann eingefroren. Erst
 `window.dispatchEvent(new Event('resize'))` oder ein Neuladen zeigt das echte
 Verhalten — das war ein falscher Alarm im Review.
+
+## H7 und H8 live (05.09.2026)
+
+**Der Leitsatz, der aus zwei Fehlern desselben Tages entstand:** *Ein Termin, der eine
+Tatsache ankündigt, wird eingelöst, nicht abgehakt.* Am 04.09. konnte Andi zweimal eine
+Absicht abhaken, aber die zugehörige Tatsache nicht erfassen — Nährsalz in der Runde,
+dann die Ballon-Lieferung. Beide Male lag der Fehler in meinem Spec, nicht im Bau.
+
+**H7 (Zugaben in der Runde):** Zugaben je Gefäß mit Menge, **vorberechnet aus der
+Fachschicht** (`naehrsalzPlan`, `zuckerFuerOechsle`, `schwefelDosierung`) — keine Formel
+ist in der Oberfläche nachgebaut. Die vorbelegte Begründung nennt den Rechenweg im
+Klartext. Vorratskopplung sagt bei Nichtbuchung den Grund („wird in g geführt, diese
+Zugabe in ml"). Fälliger Termin erscheint am Gefäß und gilt durch die Zugabe als erledigt.
+
+**Schwachpunkt zum Merken:** Die Zuordnung Termin → Zugabeart läuft über Textsuche im
+Terminnamen (`/nährsalz|naehrsalz/i`). Wird ein Termin umbenannt, bricht die Kopplung
+**still** — er erscheint dann nicht mehr in der Runde.
+
+**H8 (Gefäße verwalten):** `behaelterVerfuegbar()` in `domain/regeln.ts` ist die einzige
+Quelle für „ist dieses Gefäß benutzbar" — vorher beantworteten Auswahl und Anzeige
+dieselbe Frage verschieden, weshalb gelieferte Gefäße dauerhaft als „ab <Datum>" standen.
+Ausmustern mit Pflichtgrund statt Löschen, weil `volumenHistorie` und Ereignisse dauerhaft
+auf die id zeigen.
+
+**Deploy-Kniff:** `deploy.sh` liest `./.ftp-credentials` und die Pfade aus `DEPLOY_FILES`
+relativ zum Arbeitsverzeichnis. Für die App wird daher **aus `app/dist/` heraus** deployt,
+mit einem **Symlink** auf die Datei im Projekt-Root — keine Kopie, damit das Passwort nicht
+dupliziert wird. Symlink danach entfernen.

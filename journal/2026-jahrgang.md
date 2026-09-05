@@ -558,3 +558,34 @@ damit wahrscheinlicher — und die Entscheidung, **nach Gärende nicht sofort zu
 bleibt richtig.
 
 **Entscheidung:** Auf die Presse warten. Presstag **Dienstag 08.09.**
+
+### Abendrunde 05.09.2026, 21:27
+
+| | früh | abends | Temperatur | Δ/Tag |
+|---|---|---|---|---|
+| Bottich 1 | 36 | 24 °Oe | 23,1 °C | 23,8 |
+| Bottich 2 | 30 | 20 °Oe | 23,0 °C | 19,8 |
+| Bottich 3 | 30 | 20 °Oe | 22,9 °C | 19,8 |
+| Bottich 4 | 34 | 22 °Oe | 22,6 °C | 23,8 |
+
+**Nährsalz-Nachtrag geprüft und korrekt.** Portion 3 steht mit 0,92 / 0,86 / 0,88 / 0,74 g
+in den Daten — exakt 0,1 g je Liter erwarteter Weinmenge, alle vier mit Vorratsbuchung.
+Vorrat jetzt **49,8 g**.
+
+**Die Höchstmenge ist damit auf das Gramm genau ausgeschöpft:** drei Portionen à 3,40 g
+ergeben 10,20 g, und 34,0 L × 30 g je 100 L sind ebenfalls 10,20 g. Keine weitere
+Stickstoffgabe, unter keinen Umständen.
+
+**Alle vier erreichen SG 1,010 am Sonntag 06.09. nachmittags** — die Presse kommt aber
+erst Montag. Sie stehen damit rund anderthalb Tage durchgegoren auf der Maische, bevor
+am **Dienstag 08.09.** gepresst wird.
+
+**Das ist vertretbar, aber nicht folgenlos:** Mit dem Gärende hört die CO₂-Bildung auf,
+und damit der Schutz, der die Maische bisher getragen hat. Die Deckel sind seit Tag 2
+fest, das ist die entscheidende Bedingung. Auflage bis zum Presstag: **zweimal täglich
+unterstoßen, damit der Hut nass bleibt.** Sinkt er nach dem Gärende von selbst ab, ist
+das gut — untergetauchter Trester ist geschützter Trester.
+
+**Alternative, falls Unbehagen aufkommt:** Vorlauf am Sonntag mit dem Schlauchheber
+abziehen (braucht keine Presse) und nur den Trester bis Dienstag stehen lassen. Bringt
+zwei Drittel der Menge früher in Sicherheit, kostet einen zusätzlichen Arbeitsgang.

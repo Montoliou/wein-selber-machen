@@ -451,12 +451,24 @@ describe('Gefäßverwaltung im DOM', () => {
     expect(behaelter.ausgemustertAm).toBeUndefined()
     expect(behaelter.ausgemustertGrund).toBeUndefined()
     expect(root.querySelector('#dialog-fehler')?.textContent).toContain('Grund ist Pflicht')
+  })
+
+  it('mustert ein Gefäß über den Absendeknopf aus und schließt den Dialog', async () => {
+    const root = document.querySelector<HTMLElement>('#app')!
+    const stand = structuredClone(erzeugeStartdaten())
+    const behaelter = stand.behaelter.find(eintrag => eintrag.id === 'ballon-1')!
+    new WeinbegleiterApp(root, stand, []).start()
+    klicke(root.querySelector('[data-action="nav"][data-view="mehr"]'))
+    klicke(root.querySelector('[data-action="behaelter-ausmustern"][data-id="ballon-1"]'))
 
     root.querySelector<HTMLTextAreaElement>('#ausmustern-grund')!.value = 'Im Transport zerbrochen'
-    root.querySelector<HTMLFormElement>('#behaelter-ausmustern-form')!.dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true }))
+    klicke(root.querySelector('#behaelter-ausmustern-form button[type="submit"]'))
     await warteAufRendern()
+
     expect(behaelter.ausgemustertGrund).toBe('Im Transport zerbrochen')
     expect(behaelter.ausgemustertAm).toBeDefined()
+    expect(root.querySelector('#behaelter-ausmustern-form')).toBeNull()
+    expect(root.querySelector('[role="dialog"]')).toBeNull()
 
     klicke(root.querySelector('[data-action="behaelter-zurueckholen"][data-id="ballon-1"]'))
     await warteAufRendern()
@@ -474,15 +486,16 @@ describe('Gefäßverwaltung im DOM', () => {
     root.querySelector<HTMLInputElement>('#behaelter-liter')!.value = '7,5'
     root.querySelector<HTMLInputElement>('#behaelter-material')!.value = 'Glas'
     root.querySelector<HTMLInputElement>('#behaelter-verschluss')!.value = 'Stopfen'
-    root.querySelector<HTMLFormElement>('#behaelter-verwalten-form')!.dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true }))
+    klicke(root.querySelector('#behaelter-verwalten-form button[type="submit"]'))
     await warteAufRendern()
 
     const angelegt = stand.behaelter.find(behaelter => behaelter.name === 'Testballon')!
     expect(angelegt.bruttoLiter).toBe(7.5)
+    expect(root.querySelector('#behaelter-verwalten-form')).toBeNull()
     klicke(root.querySelector(`[data-action="behaelter-bearbeiten"][data-id="${angelegt.id}"]`))
     root.querySelector<HTMLInputElement>('#behaelter-name')!.value = 'Testballon groß'
     root.querySelector<HTMLInputElement>('#behaelter-liter')!.value = '8'
-    root.querySelector<HTMLFormElement>('#behaelter-verwalten-form')!.dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true }))
+    klicke(root.querySelector('#behaelter-verwalten-form button[type="submit"]'))
     await warteAufRendern()
 
     expect(angelegt.name).toBe('Testballon groß')
@@ -533,6 +546,170 @@ describe('Gefäßverwaltung im DOM', () => {
     expect(angekommen.vorhandenAb).toBeUndefined()
     expect(nichtAngekommen.vorhandenAb).toBe(heute)
     expect(reminder.erledigt).toBe(true)
+  })
+})
+
+describe('Wiki-Formular im DOM', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '<div id="app"></div>'
+    history.replaceState(null, '', '/')
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024 })
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: false })
+  })
+
+  it('speichert eine Wiki-Seite über den Absendeknopf', async () => {
+    const root = document.querySelector<HTMLElement>('#app')!
+    const stand = structuredClone(erzeugeStartdaten())
+    new WeinbegleiterApp(root, stand, []).start()
+    klicke(root.querySelector('[data-action="nav"][data-view="mehr"]'))
+    klicke(root.querySelector('[data-action="nav"][data-view="wiki"]'))
+    klicke(root.querySelector('[data-action="wiki-neu"]'))
+    root.querySelector<HTMLInputElement>('#wiki-titel-feld')!.value = 'Klicktest'
+    root.querySelector<HTMLInputElement>('#wiki-tags-feld')!.value = 'Test, Formular'
+    root.querySelector<HTMLTextAreaElement>('#wiki-inhalt')!.value = '# Per Klick gespeichert'
+
+    klicke(root.querySelector('#wiki-form button[type="submit"]'))
+    await warteAufRendern()
+
+    const seite = stand.wiki.find(eintrag => eintrag.titel === 'Klicktest')
+    expect(seite).toMatchObject({ tags: ['Test', 'Formular'], inhalt: '# Per Klick gespeichert' })
+    expect(root.querySelector('#wiki-form')).toBeNull()
+    expect(root.dataset.ansicht).toBe('wiki-seite')
+  })
+})
+
+describe('Formularfeldnamen im DOM', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '<div id="app"></div>'
+    history.replaceState(null, '', '/')
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024 })
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: false })
+  })
+
+  it('verdeckt in keinem gerenderten Formular eine HTMLFormElement-Eigenschaft', () => {
+    const formularEigenschaften = new Set<string>()
+    let ebene: object | null = document.createElement('form')
+    while (ebene) {
+      Object.getOwnPropertyNames(ebene).forEach(eigenschaft => formularEigenschaften.add(eigenschaft))
+      ebene = Object.getPrototypeOf(ebene) as object | null
+    }
+    const gerenderteFormulare = new Set<string>()
+    const pruefeFormulare = (root: HTMLElement): void => {
+      root.querySelectorAll<HTMLFormElement>('form').forEach(formular => {
+        const formularId = formular.getAttribute('id') ?? '(Formular ohne ID)'
+        gerenderteFormulare.add(formularId)
+        formular.querySelectorAll<HTMLElement>('[name]').forEach(feld => {
+          const feldname = feld.getAttribute('name')!
+          expect(formularEigenschaften.has(feldname), `${formularId}: name="${feldname}" verdeckt eine Formulareigenschaft`).toBe(false)
+        })
+      })
+    }
+    const starteAnsicht = (hash: string, stand = structuredClone(erzeugeStartdaten())): HTMLElement => {
+      document.body.innerHTML = '<div id="app"></div>'
+      history.replaceState(null, '', `/${hash}`)
+      const root = document.querySelector<HTMLElement>('#app')!
+      new WeinbegleiterApp(root, stand, []).start()
+      return root
+    }
+
+    let stand = structuredClone(erzeugeStartdaten())
+    let root = starteAnsicht('#runde', stand)
+    pruefeFormulare(root)
+
+    const chargeId = stand.chargen[0]!.id
+    root = starteAnsicht(`#charge/${chargeId}`, stand)
+    klicke(root.querySelector('[data-action="charge-tab"][data-tab="gefaess"]'))
+    pruefeFormulare(root)
+    klicke(root.querySelector('[data-action="erfassen"]'))
+    pruefeFormulare(root)
+    klicke(root.querySelector('[data-action="mess-erfassungsmodus"][data-mode="messgroesse"]'))
+    pruefeFormulare(root)
+    klicke(root.querySelector('[data-action="erfassen-modus"][data-mode="ereignis"]'))
+    pruefeFormulare(root)
+
+    const messung = stand.messungen.find(eintrag => stand.chargen.some(charge => charge.id === eintrag.chargeId))!
+    root = starteAnsicht(`#charge/${messung.chargeId}`, stand)
+    klicke(root.querySelector('[data-action="charge-tab"][data-tab="messungen"]'))
+    klicke(root.querySelector(`[data-action="messung-bearbeiten"][data-id="${messung.id}"]`))
+    pruefeFormulare(root)
+
+    const ereignis = stand.ereignisse.find(eintrag => stand.chargen.some(charge => charge.id === eintrag.chargeId))!
+    root = starteAnsicht(`#charge/${ereignis.chargeId}`, stand)
+    klicke(root.querySelector('[data-action="charge-tab"][data-tab="ereignisse"]'))
+    klicke(root.querySelector(`[data-action="ereignis-bearbeiten"][data-id="${ereignis.id}"]`))
+    pruefeFormulare(root)
+
+    root = starteAnsicht(`#charge/${chargeId}`, stand)
+    klicke(root.querySelector('[data-action="nav"][data-view="rechner"]'))
+    pruefeFormulare(root)
+    root = starteAnsicht('', stand)
+    klicke(root.querySelector('[data-action="nav"][data-view="umverteilen"]'))
+    pruefeFormulare(root)
+
+    root = starteAnsicht('#termine', stand)
+    pruefeFormulare(root)
+    const heute = lokalesIsoDatum()
+    const lieferStand = structuredClone(erzeugeStartdaten())
+    const lieferReminder = lieferStand.reminder.find(eintrag => eintrag.id === 'rem-ballons')!
+    const faellig = new Date()
+    faellig.setHours(0, 0, 0, 0)
+    lieferReminder.faellig = faellig.toISOString()
+    lieferReminder.erledigt = false
+    lieferReminder.beschreibung = 'Zwei Gärballons werden heute erwartet.'
+    lieferStand.behaelter.find(eintrag => eintrag.id === 'ballon-3')!.vorhandenAb = heute
+    lieferStand.behaelter.find(eintrag => eintrag.id === 'ballon-4')!.vorhandenAb = heute
+    root = starteAnsicht('', lieferStand)
+    klicke(root.querySelector('[data-action="nav"][data-view="termine"]'))
+    klicke(root.querySelector('[data-action="reminder-toggle"][data-id="rem-ballons"]'))
+    expect(root.querySelector('#lieferung-erledigen-form')).not.toBeNull()
+    pruefeFormulare(root)
+
+    root = starteAnsicht('#wiki', stand)
+    klicke(root.querySelector('[data-action="wiki-neu"]'))
+    pruefeFormulare(root)
+
+    root = starteAnsicht('#mehr', stand)
+    pruefeFormulare(root)
+    klicke(root.querySelector('[data-action="behaelter-neu"]'))
+    pruefeFormulare(root)
+    klicke(root.querySelector('[data-action="dialog-schliessen"]'))
+    klicke(root.querySelector('[data-action="behaelter-ausmustern"]'))
+    pruefeFormulare(root)
+
+    const gateStand = structuredClone(erzeugeStartdaten())
+    const gateCharge = gateStand.chargen[0]!
+    gateCharge.phase = 'PRESS_GATE'
+    gateStand.messungen = gateStand.messungen.filter(eintrag => eintrag.chargeId !== gateCharge.id || !['oechsle', 'sg'].includes(eintrag.typ))
+    root = starteAnsicht(`#gate/${gateCharge.id}`, gateStand)
+    pruefeFormulare(root)
+
+    const pressStand = structuredClone(erzeugeStartdaten())
+    const pressCharge = pressStand.chargen[0]!
+    pressCharge.phase = 'PRESS_GATE'
+    pressCharge.phaseSeit = '2026-09-04T08:00:00+02:00'
+    pressStand.messungen.push({ id: 'test-formularnamen-press-dichte', chargeId: pressCharge.id, zeit: '2026-09-04T08:05:00+02:00', typ: 'oechsle', wert: 8, methode: 'spindel' })
+    root = starteAnsicht(`#gate/${pressCharge.id}`, pressStand)
+    pruefeFormulare(root)
+
+    expect([...gerenderteFormulare].sort()).toEqual([
+      'behaelter-ausmustern-form',
+      'behaelter-verwalten-form',
+      'ereignis-bearbeiten-form',
+      'ereignis-form',
+      'gate-mess-form',
+      'gefaess-form',
+      'klima-form',
+      'lieferung-erledigen-form',
+      'mess-form',
+      'messung-bearbeiten-form',
+      'press-teilung-form',
+      'rechner-form',
+      'reminder-form',
+      'runde-form',
+      'sensor-form',
+      'umverteilen-form',
+      'wiki-form',
+    ])
   })
 })
 

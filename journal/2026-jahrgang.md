@@ -589,3 +589,67 @@ das gut — untergetauchter Trester ist geschützter Trester.
 **Alternative, falls Unbehagen aufkommt:** Vorlauf am Sonntag mit dem Schlauchheber
 abziehen (braucht keine Presse) und nur den Trester bis Dienstag stehen lassen. Bringt
 zwei Drittel der Menge früher in Sicherheit, kostet einen zusätzlichen Arbeitsgang.
+
+## 06.09.2026 — Vorlauf abgezogen
+
+Nicht gepresst, sondern **abgezogen**: Der Vorlauf braucht keine Presse. Vorgezogen, weil
+alle vier am Sonntagnachmittag das Fenster erreichten, die Presse aber erst Montag kommt —
+zwei Tage durchgegoren auf der Maische ohne CO₂-Schutz wären das unnötige Risiko gewesen.
+
+**Glücksfall:** Andi hatte an dem Tag noch nicht untergestoßen. Der Hut hatte sich gesetzt,
+darunter stand klare Flüssigkeit — der ideale Zustand. Merkposten 2027: **am Tag vor dem
+Abziehen nicht mehr unterstoßen.**
+
+**Dichten beim Abziehen:** Bottich 1 12 °Oe, Bottich 2 0, Bottich 3 (nicht gemessen),
+Bottich 4 4 °Oe. Alle bei 22,0 bis 22,3 °C.
+
+| | Trauben netto | Vorlauf | je kg |
+|---|---|---|---|
+| Bottich 1 | 13,13 kg | 8,35 kg | 0,64 |
+| Bottich 2 | 12,28 kg | 6,45 kg | 0,53 |
+| Bottich 3 | 12,53 kg | 6,98 kg | 0,56 |
+| Bottich 4 | 10,58 kg | 5,95 kg | 0,56 |
+| **gesamt** | **48,52 kg** | **27,73 kg** | **0,57** |
+
+Bottich 1 ist der Ausreißer — als erster und in Ruhe gezogen. Die anderen drei liegen
+eng bei 0,53 bis 0,56. **Für 2027 als Planwert: 0,55 kg Vorlauf je kg entrappter Trauben.**
+
+**Gefäße:** fünf 5-L-Ballons mit zusammen 24,73 kg, dazu der 3-L-Ballon mit 3,00 kg.
+Kein halbleeres Gefäß. Gärballon 6 bleibt frei für den Presswein.
+
+**Trester** (23,92 kg inklusive Restmost) auf **Bottich 1 und 3** zusammengelegt, Bottich 2
+und 4 sind leer. Zusammenlegen halbiert die luftberührte Oberfläche für die zwei Tage
+Wartezeit. Flach angedrückt, Deckel zu, Gärstopfen drauf — im Trester gärt es weiter.
+
+**Hochrechnung:** Presswein 6,7 bis 8,1 kg, Gesamtwein rund **35 L**, nach dem ersten
+Abstich etwa **31,6 L**. Die ursprüngliche Schätzung von 34 L war gut getroffen.
+
+**Alkohol:** von 82 °Oe auf 0 bis 4 °Oe sind rund **10,5 % vol**, der Rest kommt in den
+Ballons noch dazu.
+
+### Zwei Korrekturen an meinen eigenen Ansagen
+
+**„0 °Oe heißt durchgegoren" ist falsch.** 0 °Oe ist die Dichte von Wasser; ein trockener
+Rotwein liegt bei minus 3 bis minus 5, weil der Alkohol die Dichte unter Wasser drückt.
+Bei 0 °Oe stehen noch grob 15–20 g Zucker je Liter. Ich hatte deshalb zuerst geraten,
+Bottich 2 bis 4 randvoll zu füllen — das war falsch. **Alle Ballons stehen auf der
+Schulter, nicht im Hals.** Randvoll wird erst nach bestandenem Gärende-Gate.
+
+**Gärender Most gehört nicht in eine fest verschlossene Flasche.** Bei 25 g Zucker je
+Liter entstehen rund 12 L CO₂ je Liter Wein. Reste kommen locker verschlossen in eine
+Schüssel, nicht dicht verkorkt.
+
+**Nicht bestätigt hat sich meine Kopfraum-Warnung** zum ersten Ballon: 4,9 kg in einem
+nominal 5-L-Ballon klang nach 98 %, das Foto zeigte aber Schulter und Hals frei — diese
+Ballons fassen randvoll 5,5 bis 6 L. Dazu schäumt geklärter Vorlauf mangels Feststoffen
+kaum. Aus einer Zahl geschlossen, wo ein Blick ins Gefäß gereicht hätte.
+
+### Offen bis Dienstag
+
+- Ballons bei **18–20 °C stehen lassen**, NICHT sofort in den kühlen Keller — die Gärung
+  läuft noch, und ein Kälteschock riskiert genau den Restzucker, der 2025 die Flaschen
+  nachgären ließ. Erst in den Keller, wenn die Spindel zweimal unter null steht.
+- Gärröhrchen auf allen Ballons **mit Wasser füllen** — auf dem Foto von Gärballon 1 wirkte
+  es trocken.
+- Presstag **Dienstag 08.09.**, Presse Montag wässern.
+- Volumina und der Press-Gate-Ablauf sind in der App noch nicht erfasst.

@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "weinbegleiter-dist",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd \"$(dirname \"$0\")/app/dist\" 2>/dev/null || cd app/dist; exec python3 -m http.server 4173"],
+      "port": 4173
+    }
+  ]
+}

@@ -653,3 +653,45 @@ kaum. Aus einer Zahl geschlossen, wo ein Blick ins Gefäß gereicht hätte.
   es trocken.
 - Presstag **Dienstag 08.09.**, Presse Montag wässern.
 - Volumina und der Press-Gate-Ablauf sind in der App noch nicht erfasst.
+
+## 09.09.2026 — Kellertemperatur ist strukturell, und die 2025er Reste
+
+**Klimadaten belegen:** Der Keller liegt seit dem 03.09. zwischen 20,5 und 21,9 °C,
+Tagesschnitt 20,6 bis 21,4, Feuchte 57–65 %. 96 Messpunkte am Tag, keine Lücke seit
+dem 04.09. — der Job auf dem Mini läuft. **21 °C sind kein Ausreißer, sondern der
+Normalzustand dieses Kellers.** Für die auslaufende Gärung ideal, für den Ausbau zu warm.
+
+Andi: „12 bis 16 Grad bekomme ich hier in keinem Raum hin." Damit ist die passive Lösung
+vom Tisch. **Der warme Ausbau ist der Hauptverdächtige beim Verlust des 2025ers** — die
+Fehleranalyse nennt ihn als Verstärker neben Kopfraum und Dauergärspund.
+
+**Alarmschwellen umgestellt** auf 23 °C oben und 5 °C unten (vorher 28). Die früher von mir
+genannten 18 °C wären bei 21 °C Raumtemperatur ein Dauerlärm gewesen — ein Alarm, den man
+wegdrückt, ist keiner.
+
+**Empfohlener Weg: Steckdosenthermostat plus gebrauchte Kühltruhe oder Kühlschrank.**
+Rund 85 bis 135 €, regelt auf 14 °C, trägt später auch die Flaschenlagerung. Alternative
+ohne Anschaffung: kurzer Ausbau und früheres Abfüllen — schlechter, aber machbar.
+
+### Jahrgang 2025: die drei Flaschen im Kühlschrank
+
+Bestand laut Evidenzdatei und Andis Angabe: die refermentierte **Weißweinflasche** sowie
+**zwei abgefüllte Rote** (der Presswein, der im August 2026 als „noch säuerlich, nicht mehr
+faulig, sensorisch wieder genießbar" beschrieben wurde). Alle drei stehen **mit Gärstopfen**
+im Kühlschrank.
+
+**Das ist genau der Fehler, an dem der 2025er Hauptwein gestorben ist.** Die Fehleranalyse
+führt „Gärspund einfach monatelang drauflassen" ausdrücklich als künftig blockierte
+Empfehlung. Ein Gärstopfen auf einer teilvollen Flasche ist kein Verschluss, sondern eine
+langsame Oxidationskammer — die Kälte verlangsamt das nur.
+
+**Entscheidung: verkosten, dann trinken oder wegschütten. Kein Aufbewahren.** Die Flaschen
+sind seit dem 29.08. offen, das sind elf Tage.
+
+**Zweiter, wichtigerer Grund:** Offene 2025er Reste neben 27,73 kg jungem 2026er sind ein
+mikrobiologisches Risiko. Beim 2025er Hauptwein waren **Fruchtfliegen** im Gefäß, und
+Fruchtfliegen tragen Acetobacter. Die Reste gehören weg, **bevor der 2026er in den Ausbau
+geht.**
+
+**Ausdrücklich verworfen:** aus den Resten Essig ansetzen. Acetobacter absichtlich im selben
+Raum zu kultivieren, in dem 30 L Jungwein liegen, ist die schlechteste denkbare Idee.

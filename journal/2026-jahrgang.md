@@ -695,3 +695,46 @@ geht.**
 
 **Ausdrücklich verworfen:** aus den Resten Essig ansetzen. Acetobacter absichtlich im selben
 Raum zu kultivieren, in dem 30 L Jungwein liegen, ist die schlechteste denkbare Idee.
+
+## 09.09.2026 — Gepresst. Der Jahrgang ist im Glas.
+
+Die Presse kam doch noch am selben Tag. Abgepresst wurde am Abend.
+
+| | Menge | Anteil | Gefäße |
+|---|---|---|---|
+| Vorlauf | 27,73 L | 81 % | 5 × 5-L-Ballon + 3-L-Ballon |
+| Presswein | 6,50 L | 19 % | 1 × 5-L-Ballon + 1,5-L-Flasche |
+| **Gesamt** | **34,23 L** | | |
+
+**Ausbeute 0,71 L je kg entrappter Trauben.** Die Schätzung vom 30.08. lautete 34 L —
+Abweichung 0,2 L.
+
+**Bewusst nicht ausgepresst.** Andi: *„Ich habe viel weggeworfen und mich auf die leichte
+Beute konzentriert. Hätte ich voll gepresst wären wir wahrscheinlich nochmal bei +2–3 l
+gewesen. Das wars mir nicht wert."* — **Fachlich die richtige Entscheidung**, nicht nur eine
+bequeme. Der hart gepresste Anteil trägt Kernbitterstoffe, Gerbstoff aus zerdrückten Kernen
+und den höchsten Trubanteil. Er hätte den Pressweinanteil von 19 auf 25 % gehoben und die
+Qualität des Presswein-Loses gesenkt. **Merkposten 2027: wieder so machen.**
+
+**Warnung aus dem Jahrgang 2025 — der Presswein braucht früher einen Abstich.**
+Die Evidenzdatei beschreibt für 2025 genau an dieser Stelle den Verlauf: „deutlich
+schwefliger/reduktiver Geruch", Nutzerwort „ein wenig nach Furz", der Hefesatz roch
+schlechter als beim Vorlauf. Ursache ist der hohe Trubanteil — schwerer Satz zehrt
+Sauerstoff und bildet H₂S.
+
+**Daraus folgt für 2026:** Presswein **täglich riechen** und **nach vier bis sieben Tagen**
+vom Grobtrub abziehen, nicht nach ein bis zwei Wochen wie den Vorlauf. Nach dem Abstich
+schrumpft er auf etwa 5 L und passt dann in den einen 5-L-Ballon; die 1,5-L-Flasche wird
+zum Auffüllgefäß.
+
+**Die Flasche braucht einen Gärstopfen, keinen festen Verschluss** — im Presswein steckt
+noch zuckerhaltige Flüssigkeit aus dem Trester.
+
+**App-Stand:** [H9](docs/handoff-h9.md) ist gemergt und live. Der Formularfehler ist behoben
+(`getAttribute('id')` statt `formular.id`, alle Felder `name="id"` umbenannt), dazu ein
+Regressionstest über alle Formulare gegen verdeckte Eigenschaften. **74 Tests grün.**
+Im Browser nachgeprüft, diesmal mit echtem Klick: Der Dialog schließt, das Gefäß steht als
+„ausgemustert · Im Transport zerbrochen" in der Liste und bietet „Zurückholen".
+
+**Damit ist der Press-Gate in einem Durchgang erfassbar:** Vorlauf 27,73 L, Presswein 6,50 L,
+Maische archivieren.

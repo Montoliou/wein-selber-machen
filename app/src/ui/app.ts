@@ -1235,7 +1235,7 @@ export class WeinbegleiterApp {
 
   private renderWikiEditor(): string {
     const seite = this.stand.wiki.find(eintrag => eintrag.id === this.ui.wikiId)
-    return `<section class="seite" aria-labelledby="wiki-editor-titel"><button class="zurueck" type="button" data-action="nav" data-view="${seite ? 'wiki-seite' : 'wiki'}">${icon('pfeil')}Abbrechen</button><h1 class="seiten-titel" id="wiki-editor-titel">${seite ? 'Wiki-Seite bearbeiten' : 'Wiki-Seite anlegen'}</h1><form class="karte" id="wiki-form"><input type="hidden" name="id" value="${html(seite?.id ?? '')}"><label for="wiki-titel-feld">Titel</label><input id="wiki-titel-feld" name="titel" value="${html(seite?.titel ?? '')}" required><label for="wiki-tags-feld">Tags</label><input id="wiki-tags-feld" name="tags" value="${html(seite?.tags.join(', ') ?? '')}" placeholder="Gärung, Eigene Notizen"><div class="hint">Mit Komma trennen.</div><label for="wiki-inhalt">Inhalt</label><textarea id="wiki-inhalt" name="inhalt" rows="16" required>${html(seite?.inhalt ?? '# Überschrift\n\nText')}</textarea><div class="hint">Unterstützt Überschriften, **Fett**, Listen und Links.</div><button class="btn btn-haupt" type="submit">Wiki-Seite speichern</button></form></section>`
+    return `<section class="seite" aria-labelledby="wiki-editor-titel"><button class="zurueck" type="button" data-action="nav" data-view="${seite ? 'wiki-seite' : 'wiki'}">${icon('pfeil')}Abbrechen</button><h1 class="seiten-titel" id="wiki-editor-titel">${seite ? 'Wiki-Seite bearbeiten' : 'Wiki-Seite anlegen'}</h1><form class="karte" id="wiki-form"><input type="hidden" name="wikiId" value="${html(seite?.id ?? '')}"><label for="wiki-titel-feld">Titel</label><input id="wiki-titel-feld" name="titel" value="${html(seite?.titel ?? '')}" required><label for="wiki-tags-feld">Tags</label><input id="wiki-tags-feld" name="tags" value="${html(seite?.tags.join(', ') ?? '')}" placeholder="Gärung, Eigene Notizen"><div class="hint">Mit Komma trennen.</div><label for="wiki-inhalt">Inhalt</label><textarea id="wiki-inhalt" name="inhalt" rows="16" required>${html(seite?.inhalt ?? '# Überschrift\n\nText')}</textarea><div class="hint">Unterstützt Überschriften, **Fett**, Listen und Links.</div><button class="btn btn-haupt" type="submit">Wiki-Seite speichern</button></form></section>`
   }
 
   private renderMehr(): string {
@@ -1283,11 +1283,11 @@ export class WeinbegleiterApp {
   private renderBehaelterDialog(): string {
     const behaelter = this.stand.behaelter.find(eintrag => eintrag.id === this.ui.behaelterId)
     if (this.ui.behaelterDialog === 'ausmustern' && behaelter) {
-      return `<div class="dialog-hintergrund"><section class="dialog-karte" role="dialog" aria-modal="true" aria-labelledby="ausmustern-titel"><h2 id="ausmustern-titel">${html(behaelter.name)} ausmustern</h2><p>Das Gefäß bleibt mit seiner ID in der Historie erhalten.</p><form id="behaelter-ausmustern-form"><input type="hidden" name="id" value="${html(behaelter.id)}"><label for="ausmustern-grund">Grund *</label><textarea id="ausmustern-grund" name="grund" required placeholder="Zum Beispiel: Im Transport zerbrochen"></textarea><div id="dialog-fehler" role="alert"></div><div class="dialog-aktionen"><button class="btn" type="button" data-action="dialog-schliessen">Abbrechen</button><button class="btn btn-gefahr" type="submit">Ausmustern</button></div></form></section></div>`
+      return `<div class="dialog-hintergrund"><section class="dialog-karte" role="dialog" aria-modal="true" aria-labelledby="ausmustern-titel"><h2 id="ausmustern-titel">${html(behaelter.name)} ausmustern</h2><p>Das Gefäß bleibt mit seiner ID in der Historie erhalten.</p><form id="behaelter-ausmustern-form"><input type="hidden" name="behaelterId" value="${html(behaelter.id)}"><label for="ausmustern-grund">Grund *</label><textarea id="ausmustern-grund" name="grund" required placeholder="Zum Beispiel: Im Transport zerbrochen"></textarea><div id="dialog-fehler" role="alert"></div><div class="dialog-aktionen"><button class="btn" type="button" data-action="dialog-schliessen">Abbrechen</button><button class="btn btn-gefahr" type="submit">Ausmustern</button></div></form></section></div>`
     }
     const bearbeiten = this.ui.behaelterDialog === 'bearbeiten' && behaelter
     const titel = bearbeiten ? `${behaelter.name} bearbeiten` : 'Neues Gefäß anlegen'
-    return `<div class="dialog-hintergrund"><section class="dialog-karte" role="dialog" aria-modal="true" aria-labelledby="behaelter-dialog-titel"><h2 id="behaelter-dialog-titel">${html(titel)}</h2><form id="behaelter-verwalten-form"><input type="hidden" name="id" value="${html(bearbeiten ? behaelter.id : '')}"><label for="behaelter-name">Name *</label><input id="behaelter-name" name="name" value="${html(bearbeiten ? behaelter.name : '')}" required><label for="behaelter-liter">Brutto-Liter *</label><input id="behaelter-liter" name="bruttoLiter" inputmode="decimal" value="${bearbeiten ? html(formatiereZahl(behaelter.bruttoLiter)) : ''}" required><div class="formular-grid zwei"><div><label for="behaelter-material">Material *</label><input id="behaelter-material" name="material" value="${html(bearbeiten ? behaelter.material : '')}" required></div><div><label for="behaelter-verschluss">Verschluss *</label><input id="behaelter-verschluss" name="verschluss" value="${html(bearbeiten ? behaelter.verschluss : '')}" required></div></div><label for="behaelter-vorhanden-ab">Erwartet ab</label><input id="behaelter-vorhanden-ab" name="vorhandenAb" type="date" value="${html(bearbeiten ? behaelter.vorhandenAb?.slice(0, 10) ?? '' : '')}"><div class="hint">Leer lassen, wenn das Gefäß schon vorhanden ist.</div><div id="dialog-fehler" role="alert"></div><div class="dialog-aktionen"><button class="btn" type="button" data-action="dialog-schliessen">Abbrechen</button><button class="btn btn-haupt" type="submit">${bearbeiten ? 'Änderungen speichern' : 'Gefäß anlegen'}</button></div></form></section></div>`
+    return `<div class="dialog-hintergrund"><section class="dialog-karte" role="dialog" aria-modal="true" aria-labelledby="behaelter-dialog-titel"><h2 id="behaelter-dialog-titel">${html(titel)}</h2><form id="behaelter-verwalten-form"><input type="hidden" name="behaelterId" value="${html(bearbeiten ? behaelter.id : '')}"><label for="behaelter-name">Name *</label><input id="behaelter-name" name="behaelterName" value="${html(bearbeiten ? behaelter.name : '')}" required><label for="behaelter-liter">Brutto-Liter *</label><input id="behaelter-liter" name="bruttoLiter" inputmode="decimal" value="${bearbeiten ? html(formatiereZahl(behaelter.bruttoLiter)) : ''}" required><div class="formular-grid zwei"><div><label for="behaelter-material">Material *</label><input id="behaelter-material" name="material" value="${html(bearbeiten ? behaelter.material : '')}" required></div><div><label for="behaelter-verschluss">Verschluss *</label><input id="behaelter-verschluss" name="verschluss" value="${html(bearbeiten ? behaelter.verschluss : '')}" required></div></div><label for="behaelter-vorhanden-ab">Erwartet ab</label><input id="behaelter-vorhanden-ab" name="vorhandenAb" type="date" value="${html(bearbeiten ? behaelter.vorhandenAb?.slice(0, 10) ?? '' : '')}"><div class="hint">Leer lassen, wenn das Gefäß schon vorhanden ist.</div><div id="dialog-fehler" role="alert"></div><div class="dialog-aktionen"><button class="btn" type="button" data-action="dialog-schliessen">Abbrechen</button><button class="btn btn-haupt" type="submit">${bearbeiten ? 'Änderungen speichern' : 'Gefäß anlegen'}</button></div></form></section></div>`
   }
 
   private renderLieferungDialog(): string {
@@ -1729,22 +1729,23 @@ export class WeinbegleiterApp {
   private async behandleSubmit(event: SubmitEvent): Promise<void> {
     event.preventDefault()
     const formular = event.target as HTMLFormElement
-    if (formular.id === 'runde-form') return this.speichereRunde(formular)
-    if (formular.id === 'gate-mess-form') return this.speichereGateMessung(formular)
-    if (formular.id === 'press-teilung-form') return this.speicherePressTeilung(formular)
-    if (formular.id === 'mess-form') return this.speichereMessungen(formular)
-    if (formular.id === 'messung-bearbeiten-form') return this.aktualisiereMessung(formular)
-    if (formular.id === 'ereignis-form') return this.speichereEreignisse(formular)
-    if (formular.id === 'ereignis-bearbeiten-form') return this.aktualisiereEreignis(formular)
-    if (formular.id === 'gefaess-form') return this.speichereGefaess(formular)
-    if (formular.id === 'behaelter-verwalten-form') return this.speichereBehaelter(formular)
-    if (formular.id === 'behaelter-ausmustern-form') return this.mustereBehaelterAus(formular)
-    if (formular.id === 'lieferung-erledigen-form') return this.erledigeLieferung(formular)
-    if (formular.id === 'reminder-form') return this.speichereReminder(formular)
-    if (formular.id === 'wiki-form') return this.speichereWiki(formular)
-    if (formular.id === 'sensor-form') return this.speichereSensor(formular, event.submitter as HTMLButtonElement | null)
-    if (formular.id === 'klima-form') return this.speichereKlima(formular)
-    if (formular.id === 'umverteilen-form') return this.speichereUmverteilung(formular)
+    const formularId = formular.getAttribute('id')
+    if (formularId === 'runde-form') return this.speichereRunde(formular)
+    if (formularId === 'gate-mess-form') return this.speichereGateMessung(formular)
+    if (formularId === 'press-teilung-form') return this.speicherePressTeilung(formular)
+    if (formularId === 'mess-form') return this.speichereMessungen(formular)
+    if (formularId === 'messung-bearbeiten-form') return this.aktualisiereMessung(formular)
+    if (formularId === 'ereignis-form') return this.speichereEreignisse(formular)
+    if (formularId === 'ereignis-bearbeiten-form') return this.aktualisiereEreignis(formular)
+    if (formularId === 'gefaess-form') return this.speichereGefaess(formular)
+    if (formularId === 'behaelter-verwalten-form') return this.speichereBehaelter(formular)
+    if (formularId === 'behaelter-ausmustern-form') return this.mustereBehaelterAus(formular)
+    if (formularId === 'lieferung-erledigen-form') return this.erledigeLieferung(formular)
+    if (formularId === 'reminder-form') return this.speichereReminder(formular)
+    if (formularId === 'wiki-form') return this.speichereWiki(formular)
+    if (formularId === 'sensor-form') return this.speichereSensor(formular, event.submitter as HTMLButtonElement | null)
+    if (formularId === 'klima-form') return this.speichereKlima(formular)
+    if (formularId === 'umverteilen-form') return this.speichereUmverteilung(formular)
   }
 
   private async behandleAenderung(event: Event): Promise<void> {
@@ -2377,8 +2378,8 @@ export class WeinbegleiterApp {
 
   private async speichereBehaelter(formular: HTMLFormElement): Promise<void> {
     const daten = new FormData(formular)
-    const behaelterId = String(daten.get('id') ?? '')
-    const name = String(daten.get('name') ?? '').trim()
+    const behaelterId = String(daten.get('behaelterId') ?? '')
+    const name = String(daten.get('behaelterName') ?? '').trim()
     const bruttoLiter = parseDeZahl(daten.get('bruttoLiter'))
     const material = String(daten.get('material') ?? '').trim()
     const verschluss = String(daten.get('verschluss') ?? '').trim()
@@ -2407,7 +2408,7 @@ export class WeinbegleiterApp {
 
   private async mustereBehaelterAus(formular: HTMLFormElement): Promise<void> {
     const daten = new FormData(formular)
-    const behaelter = this.stand.behaelter.find(eintrag => eintrag.id === String(daten.get('id') ?? ''))
+    const behaelter = this.stand.behaelter.find(eintrag => eintrag.id === String(daten.get('behaelterId') ?? ''))
     const grund = String(daten.get('grund') ?? '').trim()
     if (!behaelter) return this.dialogFehler('Das Gefäß wurde nicht gefunden.')
     if (!grund) return this.dialogFehler('Der Grund ist Pflicht. Das Gefäß wurde nicht ausgemustert.')
@@ -2488,7 +2489,7 @@ export class WeinbegleiterApp {
 
   private async speichereWiki(formular: HTMLFormElement): Promise<void> {
     const daten = new FormData(formular)
-    const seiteId = String(daten.get('id') ?? '')
+    const seiteId = String(daten.get('wikiId') ?? '')
     const titel = String(daten.get('titel') ?? '').trim()
     const inhalt = String(daten.get('inhalt') ?? '').trim()
     const tags = String(daten.get('tags') ?? '').split(',').map(tag => tag.trim()).filter(Boolean)

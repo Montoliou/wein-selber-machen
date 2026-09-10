@@ -1,0 +1,158 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Weinbegleiter//Jahrgang 2026//DE
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+BEGIN:VTIMEZONE
+TZID:Europe/Berlin
+BEGIN:STANDARD
+DTSTART:19701025T030000
+TZOFFSETFROM:+0200
+TZOFFSETTO:+0100
+RRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU
+END:STANDARD
+BEGIN:DAYLIGHT
+DTSTART:19700329T020000
+TZOFFSETFROM:+0100
+TZOFFSETTO:+0200
+RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU
+END:DAYLIGHT
+END:VTIMEZONE
+BEGIN:VEVENT
+UID:wein-2026-presswein-riechen@weinbegleiter.local
+DTSTAMP:20260910T060000Z
+DTSTART;TZID=Europe/Berlin:20260910T190000
+RRULE:FREQ=DAILY;COUNT=6
+DTEND;TZID=Europe/Berlin:20260910T191000
+SUMMARY:Wein: Presswein riechen
+DESCRIPTION:Gaerstopfen vom 5-Liter-Ballon mit dem Presswein kurz anheben
+  und riechen. Ebenso an der 1\,5-Liter-Flasche.\n\nWorauf achten: faule E
+ ier\, Streichholz\, Kanalgeruch. Das ist Schwefelwasserstoff und entsteht
+ \, wenn der schwere Trub Sauerstoff zehrt.\n\nWICHTIG: Genau daran ist de
+ r Presswein 2025 gekippt.\n\nWenn es so riecht: sofort vom Trub abziehen 
+ (Schlauchheber\, 3 bis 5 cm ueber dem Boden) und Lucius Bescheid sagen. F
+ rueh ist das reparabel\, spaet nicht.\n\nWenn es sauber riecht: nichts tu
+ n\, Stopfen wieder drauf.
+BEGIN:VALARM
+TRIGGER:-PT30M
+ACTION:DISPLAY
+DESCRIPTION:Wein: Presswein riechen
+END:VALARM
+END:VEVENT
+BEGIN:VEVENT
+UID:wein-2026-spindel-1@weinbegleiter.local
+DTSTAMP:20260910T060000Z
+DTSTART;TZID=Europe/Berlin:20260912T090000
+DTEND;TZID=Europe/Berlin:20260912T093000
+SUMMARY:Wein: Spindel — erste Gaerende-Messung
+DESCRIPTION:Bei allen sieben Gefaessen die Dichte mit der Tauchspindel me
+ ssen (nicht mit dem Refraktometer — das zeigt bei Alkohol systematisch 
+ zu hoch).\n\nSo geht es: Probe ins Messglas ziehen\, kurz schwenken damit
+  die CO2-Blaeschen entweichen\, dann ablesen. Bläschen an der Spindel si
+ nd der groesste Einzelfehler.\n\nWerte eintragen in der App unter https:/
+ /www.montolio.de/wein/ ueber Erfassen oder die Runde.\n\nHintergrund: Das
+  Gaerende gilt erst als erreicht\, wenn die Spindel ZWEIMAL im Abstand vo
+ n mindestens 48 Stunden unter null Grad Oechsle steht. Das ist die erste 
+ der beiden Messungen\, die zweite steht am 14.09. im Kalender.
+BEGIN:VALARM
+TRIGGER:-PT30M
+ACTION:DISPLAY
+DESCRIPTION:Wein: Spindel — erste Gaerende-Messung
+END:VALARM
+END:VEVENT
+BEGIN:VEVENT
+UID:wein-2026-spindel-2-ph@weinbegleiter.local
+DTSTAMP:20260910T060000Z
+DTSTART;TZID=Europe/Berlin:20260914T090000
+DTEND;TZID=Europe/Berlin:20260914T100000
+SUMMARY:Wein: Spindel + pH messen — die wichtigste Messung des Jahrgang
+ s
+DESCRIPTION:ZWEI AUFGABEN.\n\n1. SPINDEL bei allen sieben Gefaessen\, wie
+  am 12.09. Probe schwenken\, ablesen\, in die App eintragen. Stehen beide
+  Messungen unter null Grad Oechsle\, ist das Gaerende erreicht.\n\n2. pH 
+ MESSEN — getrennt fuer Vorlauf und Presswein\, also zwei Zahlen.\n\nVor
+ her kalibrieren mit den Pufferloesungen 7\,00 und 4\,01. Die 10er-Loesung
+  NICHT benutzen\, sie verschlechtert die Gerade im Weinbereich.\n\nProbe 
+ ins Glas ziehen\, nicht das Geraet in den Ballon halten. Puffer und Wein 
+ auf gleicher Temperatur\, etwa 20 Grad. Elektrode danach mit destillierte
+ m Wasser spuelen und NICHT abwischen.\n\nEintragen in der App unter Erfas
+ sen → Messung → pH-Wert.\n\nWARUM DAS ZAEHLT: Am pH haengen zwei Ents
+ cheidungen. Erstens\, ob der biologische Saeureabbau ueberhaupt laufen ka
+ nn — unter pH 3\,1 stellen die Bakterien ein\, dann waere Warten bei 21
+  Grad sechs verlorene Wochen. Zweitens die Schwefelmenge: bei pH 3\,0 sin
+ d es 0\,5 g Kaliumpyrosulfit auf 30 Liter\, bei pH 3\,6 schon 2\,0 g. Fak
+ tor vier.\n\nBeide Zahlen Lucius durchgeben.
+BEGIN:VALARM
+TRIGGER:-PT30M
+ACTION:DISPLAY
+DESCRIPTION:Wein: Spindel + pH messen — die wichtigste Messung des Jahr
+ gangs
+END:VALARM
+END:VEVENT
+BEGIN:VEVENT
+UID:wein-2026-presswein-abstich@weinbegleiter.local
+DTSTAMP:20260910T060000Z
+DTSTART;TZID=Europe/Berlin:20260915T180000
+DTEND;TZID=Europe/Berlin:20260915T193000
+SUMMARY:Wein: Presswein vom Grobtrub abziehen
+DESCRIPTION:Den Presswein (5-Liter-Ballon und 1\,5-Liter-Flasche) mit dem
+  Schlauchheber vom Bodensatz abziehen. Filter 3 bis 5 cm ueber dem Boden 
+ halten\, den Trub zuruecklassen.\n\nWARUM FRUEHER ALS DER VORLAUF: Pressw
+ ein hat viel mehr Trub. Schwerer Satz zehrt Sauerstoff und bildet Schwefe
+ lwasserstoff. 2025 ist genau daran der Presswein gekippt — der Hefesatz
+  roch schlechter als der Wein.\n\nDanach schrumpft er auf etwa 5 Liter un
+ d passt in den einen 5-Liter-Ballon. Bis zur Schulter fuellen\, Gaerstopf
+ en drauf. Die 1\,5-Liter-Flasche wird das Auffuellgefaess.\n\nVolumen not
+ ieren und in der App eintragen.
+BEGIN:VALARM
+TRIGGER:-PT30M
+ACTION:DISPLAY
+DESCRIPTION:Wein: Presswein vom Grobtrub abziehen
+END:VALARM
+END:VEVENT
+BEGIN:VEVENT
+UID:wein-2026-vorlauf-abstich@weinbegleiter.local
+DTSTAMP:20260910T060000Z
+DTSTART;TZID=Europe/Berlin:20260921T180000
+DTEND;TZID=Europe/Berlin:20260921T200000
+SUMMARY:Wein: Vorlauf — erster Abstich
+DESCRIPTION:Die sechs Gefaesse mit dem Vorlauf (5 mal 5-Liter-Ballon plus
+  3-Liter-Ballon\, zusammen 27\,73 Liter) vom Grobtrub abziehen.\n\nSchlau
+ chheber 3 bis 5 cm ueber dem Boden ansetzen\, Zielgefaess tiefer stellen\
+ , den Trub zuruecklassen. Sauerstoffkontakt kurz halten.\n\nNACH DEM ABST
+ ICH randvoll fuellen — bis in den Hals\, nicht bis zur Schulter. Ab jet
+ zt entsteht kein CO2 mehr\, das den Kopfraum schuetzt. Zum Auffuellen die
+  Flaschen benutzen\, die beim Abziehen uebrig geblieben sind.\n\nErwartet
+  werden etwa 25 Liter\, also rund 10 Prozent Verlust durch den Trub.\n\nV
+ olumen und Kopfraum je Gefaess in der App eintragen.
+BEGIN:VALARM
+TRIGGER:-PT30M
+ACTION:DISPLAY
+DESCRIPTION:Wein: Vorlauf — erster Abstich
+END:VALARM
+END:VEVENT
+BEGIN:VEVENT
+UID:wein-2026-oktober-vorbereitung@weinbegleiter.local
+DTSTAMP:20260910T060000Z
+DTSTART;TZID=Europe/Berlin:20260918T180000
+DTEND;TZID=Europe/Berlin:20260918T190000
+SUMMARY:Wein: Vorbereitung Oktoberlese — Gefaesse bestellen
+DESCRIPTION:Die eigenen Reben werden im Oktober gelesen\, rot UND weiss. 
+ Bis dahin sind alle Ballons mit dem 2026er belegt — es gibt derzeit KEI
+ N freies Ausbaugefaess.\n\nZu klaeren und zu bestellen:\n1. Wie viel Kilo
+  werden erwartet? Danach richtet sich alles Weitere.\n2. Ballons fuer den
+  Ausbau nachbestellen. Lieferzeit einplanen — die letzten kamen mit Ver
+ zoegerung und einer ging im Transport kaputt.\n3. Weisswein braucht kuehl
+ ere Gaerung als Rotwein: 15 bis 18 Grad statt 21. Der Keller liegt bei 21
+ . Ohne Kuehlung verliert der Weisswein Aroma.\n4. Wenn der Weisswein sues
+ s werden soll: Das ist fuer 2026 gesperrt\, weil freier Schwefel nicht me
+ ssbar ist. Genau daran ist der 2025er Weisswein gescheitert — er hat in
+  der Flasche nachgegoren. Alternative Wege vorher mit Lucius klaeren.\n\n
+ Termin mit Lucius besprechen\, bevor bestellt wird.
+BEGIN:VALARM
+TRIGGER:-PT30M
+ACTION:DISPLAY
+DESCRIPTION:Wein: Vorbereitung Oktoberlese — Gefaesse bestellen
+END:VALARM
+END:VEVENT
+END:VCALENDAR

@@ -767,3 +767,6 @@ Weintermin. Mein Fehler: Datei statt Termin übergeben und nie geprüft. Acht Te
 direkt in „Andi Privat" angelegt und gegengeprüft. Neuer Plan: Presswein riechen heute
 Abend, Messen und Presswein-Abstich Di 22.09., Gärende bestätigen Do 24.09., Vorlauf-Abstich
 Sa 26.09.
+
+**21.09. abends — Presswein riecht sauber**, nach Wein und Hefe. Kein H₂S nach zwölf Tagen
+auf dem Grobtrub. Abgezogen wird wie geplant am Di 22.09. nach der Messung.

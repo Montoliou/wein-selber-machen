@@ -738,3 +738,25 @@ Im Browser nachgeprüft, diesmal mit echtem Klick: Der Dialog schließt, das Gef
 
 **Damit ist der Press-Gate in einem Durchgang erfassbar:** Vorlauf 27,73 L, Presswein 6,50 L,
 Maische archivieren.
+
+## 21.09.2026 — Herkunft der Lese, Stand nach elf Tagen
+
+**Herkunft:** Die 48,5 kg dieser Lese waren ein **Geschenk eines Nachbarn**. Die eigenen
+Reben (rot und weiß) werden erst im Oktober gelesen. Für 2027 festhalten: Die Nachbarsquelle
+existiert — ob sie wieder zur Verfügung steht, rechtzeitig vor der Lese klären, sonst fehlen
+rund 34 L in der Planung.
+
+**Eigene Reben, Mengenschätzung:** Die Evidenzdatei 2025 dokumentiert nur **11 kg rot**.
+Zum Weißwein keine Zahl. Mit dem 2026 gemessenen Faktor von 0,71 L je kg sind das 7,8 L rot;
+Andis Erinnerung von „ca. 5 L rot, 2–3 L weiß" passt dazu (5 L ≈ Vorlauf ohne Presswein).
+Eigene Reben 2025 also rund **15 kg Trauben, rund 11 L Wein**. Meine Schätzung vom 10.09. von
+30–35 L war um den Faktor drei zu hoch — ich hatte die Nachbarslese unbesehen übertragen, statt
+in die 2025er Daten zu schauen. Bedarf Oktober: drei bis fünf 5-L-Ballons, Empfehlung vier.
+
+**Kellerklima 09.–21.09.:** stabil 19,9 bis 21,9 °C, langsam fallend auf 20,0 °C heute. Feuchte
+59–66 %. Batterie 100 → 87 % in drei Wochen. Für den biologischen Säureabbau noch im Fenster.
+
+**In der App seit dem Pressen am 09.09. keine einzige Eingabe** — keine Gärende-Spindel (12.
+und 14.09.), kein pH, kein Presswein-Abstich (15.09.), der Press-Gate nicht durchlaufen. Die
+vier Maische-Chargen stehen weiter auf AKTIVE_GAERUNG. Ob die Arbeiten stattfanden und nur
+nicht eingetragen wurden, ist offen — bei Andi erfragt.

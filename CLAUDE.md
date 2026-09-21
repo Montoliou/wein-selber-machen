@@ -75,7 +75,7 @@ Claude-Arbeit (sie ist Spezifikation), UI und Persistenz gehören Codex.
   zwei Chargengruppen.
 - **Maische heute nicht schwefeln** — der 4-g-Vorrat wird nach Gärende dringender gebraucht,
   und SO₂ vor dem Anstellen hemmt die Reinzuchthefe.
-- **Termine** laufen über `.ics` in den macOS-Kalender. Der Morning-Brief von Mission Control
+- ~~**Termine** laufen über `.ics` in den macOS-Kalender.~~ **Überholt am 21.09.2026, siehe unten.** Der Morning-Brief von Mission Control
   liest den Kalender per AppleScript aus (`automation-ops/ki-takte/morning-brief/vorlauf.sh`
   → `data/termine-heute.txt`). **Kein zweites Erinnerungssystem bauen.**
 - **Technik:** Vite + TypeScript, Regelengine strikt getrennt von der UI, Vitest,
@@ -307,3 +307,30 @@ auf die id zeigen.
 relativ zum Arbeitsverzeichnis. Für die App wird daher **aus `app/dist/` heraus** deployt,
 mit einem **Symlink** auf die Datei im Projekt-Root — keine Kopie, damit das Passwort nicht
 dupliziert wird. Symlink danach entfernen.
+
+## Erinnerungen: direkt in den Kalender, nie als Datei (21.09.2026)
+
+**Der Fehler:** Am 10.09. bat Andi „Erinnerst du mich an die Messung?". Ich habe eine
+`.ics`-Datei erzeugt und mit „Doppelklick importiert sie" übergeben. Importiert wurde sie
+nie, und ich habe nie nachgesehen. **Elf Tage ohne eine einzige Erinnerung** — keine
+Gärende-Spindel, kein pH, kein Presswein-Abstich. Der Presswein stand zwölf Tage auf
+schwerem Trub, genau die Lage, in der er 2025 gekippt ist.
+
+Das ist strukturell der Fehler von 2025, den das UX-Konzept wörtlich benennt: *„Die App
+muss ihn holen — 2025 kam niemand."* Ich hatte das selbst zitiert und dann eine Erinnerung
+gebaut, die ihn nicht holt, sondern von ihm geholt werden muss.
+
+**Ab jetzt:**
+- Termine werden **direkt** über den Google-Kalender-Connector angelegt, im Kalender
+  **„Andi Privat"** (`ps0cluvcc0i7f4n8jj3u39730o@group.calendar.google.com`).
+- **Nach dem Anlegen wird geprüft**, dass sie dort stehen (`list_events` mit `fullText`).
+- Jeder Termin trägt die vollständige Anleitung im Text, Popup-Erinnerung zur Startzeit.
+- Keine Datei übergeben, die erst eine Handlung von Andi braucht, um zu wirken.
+
+**Angelegt am 21.09.:** Presswein riechen (21.09.), Spindel + pH (22.09.), Presswein
+abziehen (22.09.), Ballons bestellen (23.09.), Spindel 2 (24.09.), Vorlauf-Abstich
+(26.09.), Trauben zählen (27.09.), Ausbau-Kontrolle alle 14 Tage ab 10.10., zwölfmal.
+
+**AppleScript auf Calendar.app hat keine Berechtigung**, und die Kalenderablage unter
+`~/Library/Group Containers/group.com.apple.calendar` ist aus dem Sandkasten nicht lesbar.
+Prüfen geht nur über den Connector.

@@ -760,3 +760,10 @@ in die 2025er Daten zu schauen. Bedarf Oktober: drei bis fünf 5-L-Ballons, Empf
 und 14.09.), kein pH, kein Presswein-Abstich (15.09.), der Press-Gate nicht durchlaufen. Die
 vier Maische-Chargen stehen weiter auf AKTIVE_GAERUNG. Ob die Arbeiten stattfanden und nur
 nicht eingetragen wurden, ist offen — bei Andi erfragt.
+
+**Nachtrag 21.09.:** Andi hat seit dem 09.09. nichts gemacht — **weil keine Erinnerung kam.**
+Die `.ics`-Datei vom 10.09. wurde nie importiert; in keinem der Google-Kalender stand ein
+Weintermin. Mein Fehler: Datei statt Termin übergeben und nie geprüft. Acht Termine jetzt
+direkt in „Andi Privat" angelegt und gegengeprüft. Neuer Plan: Presswein riechen heute
+Abend, Messen und Presswein-Abstich Di 22.09., Gärende bestätigen Do 24.09., Vorlauf-Abstich
+Sa 26.09.

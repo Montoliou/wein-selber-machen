@@ -3,7 +3,8 @@ titel: Weintermine September 2026 (Gärende, pH, Abstiche, Oktobervorbereitung)
 erzeugt: 2026-09-10
 erzeuger: Lucius (Claude)
 projekt: wein-selber-machen
-gueltig: aktuell
+gueltig: ueberholt
+ueberholt_durch: Termine direkt im Google-Kalender "Andi Privat" (angelegt 21.09.2026)
 zweck: >
   Sechs Kalendertermine als .ics für den macOS-Kalender. Andi hatte um eine Erinnerung
   an die pH-Messung gebeten. Weg über .ics ist die Projektentscheidung vom 30.08.2026 —
@@ -18,3 +19,7 @@ konvention: >
   Begründung und Fehlerbild. Kein Verweis auf andere Dateien (Operating Instructions:
   "Reminder tragen ihre komplette Anleitung im Text").
 ---
+
+**Überholt am 21.09.2026:** Die Datei wurde nie importiert. Sie verlangte einen Doppelklick,
+den niemand gemacht hat, und ich habe nicht geprüft, ob die Termine ankamen. Folge: elf Tage
+ohne Erinnerung — keine Gärende-Spindel, kein pH, kein Presswein-Abstich.

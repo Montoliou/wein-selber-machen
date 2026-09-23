@@ -770,3 +770,42 @@ Sa 26.09.
 
 **21.09. abends — Presswein riecht sauber**, nach Wein und Hefe. Kein H₂S nach zwölf Tagen
 auf dem Grobtrub. Abgezogen wird wie geplant am Di 22.09. nach der Messung.
+
+## 23.09.2026 — Presswein abgezogen, pH gemessen, BSA verworfen
+
+**Presswein: −6 °Oe (SG 0,994), pH 3,17.** Durchgegoren, kein Restzucker.
+**Alkohol rund 11,0 % vol** (82 → −6 °Oe). Zweite Spindelmessung zur Bestätigung am 26.09.
+
+**Schwefelbedarf aus dem gemessenen pH** (Ziel 0,6 mg/L molekular): 14,3 mg/L freier SO₂,
+also **0,12 g Kaliumpyrosulfit für den Presswein, 0,62 g für den Vorlauf, zusammen 0,75 g**.
+Bei pH 3,6 wären es 1,96 g gewesen — Faktor 2,6. Genau dafür war das pH-Meter die richtige
+Anschaffung und das Titrationsset verzichtbar.
+
+### Entscheidung: kein biologischer Säureabbau (Andi)
+
+pH 3,17 liegt hart an der Grenze — unter 3,1 stellen Milchsäurebakterien ein. Ein spontaner
+Abbau wäre ein Münzwurf, ein sauber geführter hätte Animpfkultur (10–15 €) plus
+Papierchromatographie zum Nachweis (~25 €) gebraucht.
+
+**Andi hat abgelehnt**, mit dem Argument, das Aufwand-Nutzen-Verhältnis stimme für diese
+Menge nicht: *„Das wird niemals ein Cuvée oder Spitzenwein."*
+
+**Die Entscheidung ist fachlich gut, nicht nur billig.** Sie ist sogar die **sicherere**
+Variante: Der Wein wird sofort geschwefelt statt sechs bis acht Wochen ungeschützt zu warten,
+und es gibt kein Risiko, dass ein halb gelaufener Säureabbau in der Flasche weitermacht —
+genau der Mechanismus, der 2025 den Weißwein zerstört hat.
+
+**Zwingende Folge, kein optionaler Schritt:** Ohne Säureabbau **muss** zeitnah nach dem
+Abstich geschwefelt werden. Der Schwefel ist das, was einen später spontan anspringenden
+Abbau blockiert. Wer B wählt und das Schwefeln schleifen lässt, bekommt das Schlechteste aus
+beiden Wegen.
+
+**Säure bleibt damit hoch.** Weg dafür steht seit 02.09.: trocken ausbauen, bei Bedarf im
+Glas süßen.
+
+### Kostenbild, weil die Frage aufkam
+
+Verbrauchsmaterial dieses Jahrgangs — Hefe, Nährsalz, Zucker, Schwefel — liegt bei etwa
+**25 €** auf 34 L, also rund **0,75 € je Liter**. Der große Rest (Gärbottiche 53,97 €,
+pH-Meter ~40 €, Ballons ~35 €, Presse ~115 €) ist **Ausrüstung**, die 2027 und danach
+weiterläuft, und gehört nicht in die Rechnung eines einzelnen Jahrgangs.

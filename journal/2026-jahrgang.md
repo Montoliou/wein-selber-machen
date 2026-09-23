@@ -809,3 +809,35 @@ Verbrauchsmaterial dieses Jahrgangs — Hefe, Nährsalz, Zucker, Schwefel — li
 **25 €** auf 34 L, also rund **0,75 € je Liter**. Der große Rest (Gärbottiche 53,97 €,
 pH-Meter ~40 €, Ballons ~35 €, Presse ~115 €) ist **Ausrüstung**, die 2027 und danach
 weiterläuft, und gehört nicht in die Rechnung eines einzelnen Jahrgangs.
+
+**23.09. abends — Vorlauf pH 3,28, Spindel zerbrochen**
+
+**pH Vorlauf 3,28, Presswein 3,17.** Bemerkenswert: Der Presswein liegt **tiefer**, obwohl
+Presswein wegen des Kaliums aus den Schalen üblicherweise den höheren pH hat. Erklärbar durch
+die stärkere Säureextraktion beim Pressen. Beide Werte liegen im guten, schützenden Bereich;
+die Abweichung ändert nichts an der Bewertung, wurde aber notiert, falls sie sich später
+wiederholt.
+
+**Schwefelmengen, mit den jeweils eigenen pH-Werten gerechnet:**
+
+| | pH | freier SO₂ | Kaliumpyrosulfit |
+|---|---|---|---|
+| Presswein 5 L | 3,17 | 14,3 mg/L | 0,12 g |
+| Vorlauf 25 L | 3,28 | 18,3 mg/L | 0,79 g |
+| zusammen | | | **0,92 g** |
+
+**Dosiert wird über eine Stammlösung**, nicht durch Abwiegen von Zehntelgramm: 1,00 g
+Kaliumpyrosulfit in 100 ml Wasser ergibt 10 mg je ml. Davon **12 ml in den Presswein, 79 ml
+in den Vorlauf**. Am selben Tag ansetzen und verbrauchen.
+
+**Spindel beim ersten Messversuch zu Boden gefallen und zerbrochen** — nichts davon im Wein.
+Damit ist die Gärende-Bestätigung des Vorlaufs blockiert. Zwei Ersatzspindeln bestellt
+(Glas, zerbrechlich, Reserve sinnvoll). Der Abstich am 26.09. steht unter Vorbehalt;
+**spätestens am Wochenende 03./04.10.** muss er laufen — dann liegt der Wein vier Wochen auf
+dem Grobtrub, und das ist die Grenze.
+
+**Presswein passte fast vollständig in den 5-L-Ballon**, der Rest wurde getrunken. Erste
+Verkostung des Jahrgangs.
+
+**Gefäßrechnung nach dem Abstich:** 27,73 L minus rund 10 % Trub sind etwa 25 L — das passt
+genau in fünf 5-L-Ballons. **Der 3-L-Ballon wird frei**, kein halbvolles Gefäß.

@@ -841,3 +841,24 @@ Verkostung des Jahrgangs.
 
 **Gefäßrechnung nach dem Abstich:** 27,73 L minus rund 10 % Trub sind etwa 25 L — das passt
 genau in fünf 5-L-Ballons. **Der 3-L-Ballon wird frei**, kein halbvolles Gefäß.
+
+## 25.09.2026 — Neue Mostwaage, Gärende noch offen
+
+**Presswein ist entgegen dem Termin vom 24.09. noch nicht geschwefelt** — Andi wollte alles
+zusammen machen. Wird am 26.09. mit 12 ml Stammlösung nachgeholt, unabhängig vom Vorlauf.
+
+**Neue Mostwaage** (Skala ab SG 1,000 mit drei Strichen darunter, also bis −3 °Oe).
+**Wasserprobe bei 21,5 °C: knapp unter 1,000** — rechnerisch erwartet 0,9997, weil Wasser bei
+21,5 °C leichter ist als bei der Eichtemperatur 20 °C. **Kein Versatz, das Gerät stimmt.**
+
+**Ballon 3 (Vorlauf): −3 °Oe.** Echt, nicht Messfehler.
+
+**Korrektur meiner eigenen Tabelle vom 24.09.:** Dort hatte ich −3 °Oe mit „rund 10 g/L
+Restzucker" übersetzt. Zu präzise. Die Rechnung setzte „trocken bei 11 % vol = SG 0,993"
+voraus; tatsächlich hängt die Trockengrenze auch am **Extrakt** (Säuren, Glycerin, Gerbstoffe).
+Ein säurereicher Rotwein mit 11 % kann trocken bei −4 bis −5 °Oe stehen. **−3 kann 3 g/L
+bedeuten oder 10.** Eine Einzelmessung mit der Mostwaage entscheidet das nicht.
+
+**Entscheidung:** Vorlauf am 26.09. abziehen (Grobtrub muss weg), zwei Ballons danach messen
+und markieren, **nicht schwefeln**. Nachmessen am 29.09. Steht der Wert still, ist die Gärung
+durch und es wird geschwefelt. Fällt er, gärt er noch. Dazu Geschmacksprobe auf Süße.

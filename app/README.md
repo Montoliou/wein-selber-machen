@@ -20,7 +20,9 @@ Die App ordnet ihre Oberfläche über `layoutKlasse()` in drei Klassen ein: Tele
 
 Jede Rundeneingabe wird zuerst lokal in IndexedDB gespeichert. Fällt die Verbindung während der Runde aus, bleibt die Erfassung benutzbar; der Abgleich startet beim nächsten Speichern oder beim nächsten Online-Ereignis erneut. Die Rücknahmefrist entfernt genau die zuletzt gespeicherten Messungen und Ereignisse und legt dafür Sync-Grabsteine an.
 
-Gate-Prüfungen laufen einzeln nacheinander. Eine fehlende Messung kann direkt in der betreffenden Prüfung erfasst werden. Nach bestandenem Press-Gate legt der geführte Press-Schritt Vorlauf und Presswein als getrennte Nachgärungs-Chargen mit Eltern-ID, Volumenpunkt, Kopfraum und Behälter an und archiviert die Maische-Charge.
+Gate-Prüfungen laufen einzeln nacheinander. Eine fehlende Messung kann direkt in der betreffenden Prüfung erfasst werden. Nach bestandenem Press-Gate verteilt `fuellplan()` Vorlauf und Presswein auf mehrere gewählte Gefäße. Je Gefäß entsteht eine Nachgärungs-Charge im Los `Vorlauf <Jahrgang>` oder `Presswein <Jahrgang>`; `herkunftIds` verweist auf alle archivierten Maische-Chargen.
+
+Jedes aktive Los in Nachgärung oder Ausbau bietet den geführten Abstich an. `abstichGate()` prüft Gärende, Trennung der Fraktionen, Sperren, Zielgefäße und die Bestätigung der abgekühlten Ballons. Der Füllplan verwendet die Gefäße des Loses und freie Gefäße; belegte Gefäße anderer Lose fehlen in der Auswahl. Nach dem Abstich zeigt die App bei bestätigtem Gärende die Milliliter Stammlösung je Gefäß aus `stammloesungMl()` und speichert die Zugabe in Gramm Kaliumpyrosulfit.
 
 Ab 1.200 px zeigt der Schreibtisch links Navigation und Gefäße, in der Mitte Status, Kurven, Kellerklima und Phase sowie rechts Messungen und Ereignisse des gewählten Gefäßes. Die Zeilen im rechten Bereich öffnen die vorhandenen Bearbeitungsansichten.
 
@@ -31,6 +33,8 @@ Die Messerfassung öffnet im Modus „Ein Bottich / viele Werte“. Die App zeig
 Nach dem Speichern nennt die App die erfassten Messgrößen. „Weiter zu Bottich N“ öffnet die nächste aktive Charge mit leeren Messwerten und demselben Zeitpunkt. Nach der letzten aktiven Charge bleibt „Runde beenden“ als Abschluss.
 
 Der Modus „Ein Wert / alle Bottiche“ erfasst eine Messgröße für mehrere ausgewählte Chargen. Die Chargenauswahl und bereits eingegebene Werte bleiben bei einem Wechsel der Messgröße erhalten. Jede ausgewählte Charge erhält weiterhin einen eigenen Messdatensatz.
+
+Bei °Oe und SG kann „unter der Skala“ eingeschaltet werden. Dann speichert die App das änderbare Skalenende mit `grenze: 'unter'`. Listen, Journal, Kurvenbeschriftungen sowie Markdown- und CSV-Export zeigen den Wert mit vorangestelltem `<`.
 
 ## Prüfen und bauen
 
@@ -78,7 +82,7 @@ Der Link enthält keine Zugangsdaten und liegt im ignorierten Build-Ordner. Ein 
 ## Datenstruktur
 
 - `Datenstand`: Jahrgang, Chargen, Behälter, Messungen, Ereignisse, Reminder, Wiki, Klima, Sensor und Vorrat.
-- `Charge.mengeKg` und `Charge.elternChargeId`: Menge und direkte Abstammung liegen im Chargenmodell.
+- `Charge.los` gruppiert denselben Wein über mehrere Gefäße. `Charge.herkunftIds` hält alle Ausgangschargen einer Press- oder Aufteilungsaktion fest; `elternChargeId` bleibt für ältere direkte Abstammungen erhalten.
 - `Charge.volumenHistorie`: Pressen, Abstiche und Gefäßwechsel hängen einen neuen Volumenpunkt an. `fuellLiter` und `kopfraumLiter` spiegeln den jüngsten Punkt.
 - `Ereignis.vorratId`: Verknüpfte Zugaben vermindern den Vorrat; beim Löschen bucht die Speicherschicht die Menge zurück.
 - IndexedDB-Store `datenstand`: aktiver Datenstand. Beim Laden migriert die App ältere Fassungen auf Version 3, ergänzt Sync-Zeitstempel und schreibt die Migration zurück.
@@ -104,4 +108,4 @@ Fotos bleiben gerätelokal. Sie liegen als Blobs in einem eigenen IndexedDB-Stor
 
 `Reminder` hat noch kein Feld, das einen Termin direkt mit einer Gefäßlieferung verknüpft. Die UI erkennt Liefertermine deshalb an Lieferwörtern in Titel oder Beschreibung und ordnet die Gefäße über `vorhandenAb <= Termindatum` zu. Eine spätere typisierte Verknüpfung würde diese Texterkennung ersetzen; dafür müsste das derzeit gesperrte Domänenmodell erweitert werden.
 
-H6 bis H8 bringen darüber hinaus keine offenen Punkte mit. Der Schreibtisch, die Runde, „Heute“, der Press-Gate-Fluss, die Zugaben und die Gefäßverwaltung verwenden die vorhandenen Datenstrukturen und Fachfunktionen.
+H6 bis H10 bringen darüber hinaus keine offenen Punkte mit. Press-Füllplan, Abstich-Gate, Behälterauswahl und Stammlösung verwenden die vorhandenen Fachfunktionen. Fehlt der pH-Wert eines Loses, zeigt der Abstich bewusst keinen Schwefelvorschlag.

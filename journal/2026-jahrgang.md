@@ -862,3 +862,26 @@ bedeuten oder 10.** Eine Einzelmessung mit der Mostwaage entscheidet das nicht.
 **Entscheidung:** Vorlauf am 26.09. abziehen (Grobtrub muss weg), zwei Ballons danach messen
 und markieren, **nicht schwefeln**. Nachmessen am 29.09. Steht der Wert still, ist die Gärung
 durch und es wird geschwefelt. Fällt er, gärt er noch. Dazu Geschmacksprobe auf Süße.
+
+## 26.09.2026 — Vorlauf abgestochen
+
+**Ballon-Nummerierung ab jetzt (Andis Zählung):** 1–5 = Vorlauf je 5 L, 6 = 3-L-Ballon,
+**7 = Presswein.** In früheren Kalenderterminen hieß der Presswein „Gärballon 6" — korrigiert.
+
+**Ablauf:** Ballons 1–4 im 20-L-Bottich vereinigt und gemessen: **−4 °Oe** (im Bottich schwimmt
+die neue Mostwaage frei, im Zylinder hat sie zu viel Tiefgang). Ballons heiß ausgekocht,
+handwarm abkühlen lassen, randvoll zurückgefüllt. Ballon 4 mit dem ersten Abzug aus Ballon 5
+aufgefüllt. Der Rest aus Ballon 5 und 6 sank **unter den letzten Strich (< −3 °Oe)**, Andi schätzt
+um −6. Alles passte in Ballon 5.
+
+**Ergebnis: Ballon 1–5 bis in den Hals voll, Ballon 6 leer, kein halbvolles Gefäß.** Die
+Trubverluste waren kleiner als die angesetzten 10 %.
+
+**Befund passt zur Herkunft:** Der Rest aus Ballon 5/6 stammt aus Bottich 3 und 4, die Mischung
+1–4 enthält den Nachzügler Bottich 1 (12 °Oe beim Abziehen am 06.09.). Deshalb ist die Mischung
+etwas weniger weit.
+
+**Vorlauf nicht geschwefelt**, Presswein (Ballon 7) heute mit 12 ml Stammlösung (0,12 g
+Kaliumpyrosulfit). Nachmessen am 29.09. **nur an Ballon 1** — Ballon 4 und 5 liegen unter der
+Skala und können eine Bewegung nicht zeigen. Bleibt Ballon 1 bei −4, werden alle fünf mit je
+16 ml Stammlösung geschwefelt.

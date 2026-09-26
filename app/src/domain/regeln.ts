@@ -35,7 +35,18 @@ export const GRENZEN = {
   gaerendeMaxSg: 0.9960,     // Restzucker praktisch durchgegoren
   gaerendeMaxDeltaSg: 0.0010,
   gaerendeMindestabstandStunden: 48,
-  kontrollintervallAusbauTage: 21,
+  /** 14 Tage: der Rhythmus, den Andi seit 21.09.2026 im Kalender hat (vorher 21). */
+  kontrollintervallAusbauTage: 14,
+  /** Nutzvolumen eines Ballons relativ zum Nennvolumen. Gemessen 26.09.2026: 5 L bis in den Hals ≈ 5,3 L. */
+  fuellfaktorHals: 1.06,
+  /** Bis zur Schulter: 4,9 kg im 5-L-Ballon am 06.09.2026. */
+  fuellfaktorSchulter: 0.98,
+  /** Erwarteter Verlust beim Abstich. 26.09.2026 lag er deutlich unter den früher angesetzten 10 %. */
+  abstichTrubAnteil: 0.05,
+  /** Ein Gefäß gilt als „voll genug", wenn es zu mindestens 90 % seines Nutzvolumens gefüllt ist. */
+  fuellplanMindestFuellung: 0.9,
+  /** So viel Rest darf in Auffüllflaschen gehen, bevor die Gefäße als nicht ausreichend gelten. */
+  fuellplanMaxRestLiter: 1.5,
   gaertemperaturRotMin: 18,
   gaertemperaturRotMax: 28,
   maischeKaltMin: 4,
@@ -129,16 +140,39 @@ export function befundeFuerCharge(stand: Datenstand, charge: Charge, jetzt = new
     })
   }
 
-  // R-KOPFRAUM: Pflichtvariable (Audit-Regel 5), scharf ab Ausbau
+  // R-KOPFRAUM: Pflichtvariable (Audit-Regel 5), scharf ab Ausbau.
+  // Seit 26.09.2026 genügt die Füllstand-Stufe; sie gilt, wenn sie jünger ist als die letzte Literangabe.
   const inAusbau = ['AUSBAU', 'STABILITAETS_GATE', 'SUESSE_GATE', 'ABFUELL_GATE'].includes(charge.phase)
   if (inAusbau) {
-    if (charge.fuellLiter == null || charge.kopfraumLiter == null) {
+    const stufe = letzteMessung(stand, charge.id, 'fuellstand')
+    const letzterVolumenpunkt = [...(charge.volumenHistorie ?? [])].sort((a, b) => b.zeit.localeCompare(a.zeit))[0]
+    const stufeGilt = stufe?.text != null && (!letzterVolumenpunkt || stufe.zeit >= letzterVolumenpunkt.zeit
+      || charge.fuellLiter == null || charge.kopfraumLiter == null)
+    if (stufeGilt) {
+      if (stufe!.text === 'darunter') {
+        b.push({
+          regelId: 'R-KOPFRAUM',
+          ampel: 'ORANGE',
+          titel: 'Füllstand unter der Schulter — zu viel Kopfraum',
+          text: 'Genau diese Konstellation hat den Hauptwein 2025 über den Sommer gekippt: Kopfraum über Monate, Gärspund als Dauerverschluss, keine Kontrolle.',
+          massnahme: 'Aus der Auffüllflasche bis in den Hals nachfüllen oder in ein kleineres Gefäß umziehen.',
+        })
+      } else if (stufe!.text === 'an der Schulter') {
+        b.push({
+          regelId: 'R-KOPFRAUM',
+          ampel: 'YELLOW',
+          titel: 'Füllstand an der Schulter',
+          text: 'Nach dem Gärende gehört der Wein bis in den Hals. An der Schulter liegt mehr Luft über dem Wein, als ein langer Ausbau verträgt.',
+          massnahme: 'Aus der Auffüllflasche bis in den Hals nachfüllen.',
+        })
+      }
+    } else if (charge.fuellLiter == null || charge.kopfraumLiter == null) {
       b.push({
         regelId: 'R-KOPFRAUM-FEHLT',
         ampel: 'ORANGE',
         titel: 'Kopfraum nicht erfasst',
-        text: 'Kopfraum ist im Ausbau Pflichtvariable. Ohne diese Zahl lässt sich das Oxidationsrisiko nicht beurteilen.',
-        massnahme: 'Füllvolumen und Kopfraum am Gefäß eintragen.',
+        text: 'Kopfraum ist im Ausbau Pflichtvariable. Ohne diese Angabe lässt sich das Oxidationsrisiko nicht beurteilen.',
+        massnahme: 'Füllstand am Gefäß eintragen: im Hals, an der Schulter oder darunter.',
       })
     } else {
       const anteil = kopfraumAnteil(charge.fuellLiter, charge.kopfraumLiter)
@@ -400,8 +434,12 @@ export function gaerendeGate(stand: Datenstand, charge: Charge): GateErgebnis {
   const abstandOk = zweiMessungen && m0 && m1
     ? stundenZwischen(m0.zeit, m1.zeit) >= GRENZEN.gaerendeMindestabstandStunden
     : false
-  const konstant = zweiMessungen ? Math.abs(sg0! - sg1!) <= GRENZEN.gaerendeMaxDeltaSg : false
+  // Werte jenseits der Skala (26.09.2026: Mostwaage endet bei −3 °Oe) beweisen keinen Stillstand.
+  const jenseits = Boolean(m0?.grenze || m1?.grenze)
+  const konstant = zweiMessungen && !jenseits ? Math.abs(sg0! - sg1!) <= GRENZEN.gaerendeMaxDeltaSg : false
   const trocken = sg0 !== null ? sg0 <= GRENZEN.gaerendeMaxSg : false
+  // „unter X" ist nur dann sicher trocken, wenn schon X unter der Grenze liegt.
+  const trockenUnbestimmt = m0?.grenze === 'unter' && !trocken
 
   checks.push({
     id: 'gaerende-zwei-messungen',
@@ -417,18 +455,22 @@ export function gaerendeGate(stand: Datenstand, charge: Charge): GateErgebnis {
   checks.push({
     id: 'gaerende-konstant',
     frage: `Sind beide Werte konstant (Δ ≤ ${GRENZEN.gaerendeMaxDeltaSg.toFixed(4)})?`,
-    erfuellt: zweiMessungen ? konstant : null,
-    begruendung: zweiMessungen
-      ? `Δ = ${Math.abs(sg0! - sg1!).toFixed(4)}.`
-      : 'Nicht beurteilbar.',
+    erfuellt: zweiMessungen && !jenseits ? konstant : null,
+    begruendung: !zweiMessungen
+      ? 'Nicht beurteilbar.'
+      : jenseits
+        ? 'Mindestens ein Wert liegt jenseits der Skala. Ob er sich bewegt hat, ist nicht ablesbar — mit der Feinspindel messen.'
+        : `Δ = ${Math.abs(sg0! - sg1!).toFixed(4)}.`,
   })
 
   checks.push({
     id: 'gaerende-trocken',
     frage: `Ist der Wein durchgegoren (SG ≤ ${GRENZEN.gaerendeMaxSg.toFixed(4)})?`,
-    erfuellt: sg0 !== null ? trocken : null,
+    erfuellt: sg0 === null || trockenUnbestimmt ? null : trocken,
     begruendung: sg0 === null
       ? 'Keine Dichtemessung.'
+      : trockenUnbestimmt
+        ? `Unter SG ${sg0.toFixed(4)}, aber nicht sicher unter ${GRENZEN.gaerendeMaxSg.toFixed(4)}. Die Skala reicht nicht tief genug.`
       : trocken
         ? `SG ${sg0.toFixed(4)} — durchgegoren.`
         : `SG ${sg0.toFixed(4)} weist auf Restzucker hin. Ein Wein mit Restzucker ist nicht am Gärende, sondern womöglich stecken geblieben.`,
@@ -638,4 +680,171 @@ export function behaelterVerfuegbar(behaelter: Behaelter, stichtagISO: string): 
   if (behaelter.ausgemustertAm && behaelter.ausgemustertAm.slice(0, 10) <= tag) return false
   if (behaelter.vorhandenAb && behaelter.vorhandenAb.slice(0, 10) > tag) return false
   return true
+}
+
+// ─── Ausbau: Füllplan und Abstich (26.09.2026) ─────────────────────────────
+
+export interface FuellplanGefaess { behaelterId: string; bruttoLiter: number }
+
+export interface Fuellplan {
+  /** Weinmenge nach Abzug des erwarteten Trubs. */
+  volumenLiter: number
+  zielFuellung: 'hals' | 'schulter'
+  befuellt: { behaelterId: string; liter: number; anteil: number }[]
+  /** Rest für Auffüllflaschen. */
+  restLiter: number
+  frei: string[]
+  reichtNicht: boolean
+  hinweise: string[]
+}
+
+const r2 = (x: number): number => Math.round(x * 100) / 100
+
+/**
+ * Verteilt eine Weinmenge so auf Gefäße, dass kein halbvolles Gefäß bleibt.
+ * Gesucht wird die Auswahl mit dem kleinsten Leerraum, bei der höchstens ein Gefäß
+ * nicht ganz voll ist — und das mindestens zu 90 %. Findet sich keine, werden so viele
+ * Gefäße wie möglich voll gemacht und der Rest geht in Auffüllflaschen.
+ * Beleg 26.09.2026: 27,73 L auf 5 × 5 L + 3 L → fünf 5-L-Ballons, der 3-L-Ballon bleibt frei.
+ */
+export function fuellplan(
+  volumenVorAbstich: number,
+  gefaesse: FuellplanGefaess[],
+  optionen: { zielFuellung?: 'hals' | 'schulter'; trubAnteil?: number } = {},
+): Fuellplan {
+  const zielFuellung = optionen.zielFuellung ?? 'hals'
+  const trub = optionen.trubAnteil ?? GRENZEN.abstichTrubAnteil
+  const faktor = zielFuellung === 'hals' ? GRENZEN.fuellfaktorHals : GRENZEN.fuellfaktorSchulter
+  const volumen = r2(volumenVorAbstich * (1 - trub))
+  const nutz = gefaesse.map(g => ({ ...g, nutz: g.bruttoLiter * faktor }))
+  const n = nutz.length
+  const hinweise: string[] = []
+
+  let beste: { maske: number; leer: number; anzahl: number } | null = null
+  if (n <= 16) {
+    for (let maske = 1; maske < (1 << n); maske++) {
+      let kap = 0; let groesste = 0; let anzahl = 0
+      for (let i = 0; i < n; i++) if (maske & (1 << i)) { kap += nutz[i]!.nutz; groesste = Math.max(groesste, nutz[i]!.nutz); anzahl++ }
+      const leer = kap - volumen
+      if (leer < -1e-9 || leer > (1 - GRENZEN.fuellplanMindestFuellung) * groesste + 1e-9) continue
+      if (!beste || leer < beste.leer - 1e-9 || (Math.abs(leer - beste.leer) < 1e-9 && anzahl < beste.anzahl)) beste = { maske, leer, anzahl }
+    }
+  }
+
+  const befuellt: Fuellplan['befuellt'] = []
+  let restLiter = 0
+  if (beste) {
+    const gewaehlt = nutz.filter((_, i) => beste!.maske & (1 << i)).sort((a, b) => b.nutz - a.nutz)
+    gewaehlt.forEach((g, i) => {
+      const liter = i === 0 ? g.nutz - beste!.leer : g.nutz
+      befuellt.push({ behaelterId: g.behaelterId, liter: r2(liter), anteil: r2(liter / g.nutz) })
+    })
+    if (beste.leer > 0.05) hinweise.push(`Ein Gefäß ist zu ${Math.round((1 - beste.leer / gewaehlt[0]!.nutz) * 100)} % gefüllt — aus der Auffüllflasche nachfüllen.`)
+  } else {
+    // Keine passende Auswahl: größtmögliche Menge in volle Gefäße, Rest in Flaschen.
+    let bestKap = 0; let bestMaske = 0
+    if (n <= 16) {
+      for (let maske = 1; maske < (1 << n); maske++) {
+        let kap = 0
+        for (let i = 0; i < n; i++) if (maske & (1 << i)) kap += nutz[i]!.nutz
+        if (kap <= volumen + 1e-9 && kap > bestKap) { bestKap = kap; bestMaske = maske }
+      }
+    }
+    nutz.forEach((g, i) => { if (bestMaske & (1 << i)) befuellt.push({ behaelterId: g.behaelterId, liter: r2(g.nutz), anteil: 1 }) })
+    restLiter = r2(volumen - bestKap)
+    if (restLiter > GRENZEN.fuellplanMaxRestLiter) {
+      // Zu viel für Flaschen: in das kleinste freie Gefäß, das den Rest fasst — mit Warnung.
+      const kandidat = nutz
+        .filter((_, i) => !(bestMaske & (1 << i)))
+        .filter(g => g.nutz >= restLiter - 1e-9)
+        .sort((a, b) => a.nutz - b.nutz)[0]
+      if (kandidat) {
+        const anteil = r2(restLiter / kandidat.nutz)
+        befuellt.push({ behaelterId: kandidat.behaelterId, liter: restLiter, anteil })
+        hinweise.push(`Ein Gefäß ist nur zu ${Math.round(anteil * 100)} % gefüllt — Kopfraum. Mit der Auffüllflasche ausgleichen oder ein kleineres Gefäß wählen.`)
+        restLiter = 0
+      }
+    }
+    if (restLiter > 0) hinweise.push(`${restLiter.toFixed(2).replace('.', ',')} L randvoll in Flaschen — das ist der Auffüllvorrat.`)
+  }
+  const belegt = new Set(befuellt.map(b => b.behaelterId))
+  const frei = gefaesse.filter(g => !belegt.has(g.behaelterId)).map(g => g.behaelterId)
+  const reichtNicht = restLiter > GRENZEN.fuellplanMaxRestLiter
+  if (reichtNicht) hinweise.push('Die gewählten Gefäße reichen nicht. Weitere Gefäße auswählen.')
+  return { volumenLiter: volumen, zielFuellung, befuellt, restLiter, frei, reichtNicht, hinweise }
+}
+
+export interface AbstichEingabe {
+  /** Die Chargen, die abgezogen werden, z. B. Ballon 1–5 eines Loses. */
+  quellen: Charge[]
+  /** Die gewählten Zielgefäße. */
+  ziele: Behaelter[]
+  /** Summe der Füllvolumina vor dem Abstich. */
+  volumenLiter: number
+  /** null = noch nicht bestätigt. */
+  ballonsAbgekuehlt: boolean | null
+  /** Gärende nicht bestätigt, aber bewusst trotzdem abziehen (z. B. Grobtrub zu lange). */
+  vorziehenBegruendung?: string
+}
+
+export interface AbstichPruefung extends GateErgebnis {
+  zielFuellung: 'hals' | 'schulter'
+  /** Schwefel erst, wenn das Gärende bestätigt ist — sonst stoppt er die Hefe vor dem Ziel. */
+  schwefelFreigegeben: boolean
+  plan: Fuellplan
+}
+
+/**
+ * Abstich-Gate. Der Abstich ist der sauerstoffreichste Schritt des Jahres und hatte
+ * bis 26.09.2026 keine einzige Prüfung.
+ */
+export function abstichGate(stand: Datenstand, e: AbstichEingabe): AbstichPruefung {
+  const checks: GateCheck[] = []
+  const gaerendeOk = e.quellen.length > 0 && e.quellen.every(q => gaerendeGate(stand, q).freigegeben)
+  const vorgezogen = !gaerendeOk && Boolean(e.vorziehenBegruendung?.trim())
+  checks.push({
+    id: 'abstich-gaerende',
+    frage: 'Ist das Gärende bestätigt?',
+    erfuellt: gaerendeOk || vorgezogen ? true : null,
+    begruendung: gaerendeOk
+      ? 'Zwei konstante Dichtemessungen im Mindestabstand liegen vor.'
+      : vorgezogen
+        ? `Bewusst vorgezogen: ${e.vorziehenBegruendung!.trim()} Gefüllt wird nur bis zur Schulter, Schwefel bleibt gesperrt, bis das Gärende feststeht.`
+        : 'Nicht bestätigt. Entweder zweite Messung abwarten oder den Abstich bewusst vorziehen und begründen.',
+  })
+
+  const typen = new Set(e.quellen.map(q => q.typ))
+  const getrennt = !(typen.has('presswein') && typen.size > 1)
+  checks.push({
+    id: 'abstich-getrennt',
+    frage: 'Bleiben Vorlauf und Presswein getrennt?',
+    erfuellt: getrennt,
+    begruendung: getrennt ? 'Alle Quellen gehören zur selben Fraktion.' : 'Presswein und Vorlauf würden zusammenlaufen (Audit-Regel 8).',
+  })
+
+  const rot = e.quellen.filter(q => q.gesperrt || ampelFuerCharge(stand, q) === 'RED')
+  checks.push({
+    id: 'abstich-nicht-gesperrt',
+    frage: 'Ist keine Quelle gesperrt?',
+    erfuellt: rot.length === 0,
+    begruendung: rot.length === 0 ? 'Keine rote Ampel.' : `Gesperrt: ${rot.map(q => q.name).join(', ')}. Erst den Befund klären.`,
+  })
+
+  const zielFuellung = gaerendeOk ? 'hals' : 'schulter'
+  const plan = fuellplan(e.volumenLiter, e.ziele.map(z => ({ behaelterId: z.id, bruttoLiter: z.bruttoLiter })), { zielFuellung })
+  checks.push({
+    id: 'abstich-gefaesse',
+    frage: 'Reichen die Zielgefäße ohne halbvolles Gefäß?',
+    erfuellt: !plan.reichtNicht,
+    begruendung: plan.reichtNicht ? plan.hinweise.join(' ') : `${plan.befuellt.length} Gefäße, ${plan.frei.length} bleiben frei.`,
+  })
+
+  checks.push({
+    id: 'abstich-abgekuehlt',
+    frage: 'Sind die Ballons ausgespült und abgekühlt?',
+    erfuellt: e.ballonsAbgekuehlt,
+    begruendung: e.ballonsAbgekuehlt ? 'Bestätigt.' : 'Heißes Glas kann springen, wenn kühler Wein hineinläuft.',
+  })
+
+  return { ...baueGate('ERSTER_ABSTICH', 'Abstich-Gate', checks), zielFuellung, schwefelFreigegeben: gaerendeOk, plan }
 }

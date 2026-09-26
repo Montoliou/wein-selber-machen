@@ -36,6 +36,7 @@ export type MessTyp =
   | 'temperatur' | 'oechsle' | 'sg' | 'brix' | 'ph' | 'gesamtsaeure'
   | 'so2_frei' | 'so2_gesamt' | 'yan' | 'volumen' | 'kopfraum'
   | 'geruch' | 'geschmack' | 'oberflaeche' | 'gaeraktivitaet' | 'restzucker'
+  | 'fuellstand'
 
 export interface MessDefinition {
   typ: MessTyp
@@ -59,6 +60,9 @@ export const MESS_DEFINITIONEN: MessDefinition[] = [
   { typ: 'volumen', label: 'Füllvolumen', einheit: 'L', art: 'zahl' },
   { typ: 'kopfraum', label: 'Kopfraum', einheit: 'L', art: 'zahl', hinweis: 'Pflichtvariable — Audit-Regel 5' },
   { typ: 'restzucker', label: 'Restzucker', einheit: 'g/L', art: 'zahl' },
+  { typ: 'fuellstand', label: 'Füllstand', einheit: '', art: 'auswahl',
+    optionen: ['im Hals', 'an der Schulter', 'darunter'],
+    hinweis: 'Stufe statt Liter — am Ballon schätzt niemand Kopfraum in Litern' },
   { typ: 'geruch', label: 'Geruch', einheit: '', art: 'auswahl',
     optionen: ['sauber / fruchtig', 'hefig', 'reduktiv / dumpf', 'faule Eier (H₂S)', 'essigstichig', 'Klebstoff / Lösungsmittel', 'muffig'] },
   { typ: 'geschmack', label: 'Geschmack', einheit: '', art: 'auswahl',
@@ -86,6 +90,12 @@ export interface Messung {
   wert: number | null   // bei art 'auswahl' null
   text?: string         // bei art 'auswahl'
   methode?: MessMethode // nur bei Dichte-/Zuckerwerten relevant
+  /**
+   * Der wahre Wert liegt jenseits der Skala des Messgeräts; `wert` ist dann die Skalengrenze.
+   * Beispiel 26.09.2026: Die Mostwaage endet bei −3 °Oe, der Wein sank darunter →
+   * { typ: 'oechsle', wert: -3, grenze: 'unter' }. Zwei solche Werte beweisen keinen Stillstand.
+   */
+  grenze?: 'unter' | 'ueber'
   notiz?: string
 }
 
@@ -132,6 +142,8 @@ export interface Behaelter {
    */
   ausgemustertAm?: string
   ausgemustertGrund?: string
+  /** Position im Kellerregal von links, damit die App die Gefäße so zeigt, wie sie stehen. */
+  regalPosition?: number
   notiz?: string
 }
 
@@ -152,6 +164,13 @@ export interface Charge {
   phase: Phase
   phaseSeit?: string
   elternChargeId?: string
+  /**
+   * Los: derselbe Wein in mehreren Gefäßen, z. B. „Vorlauf 2026" in Ballon 1–5.
+   * Je Gefäß eine Charge, damit Kopfraum und Kontrolle je Gefäß prüfbar bleiben.
+   */
+  los?: string
+  /** Chargen, aus denen diese hervorging (Abstich/Pressen aus mehreren Bottichen). */
+  herkunftIds?: string[]
   startdatum: string
   mengeKg?: number
   behaelterId?: string

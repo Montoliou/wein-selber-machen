@@ -213,3 +213,37 @@ export function maischeVolumen(kgEntrappt: number): number {
 export function benoetigtesGaervolumen(kgEntrappt: number): number {
   return Math.round(maischeVolumen(kgEntrappt) / MAX_FUELLGRAD_MAISCHE)
 }
+
+/** Deutsches Zahlenformat für Texte, die Andi liest. */
+function deZahl(x: number, stellen?: number): string {
+  return (stellen == null ? String(x) : x.toFixed(stellen)).replace('.', ',')
+}
+
+/** 1 g Kaliumpyrosulfit in 100 ml Wasser. So wird im Keller tatsächlich dosiert. */
+export const STAMMLOESUNG_MG_PRO_ML = 10
+
+/**
+ * Schwefelgabe in Millilitern Stammlösung statt in Gramm.
+ * Für 5 L Wein braucht es rund ein Zehntelgramm Kaliumpyrosulfit — das wiegt niemand
+ * zuverlässig ab. Kontrolle 26.09.2026: pH 3,28 → 15,9 ml je 5 L, pH 3,17 → 12,4 ml.
+ */
+export function stammloesungMl(
+  volumenLiter: number,
+  ph: number,
+  molekularZiel = 0.6,
+  mgProMl = STAMMLOESUNG_MG_PRO_ML,
+): Rechenergebnis {
+  const frei = molekularZiel * (1 + Math.pow(10, ph - PKA_SO2))
+  const kpsMg = frei * volumenLiter / SO2_ANTEIL_KPS
+  const ml = kpsMg / mgProMl
+  return {
+    wert: Math.round(ml * 10) / 10,
+    einheit: 'ml Stammlösung',
+    formel: `${deZahl(molekularZiel)} × (1 + 10^(${deZahl(ph)} − 1,81)) = ${deZahl(frei, 1)} mg/L frei · ${deZahl(volumenLiter)} L ÷ 0,576 ÷ ${mgProMl} mg/ml`,
+    sicherheit: 'gerechnet',
+    hinweise: [
+      `Entspricht ${deZahl(kpsMg / 1000, 2)} g Kaliumpyrosulfit.`,
+      'Freier SO₂ wird nicht gemessen; die Dosis ist eine Rechnung, kein Messbeleg.',
+    ],
+  }
+}

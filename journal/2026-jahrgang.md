@@ -885,3 +885,12 @@ etwas weniger weit.
 Kaliumpyrosulfit). Nachmessen am 29.09. **nur an Ballon 1** — Ballon 4 und 5 liegen unter der
 Skala und können eine Bewegung nicht zeigen. Bleibt Ballon 1 bei −4, werden alle fünf mit je
 16 ml Stammlösung geschwefelt.
+
+**26.09. nachmittags:** Presswein (Ballon 7) mit 12 ml Stammlösung geschwefelt. Beim Ansetzen
+fielen 1,5 g statt 1,0 g Kaliumpyrosulfit ins Glas; Andi hat auf 150 ml aufgefüllt — gleiche
+Konzentration (10 mg/ml), Dosis unverändert 12 ml.
+
+**Foto nach dem Abstich** (`Claude_Fotos/6Gärballons_nach_Abzug.HEIC`): Ballon 7, 1, 2, 3, 4, 5 im
+Kellerregal, **alle bis in den Hals gefüllt**, Kellersensor direkt davor. Farbe deutlich tiefer
+(Rubin bis Purpur) und klarer als vor dem Abstich. Fünf volle 5-L-Ballons Vorlauf entsprechen
+etwa 26–27 L; die Trubverluste waren kleiner als angesetzt.

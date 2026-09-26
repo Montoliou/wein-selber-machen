@@ -334,3 +334,35 @@ abziehen (22.09.), Ballons bestellen (23.09.), Spindel 2 (24.09.), Vorlauf-Absti
 **AppleScript auf Calendar.app hat keine Berechtigung**, und die Kalenderablage unter
 `~/Library/Group Containers/group.com.apple.calendar` ist aus dem Sandkasten nicht lesbar.
 Prüfen geht nur über den Connector.
+
+## Stand nach dem ersten Abstich (26.09.2026)
+
+**Gefäße (Andis Nummerierung, orange Aufkleber):** Ballon 1–5 = Vorlauf, je 5 L, bis in den
+Hals, zusammen etwa 26–27 L. Ballon 6 = 3-L-Ballon, **leer**. **Ballon 7 = Presswein**, ~5 L.
+Frühere Termine nannten den Presswein „Gärballon 6" — gilt nicht mehr.
+
+**Messwerte:** pH Vorlauf 3,28, Presswein 3,17. Presswein −6 °Oe (durchgegoren). Vorlauf:
+Mischung Ballon 1–3 bei −4 °Oe, Ballon 4/5 unter der Skala. Alkohol rund 11 % vol.
+
+**Schwefeln über Stammlösung** 1 g Kaliumpyrosulfit auf 100 ml = 10 mg/ml, nie Zehntelgramm
+abwiegen. Presswein 12 ml (am 26.09. erledigt). Vorlauf 16 ml je 5-L-Ballon, **erst nach
+bestätigtem Gärende** (Nachmessung Ballon 1 am 29.09., Vergleichswert −4).
+
+**Biologischer Säureabbau verworfen** (Andi, 23.09., Aufwand-Nutzen). Damit ist das Schwefeln
+Pflicht, weil es einen spontanen Abbau blockiert.
+
+**Messgeräte:** Alte Spindel am 23.09. zerbrochen. Neue Mostwaage reicht bis −3 °Oe
+(SG 0,997), Wasserprobe bei 21,5 °C ergab knapp unter 1,000 → kein Versatz. Hat im
+Messzylinder zu wenig Tiefgang; gemessen wird im Bottich oder aus dem Schlauchstrahl beim
+Abziehen. **Feinspindel 0,990–1,020 fehlt noch, wird vor dem Abfüllen gebraucht.**
+Refraktometer nur für Most (R-REFRAKTOMETER).
+
+**Oktober: eigene Reben**, rot und weiß, 2025 etwa 15 kg / 11 L. Die Lese vom 30.08. war
+ein Geschenk eines Nachbarn — 2027 rechtzeitig nachfragen.
+
+**App-Lücken, die der Abstich offengelegt hat:**
+- Press-Gate kennt **ein Gefäß je Fraktion**. Der Vorlauf liegt in fünf Ballons.
+- Messwerte sind reine Zahlen, **„unter der Skala" ist nicht abbildbar**.
+- **Kein Abstich-Gate**, keine Ausbau-Statistik, keine Ausbau-Termine. Die App deckt die
+  Gärphase ab; den Ausbau trägt derzeit der Google-Kalender.
+- Schwefeldosis kommt in Gramm, gebraucht werden **Milliliter Stammlösung**.

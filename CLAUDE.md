@@ -366,3 +366,25 @@ ein Geschenk eines Nachbarn — 2027 rechtzeitig nachfragen.
 - **Kein Abstich-Gate**, keine Ausbau-Statistik, keine Ausbau-Termine. Die App deckt die
   Gärphase ab; den Ausbau trägt derzeit der Google-Kalender.
 - Schwefeldosis kommt in Gramm, gebraucht werden **Milliliter Stammlösung**.
+
+## Ausbau-Umbau (26.09.2026)
+
+**Mockup v4** (`outputs/mockup-v4-ausbau.html`) von Andi abgenommen: Keller, Kontrolle am
+Ballon, Abstich. Drei Entscheidungen darin: Füllstand als Stufe statt Liter, **eine Charge je
+Gefäß** zusammengefasst im Los, Keller als Startbildschirm im Ausbau.
+
+**Domäne fertig** (Claude-Seite, `ausbau.test.ts`, 90 Tests grün): `Charge.los`,
+`herkunftIds`, `Behaelter.regalPosition`, `Messung.grenze`, Messtyp `fuellstand`,
+`fuellplan()`, `abstichGate()`, `stammloesungMl()`. Gärende-Gate wertet Werte jenseits der
+Skala als nicht beweisend. Kontrollintervall 14 statt 21 Tage.
+
+**Reihenfolge der Handoffs:** H11 (Wiki-Startseiten nachtragen) und H10 (Lose, Abstich,
+mehrere Gefäße) liegen im Postfach. **H12 (Keller, Kontrolle am Ballon) erst nach dem Merge
+von H10 einstellen** — beide ändern `app.ts`. Aufgeteilt, weil H7 als großer Auftrag im
+Nutzungslimit abgebrochen ist. H12 wird bis zur ersten Ausbau-Kontrolle am 10.10. gebraucht.
+
+**Nach H10:** Andi trägt den Jahrgang nach — Press-Gate mit Zeitpunkt 09.09. und den Abstich
+vom 26.09. Erst dann stimmt der Stand in der App wieder.
+
+**Die App legt keine Kalendertermine an.** Bewusst nicht ins Mockup geschrieben: Sie kann nur
+`.ics` erzeugen. Termine pflegt Lucius im Google-Kalender „Andi Privat".

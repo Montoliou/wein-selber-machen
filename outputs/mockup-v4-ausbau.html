@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Weinbegleiter · Ausbau v4</title>
+<style>
+:root{--bg:#14100f;--fl:#1e1917;--fl2:#272120;--rand:#392f2c;--text:#f0e9e5;--t2:#a89a93;--t3:#7a6c65;
+ --wein:#8e1f36;--weinh:#c4415c;--gold:#c8a55b;--gruen:#3f8a5a;--gelb:#c9a227;--orange:#cd6a24;--rot:#b4232f;
+ --r:16px;--f:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{background:var(--bg);color:var(--text);font-family:var(--f);font-size:17px;line-height:1.45;overflow:hidden}
+.mockbar{position:fixed;top:0;left:0;right:0;z-index:50;display:flex;gap:6px;align-items:center;padding:6px 10px;
+ background:rgba(200,165,91,.12);border-bottom:1px dashed rgba(200,165,91,.45);font-size:12px;color:var(--t2);flex-wrap:wrap}
+.mockbar b{color:var(--gold);margin-right:6px}
+.mockbar button{padding:5px 11px;border-radius:99px;border:1px solid var(--rand);background:var(--fl2);color:var(--text);font:600 12px var(--f);cursor:pointer}
+.mockbar button.an{background:var(--wein);border-color:var(--wein);color:#fff}
+.mockbar .hinweis{margin-left:auto;color:var(--t3)}
+.screen{display:none;position:absolute;inset:34px 0 0 0;overflow:auto}.screen.an{display:block}
+h2.sek{font-size:11.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--t3);font-weight:700;margin-bottom:10px}
+.karte{background:var(--fl);border:1px solid var(--rand);border-radius:var(--r);padding:18px 20px}
+.karte h3{font-size:16px;font-weight:650;margin-bottom:10px}
+.ampel{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:6px 12px;border-radius:99px}
+.ampel i{width:8px;height:8px;border-radius:99px;background:currentColor}
+.a-gruen{background:rgba(63,138,90,.18);color:#7fd39c}.a-gelb{background:rgba(201,162,39,.18);color:#e0c05a}
+.a-orange{background:rgba(205,106,36,.18);color:#eb9a5c}.a-grau{background:var(--fl2);color:var(--t3)}
+
+/* ═══ KELLER ═══ */
+.keller{display:grid;grid-template-columns:1.55fr 1fr;gap:20px;padding:18px 24px 28px}
+.sb{display:flex;background:var(--fl);border:1px solid var(--rand);border-radius:var(--r);overflow:hidden;grid-column:1/-1}
+.sb div{flex:1;padding:13px 8px;text-align:center;border-right:1px solid var(--rand)}
+.sb div:last-child{border:0}
+.sb b{display:block;font-size:25px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.1}
+.sb span{display:block;font-size:10.5px;color:var(--t3);letter-spacing:.07em;text-transform:uppercase;margin-top:3px}
+.sb .warn b{color:#eb9a5c}.sb .gut b{color:#7fd39c}
+.regal{display:flex;gap:10px;align-items:flex-end;padding:8px 4px 0;border-bottom:6px solid #5a3f2a;border-radius:0 0 4px 4px}
+.ballon{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;padding-bottom:10px;border-radius:12px}
+.ballon:hover{background:rgba(255,255,255,.03)}
+.ballon svg{width:100%;max-width:92px;height:auto;display:block}
+.ballon .nr{font-size:22px;font-weight:800;line-height:1}
+.ballon .los{font-size:11.5px;color:var(--t2);text-align:center;line-height:1.25}
+.ballon .punkte{display:flex;flex-direction:column;align-items:center;gap:3px}
+.ballon .punkte i{font-style:normal;font-size:10.5px;padding:2px 7px;border-radius:99px;background:var(--fl2);color:var(--t2)}
+.ballon .punkte i.ok{color:#7fd39c;background:rgba(63,138,90,.16)}
+.ballon .punkte i.offen{color:#e0c05a;background:rgba(201,162,39,.16)}
+.ballon.leer{opacity:.45}
+.ballon.klein{flex:0 0 72px}
+.ballon.klein svg{max-width:58px}
+.lose{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
+.los-k{background:var(--fl2);border:1px solid var(--rand);border-radius:14px;padding:14px 16px}
+.los-k b{display:block;font-size:16px}
+.los-k .z{display:flex;justify-content:space-between;font-size:14px;padding:4px 0;border-bottom:1px solid var(--rand)}
+.los-k .z:last-child{border:0}.los-k .z span{color:var(--t2)}
+.rechts{display:flex;flex-direction:column;gap:14px}
+.an-liste .p{display:grid;grid-template-columns:78px 1fr;gap:12px;padding:10px 0;border-bottom:1px solid var(--rand)}
+.an-liste .p:last-child{border:0}
+.an-liste .d{font-size:12px;color:var(--t3);text-transform:uppercase;letter-spacing:.05em;line-height:1.25}
+.an-liste .d b{display:block;font-size:19px;color:var(--text);letter-spacing:0}
+.an-liste .p strong{display:block;font-size:15.5px}
+.an-liste .p small{color:var(--t2);font-size:13.5px;display:block}
+.an-liste .p.jetzt .d b{color:var(--gold)}
+.an-liste .d b.lang{font-size:15px}
+.band{position:relative;height:30px;border-radius:8px;background:var(--fl2);margin:10px 0 6px;overflow:hidden}
+.band .ziel{position:absolute;top:0;bottom:0;background:rgba(63,138,90,.28);border-left:1px solid #7fd39c;border-right:1px solid #7fd39c}
+.band .ist{position:absolute;top:-2px;bottom:-2px;width:3px;background:#eb9a5c;border-radius:2px}
+.band-ax{display:flex;justify-content:space-between;font-size:11px;color:var(--t3)}
+.klima-zahl{display:flex;align-items:baseline;gap:10px}
+.klima-zahl b{font-size:30px;font-weight:800;font-variant-numeric:tabular-nums}
+.klima-zahl span{color:var(--t2);font-size:14px}
+.hinweis-k{font-size:13.5px;color:var(--t2);margin-top:8px}
+.hinweis-k b{color:#eb9a5c}
+
+/* ═══ KONTROLLE ═══ */
+.runde{display:grid;grid-template-rows:auto 1fr;min-height:100%}
+.r-top{display:flex;align-items:center;gap:14px;padding:12px 24px;border-bottom:1px solid var(--rand);background:var(--fl)}
+.r-top .t{font-size:14px;color:var(--t2)}.r-top .t b{color:var(--text)}
+.r-top .dots{margin-left:auto;display:flex;gap:7px}
+.r-top .dots i{width:9px;height:9px;border-radius:99px;background:var(--rand)}
+.r-top .dots i.an{background:var(--gold)}.r-top .dots i.ok{background:var(--gruen)}
+.r-top .abbr{margin-left:18px;color:var(--t2);font-size:14px;cursor:pointer}
+.r-body{display:grid;grid-template-columns:1fr 1.35fr}
+.r-links{padding:26px 28px 26px 34px;display:flex;flex-direction:column;gap:18px;border-right:1px solid var(--rand)}
+.r-rechts{padding:22px 34px 26px 28px;display:flex;flex-direction:column;gap:12px}
+.gefaess .nr{font-size:60px;font-weight:800;letter-spacing:-.03em;line-height:1}
+.gefaess .nm{font-size:21px;font-weight:650;margin-top:2px}
+.gefaess .meta{font-size:14.5px;color:var(--t2);margin-top:4px}
+.zuletzt{background:var(--fl);border:1px solid var(--rand);border-radius:var(--r);padding:14px 18px}
+.zuletzt h4{font-size:11.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--t3);margin-bottom:8px}
+.zuletzt .z{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--rand);font-size:15px}
+.zuletzt .z:last-child{border:0}.zuletzt .z span{color:var(--t2)}
+.zuletzt .z b small{color:var(--t3);font-weight:500;font-size:12.5px;margin-left:6px}
+.wahl{background:var(--fl);border:1px solid var(--rand);border-radius:var(--r);padding:12px 16px}
+.wahl .lb{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:9px}
+.wahl .lb b{font-size:16px}.wahl .lb small{font-size:12.5px;color:var(--t3)}
+.knoepfe{display:flex;gap:8px;flex-wrap:wrap}
+.knoepfe button{flex:1;min-width:92px;padding:13px 10px;border-radius:12px;border:1.5px solid var(--rand);background:var(--fl2);color:var(--text);font:600 15.5px var(--f);cursor:pointer}
+.knoepfe button.an{border-color:var(--gruen);background:rgba(63,138,90,.18);color:#bfe8cc}
+.knoepfe button.warn.an{border-color:var(--rot);background:rgba(180,35,47,.2);color:#f1a3aa}
+.dichte{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center}
+.dichte input{width:120px;padding:12px 14px;border-radius:12px;border:1.5px solid var(--rand);background:var(--fl2);color:var(--text);font:600 22px var(--f);text-align:right}
+.dichte input:disabled{opacity:.35}
+.schalter{display:flex;align-items:center;gap:10px;font-size:14.5px;color:var(--t2);cursor:pointer;margin-top:8px}
+.schalter i{width:40px;height:24px;border-radius:99px;background:var(--rand);position:relative;transition:.15s}
+.schalter i::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:99px;background:var(--t2);transition:.15s}
+.schalter.an i{background:var(--gruen)}.schalter.an i::after{left:19px;background:#fff}
+.schalter.an{color:var(--text)}
+.zugabe{border:1px dashed var(--rand);border-radius:var(--r);padding:14px 16px;background:rgba(201,162,39,.06)}
+.zugabe .kopf{display:flex;justify-content:space-between;align-items:center}
+.zugabe .kopf b{font-size:16px}
+.zugabe .menge{font-size:28px;font-weight:800;font-variant-numeric:tabular-nums;margin-top:6px}
+.zugabe .menge small{font-size:14px;color:var(--t2);font-weight:500;margin-left:8px}
+.zugabe .herk{font-size:13px;color:var(--t2);margin-top:4px}
+.zugabe .sperre{margin-top:10px;font-size:13.5px;color:#e0c05a;background:rgba(201,162,39,.12);border-radius:10px;padding:9px 12px}
+.speichern{margin-top:6px;padding:18px;border-radius:16px;border:0;background:var(--wein);color:#fff;font:700 20px var(--f);cursor:pointer}
+
+/* ═══ ABSTICH ═══ */
+.abstich{display:grid;grid-template-columns:1.1fr 1fr;gap:20px;padding:20px 24px 28px}
+.abstich h1{font-size:28px;font-weight:800;letter-spacing:-.01em;grid-column:1/-1}
+.abstich h1 small{display:block;font-size:15px;color:var(--t2);font-weight:500;margin-top:4px}
+.pruef{display:grid;grid-template-columns:34px 1fr;gap:12px;padding:13px 0;border-bottom:1px solid var(--rand)}
+.pruef:last-child{border:0}
+.pruef .ic{width:30px;height:30px;border-radius:99px;display:grid;place-items:center;font-weight:800;font-size:15px}
+.pruef .ic.ok{background:rgba(63,138,90,.2);color:#7fd39c}.pruef .ic.frage{background:rgba(201,162,39,.2);color:#e0c05a}
+.pruef b{display:block;font-size:16px}.pruef small{display:block;color:var(--t2);font-size:13.5px}
+.pruef .hand{margin-top:8px;display:flex;gap:8px}
+.pruef .hand button{padding:9px 14px;border-radius:10px;border:1.5px solid var(--rand);background:var(--fl2);color:var(--text);font:600 14px var(--f);cursor:pointer}
+.pruef .hand button.an{border-color:var(--gruen);background:rgba(63,138,90,.18)}
+.plan .zeile{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:9px 0;border-bottom:1px solid var(--rand);font-size:15px}
+.plan .zeile:last-child{border:0}
+.plan .glas{width:26px;height:34px}
+.plan .zeile b{font-variant-numeric:tabular-nums}
+.plan .zeile small{color:var(--t3);display:block;font-size:12.5px}
+.summe{display:flex;justify-content:space-between;font-size:14px;color:var(--t2);margin-top:10px}
+.summe b{color:var(--text)}
+.tipp{font-size:14px;color:var(--t2);background:var(--fl2);border-radius:12px;padding:12px 14px;margin-top:12px}
+.tipp b{color:var(--gold)}
+.los-btn{display:block;width:100%;margin-top:16px;padding:18px;border-radius:16px;border:0;background:var(--wein);color:#fff;font:700 19px var(--f);cursor:pointer}
+.notiz{font-size:12.5px;color:var(--t3);margin-top:10px;line-height:1.4}
+</style></head>
+<body>
+
+<div class="mockbar"><b>Mockup v4 · Ausbau</b>
+ <button class="an" data-s="keller">1 · Keller</button>
+ <button data-s="kontrolle">2 · Kontrolle am Ballon</button>
+ <button data-s="abstich">3 · Abstich</button>
+ <span class="hinweis">iPad quer · Zahlen = echter Stand 26.09.2026</span>
+</div>
+
+<!-- ═══════════ 1 · KELLER ═══════════ -->
+<section class="screen an" id="keller"><div class="keller">
+
+ <div class="sb">
+  <div><b>31,5 L</b><span>im Keller</span></div>
+  <div><b>6</b><span>Gefäße belegt</span></div>
+  <div class="gut"><b>0</b><span>mit Kopfraum</span></div>
+  <div><b>Di 29.09.</b><span>nächster Schritt</span></div>
+  <div class="warn"><b>20,0 °C</b><span>Keller</span></div>
+ </div>
+
+ <div class="karte">
+  <h2 class="sek">Das Regal · so wie es im Keller steht</h2>
+  <div class="regal" id="regal"></div>
+  <div class="lose">
+   <div class="los-k">
+    <b>Vorlauf 2026</b>
+    <div class="z"><span>Menge</span><span>26,5 L · Ballon 1–5</span></div>
+    <div class="z"><span>pH</span><span>3,28</span></div>
+    <div class="z"><span>Dichte</span><span>−4 °Oe (26.09.)</span></div>
+    <div class="z"><span>Gärende</span><span style="color:#e0c05a">offen · 2. Messung Di</span></div>
+    <div class="z"><span>Schwefel</span><span style="color:#e0c05a">offen</span></div>
+   </div>
+   <div class="los-k">
+    <b>Presswein 2026</b>
+    <div class="z"><span>Menge</span><span>5,0 L · Ballon 7</span></div>
+    <div class="z"><span>pH</span><span>3,17</span></div>
+    <div class="z"><span>Dichte</span><span>−6 °Oe (23.09.)</span></div>
+    <div class="z"><span>Gärende</span><span style="color:#7fd39c">bestätigt</span></div>
+    <div class="z"><span>Schwefel</span><span style="color:#7fd39c">26.09. · 12 ml</span></div>
+   </div>
+  </div>
+ </div>
+
+ <div class="rechts">
+  <div class="karte an-liste">
+   <h3>Was ansteht</h3>
+   <div class="p jetzt"><div class="d">Di<b>29.09.</b></div><div><strong>Ballon 1 nachmessen</strong><small>Bleibt er bei −4 °Oe, ist die Gärung durch. Dann alle fünf mit je 16 ml Stammlösung schwefeln.</small></div></div>
+   <div class="p"><div class="d">Sa<b>10.10.</b></div><div><strong>Kontrolle, alle Ballons</strong><small>Füllstand, Oberfläche, Geruch, Gärröhrchen. Danach alle 14 Tage.</small></div></div>
+   <div class="p"><div class="d">Okt.<b>?</b></div><div><strong>Lese eigene Reben</strong><small>Rot und weiß, etwa 15 kg. Ballon 6 und die bestellten Ballons sind frei.</small></div></div>
+   <div class="p"><div class="d">vor dem<b class="lang">Abfüllen</b></div><div><strong>Feinspindel besorgen</strong><small>Die Mostwaage löst am Gärende zu grob auf.</small></div></div>
+  </div>
+
+  <div class="karte">
+   <h3>Kellerklima</h3>
+   <div class="klima-zahl"><b>20,0 °C</b><span>63 % · 7 Tage 19,9–21,1 °C</span></div>
+   <div class="band"><div class="ziel" style="left:26.7%;width:26.7%"></div><div class="ist" style="left:66.7%"></div></div>
+   <div class="band-ax"><span>8 °C</span><span>Ausbau-Ziel 12–16 °C</span><span>23 °C</span></div>
+   <p class="hinweis-k"><b>4 Grad über dem Ziel.</b> Für den Ausbau über Monate zu warm; 2025 hat der warme Keller den Hauptwein mit verdorben. Abhilfe: Kühltruhe mit Steckdosenthermostat.</p>
+  </div>
+ </div>
+</div></section>
+
+<!-- ═══════════ 2 · KONTROLLE ═══════════ -->
+<section class="screen" id="kontrolle"><div class="runde">
+ <div class="r-top">
+  <div class="t"><b>Ausbau-Kontrolle</b> · Sa 10.10.2026, 10:04</div>
+  <div class="dots"><i class="an"></i><i></i><i></i><i></i><i></i><i></i></div>
+  <div class="abbr">Abbrechen</div>
+ </div>
+ <div class="r-body">
+  <div class="r-links">
+   <div class="gefaess">
+    <div class="nr">1</div>
+    <div class="nm">Vorlauf 2026</div>
+    <div class="meta">5-L-Ballon · Kellerregal · geschwefelt 29.09.</div>
+    <span class="ampel a-gruen" style="margin-top:10px"><i></i>Alles in Ordnung</span>
+   </div>
+   <div class="zuletzt">
+    <h4>Zuletzt · 29.09.</h4>
+    <div class="z"><span>Füllstand</span><b>im Hals</b></div>
+    <div class="z"><span>Oberfläche</span><b>blank</b></div>
+    <div class="z"><span>Geruch</span><b>sauber</b></div>
+    <div class="z"><span>Dichte</span><b>−4 °Oe<small>= 26.09.</small></b></div>
+    <div class="z"><span>Schwefel</span><b>16 ml<small>29.09.</small></b></div>
+   </div>
+   <div class="zuletzt">
+    <h4>Warum diese Runde</h4>
+    <p style="font-size:14px;color:var(--t2)">Der 2025er Hauptwein ist über Monate ohne Kontrolle gekippt: Kopfraum, Fruchtfliegen, Film auf der Oberfläche. Zehn Minuten alle zwei Wochen verhindern das.</p>
+   </div>
+  </div>
+
+  <div class="r-rechts">
+   <div class="wahl" data-gruppe>
+    <div class="lb"><b>Füllstand</b><small>Stufe statt Liter</small></div>
+    <div class="knoepfe"><button class="an">Im Hals</button><button>An der Schulter</button><button class="warn">Darunter</button></div>
+   </div>
+   <div class="wahl" data-gruppe>
+    <div class="lb"><b>Oberfläche</b></div>
+    <div class="knoepfe"><button class="an">Blank</button><button>Schlieren</button><button class="warn">Film / Haut</button><button class="warn">Fruchtfliegen</button></div>
+   </div>
+   <div class="wahl" data-gruppe>
+    <div class="lb"><b>Geruch</b><small>Stopfen kurz anheben</small></div>
+    <div class="knoepfe"><button class="an">Sauber</button><button class="warn">Faule Eier</button><button class="warn">Essig</button><button class="warn">Klebstoff</button></div>
+   </div>
+   <div class="wahl" data-gruppe>
+    <div class="lb"><b>Gärröhrchen</b></div>
+    <div class="knoepfe"><button class="an">Wasser drin</button><button>Nachgefüllt</button></div>
+   </div>
+   <div class="wahl">
+    <div class="lb"><b>Dichte</b><small>freiwillig · Mostwaage</small></div>
+    <div class="dichte"><span style="color:var(--t2);font-size:14px">Grad Oechsle</span><input id="oe" value="−4"></div>
+    <label class="schalter" id="skala"><i></i>Unter der Skala · sinkt unter den letzten Strich (&lt; −3 °Oe)</label>
+   </div>
+   <div class="zugabe">
+    <div class="kopf"><b>Schwefel nachlegen?</b><span class="ampel a-grau">nicht fällig</span></div>
+    <div class="menge">16 ml<small>Stammlösung 10 mg/ml · = 0,16 g Kaliumpyrosulfit</small></div>
+    <div class="herk">aus pH 3,28 → 18,3 mg/L frei → 0,6 mg/L molekular · 5-L-Ballon</div>
+    <div class="sperre">Zuletzt am 29.09. geschwefelt. Nachlegen erst beim nächsten Abstich oder nach Rücksprache.</div>
+   </div>
+   <button class="speichern">Speichern · weiter zu Ballon 2</button>
+  </div>
+ </div>
+</div></section>
+
+<!-- ═══════════ 3 · ABSTICH ═══════════ -->
+<section class="screen" id="abstich"><div class="abstich">
+ <h1>Abstich · Vorlauf 2026<small>Wein vom Trub nehmen. Die App prüft vorher, plant die Gefäße und rechnet den Schwefel danach.</small></h1>
+
+ <div class="karte">
+  <h2 class="sek">Vorher prüfen</h2>
+  <div class="pruef"><div class="ic ok">✓</div><div><b>Gärende bestätigt</b><small>−4 °Oe am 26.09. und am 29.09., Abstand 72 h. Unverändert.</small></div></div>
+  <div class="pruef"><div class="ic ok">✓</div><div><b>Presswein getrennt</b><small>Ballon 7 gehört zu einem anderen Los und wird nicht angeboten.</small></div></div>
+  <div class="pruef"><div class="ic ok">✓</div><div><b>Genug Zielgefäße frei</b><small>26,5 L brauchen 5 × 5 L. Frei: Ballon 1–5 nach dem Umfüllen, dazu Ballon 6 (3 L) und 20-L-Bottich als Zwischengefäß.</small></div></div>
+  <div class="pruef"><div class="ic frage">?</div><div><b>Ballons ausgespült und abgekühlt?</b><small>Heißes Glas kann springen, wenn kühler Wein hineinläuft.</small>
+   <div class="hand"><button id="kalt">Ja, handwarm</button></div></div></div>
+  <div class="pruef"><div class="ic frage">?</div><div><b>Gärende nicht bestätigt: trotzdem abziehen?</b><small>Nur sichtbar, wenn die zweite Messung fehlt. Dann wird bis zur Schulter gefüllt und der Schwefel gesperrt, bis das Gärende feststeht.</small></div></div>
+ </div>
+
+ <div class="karte plan">
+  <h2 class="sek">Füllplan · von der App gerechnet</h2>
+  <div class="zeile"><svg class="glas" viewBox="0 0 26 34"><path d="M9 2h8v6c5 2 7 6 7 11v11c0 2-1 3-3 3H5c-2 0-3-1-3-3V19c0-5 2-9 7-11z" fill="none" stroke="#7a6c65"/><path d="M3 12h20v18c0 2-1 3-3 3H6c-2 0-3-1-3-3z" fill="#8e1f36"/></svg><div>Ballon 1 bis 5<small>je bis in den Hals · ca. 5,3 L</small></div><b>26,5 L</b></div>
+  <div class="zeile"><svg class="glas" viewBox="0 0 26 34"><path d="M9 2h8v6c5 2 7 6 7 11v11c0 2-1 3-3 3H5c-2 0-3-1-3-3V19c0-5 2-9 7-11z" fill="none" stroke="#7a6c65"/></svg><div>Ballon 6 · 3 L<small>bleibt leer</small></div><b>—</b></div>
+  <div class="zeile"><svg class="glas" viewBox="0 0 26 34"><rect x="8" y="4" width="10" height="28" rx="3" fill="none" stroke="#7a6c65"/><rect x="9" y="6" width="8" height="25" rx="2" fill="#8e1f36"/></svg><div>Auffüllflasche<small>Rest randvoll, fürs Nachfüllen bei Kontrollen</small></div><b>ca. 0,5 L</b></div>
+  <div class="summe"><span>Erwarteter Trubverlust 5–10 %</span><b>kein halbvolles Gefäß</b></div>
+  <div class="tipp"><b>Nebenbei messen:</b> beim Zurückfüllen den Messzylinder kurz in den Strahl halten. Das spart das Probeziehen.</div>
+
+  <h2 class="sek" style="margin-top:18px">Danach schwefeln</h2>
+  <div class="zeile"><span style="font-size:22px">⚗︎</span><div>Stammlösung 1 g auf 100 ml<small>aus pH 3,28 · 16 ml je 5-L-Ballon</small></div><b>80 ml</b></div>
+  <button class="los-btn">Abstich beginnen</button>
+  <p class="notiz">Nach dem Abstich legt die App je Ballon eine eigene Charge im Los „Vorlauf 2026" an. So bleibt der Kopfraum je Gefäß prüfbar. Die nächste fällige Kontrolle zeigt der Keller-Bildschirm; die Kalendertermine legt Lucius an, weil die App nicht selbst in den Google-Kalender schreiben kann.</p>
+ </div>
+</div></section>
+
+<script>
+// Regal zeichnen: Reihenfolge wie im Keller-Foto vom 26.09.
+const ballons=[
+ {nr:7,los:'Presswein',stand:'hals',schwefel:'ok',gaer:'ok'},
+ {nr:1,los:'Vorlauf',stand:'hals',schwefel:'offen',gaer:'offen'},
+ {nr:2,los:'Vorlauf',stand:'hals',schwefel:'offen',gaer:'offen'},
+ {nr:3,los:'Vorlauf',stand:'hals',schwefel:'offen',gaer:'offen'},
+ {nr:4,los:'Vorlauf',stand:'hals',schwefel:'offen',gaer:'offen'},
+ {nr:5,los:'Vorlauf',stand:'hals',schwefel:'offen',gaer:'offen'},
+ {nr:6,los:'leer · 3 L',stand:'leer',leer:true,klein:true},
+];
+function glas(stand,i){
+ const koerper='M33 4H47V22C47 27 73 31 74 58V104C74 112 68 118 60 118H20C12 118 6 112 6 104V58C7 31 33 27 33 22Z';
+ const pegel={hals:12,schulter:34,leer:130}[stand];
+ return `<svg viewBox="0 0 80 124">
+  <clipPath id="k${i}"><path d="${koerper}"/></clipPath>
+  <path d="${koerper}" fill="#1b1514" stroke="#6b5a53" stroke-width="1.6"/>
+  <rect x="0" y="${pegel}" width="80" height="124" fill="#7a1a2f" clip-path="url(#k${i})"/>
+  <path d="${koerper}" fill="none" stroke="#6b5a53" stroke-width="1.6"/>
+  <rect x="4" y="94" width="72" height="26" rx="6" fill="rgba(200,165,91,.32)"/>
+  <path d="M8 102H72M8 110H72" stroke="rgba(200,165,91,.5)" stroke-width="1"/></svg>`;
+}
+document.getElementById('regal').innerHTML=ballons.map((b,i)=>`
+ <div class="ballon ${b.leer?'leer':''} ${b.klein?'klein':''}" data-s="kontrolle">
+  ${glas(b.stand,i)}
+  <div class="nr">${b.nr}</div><div class="los">${b.los}</div>
+  ${b.leer?'':`<div class="punkte"><i class="${b.gaer}">Gärende</i><i class="${b.schwefel}">SO₂</i></div>`}
+ </div>`).join('');
+
+// Umschalten
+function zeige(id){document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('an',s.id===id));
+ document.querySelectorAll('.mockbar button').forEach(b=>b.classList.toggle('an',b.dataset.s===id));}
+document.addEventListener('click',e=>{const t=e.target.closest('[data-s]');if(t)zeige(t.dataset.s);
+ const k=e.target.closest('.knoepfe button');if(k){k.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('an'));k.classList.add('an');}
+ if(e.target.closest('#skala')){const s=document.getElementById('skala');s.classList.toggle('an');const i=document.getElementById('oe');i.disabled=s.classList.contains('an');i.value=i.disabled?'< −3':'−4';}
+ if(e.target.closest('#kalt')){const b=document.getElementById('kalt');b.classList.toggle('an');const ic=b.closest('.pruef').querySelector('.ic');ic.className='ic '+(b.classList.contains('an')?'ok':'frage');ic.textContent=b.classList.contains('an')?'✓':'?';}
+});
+</script>
+</body></html>

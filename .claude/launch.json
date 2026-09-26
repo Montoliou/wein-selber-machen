@@ -4,8 +4,20 @@
     {
       "name": "weinbegleiter-dist",
       "runtimeExecutable": "bash",
-      "runtimeArgs": ["-c", "cd \"$(dirname \"$0\")/app/dist\" 2>/dev/null || cd app/dist; exec python3 -m http.server 4173"],
+      "runtimeArgs": [
+        "-c",
+        "cd \"$(dirname \"$0\")/app/dist\" 2>/dev/null || cd app/dist; exec python3 -m http.server 4173"
+      ],
       "port": 4173
+    },
+    {
+      "name": "weinbegleiter-mockups",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": [
+        "-c",
+        "cd outputs && exec python3 -m http.server 4174"
+      ],
+      "port": 4174
     }
   ]
 }

@@ -16,7 +16,10 @@ function csvFeld(wert: string): string {
 }
 
 function messwert(messung: Messung): string {
-  if (messung.wert !== null) return deZahl.format(messung.wert)
+  if (messung.wert !== null) {
+    const grenze = messung.grenze === 'unter' ? '< ' : messung.grenze === 'ueber' ? '> ' : ''
+    return `${grenze}${deZahl.format(messung.wert).replace(/^-/, '−')}`
+  }
   return messung.text ?? ''
 }
 

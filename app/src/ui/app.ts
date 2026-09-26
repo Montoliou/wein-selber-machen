@@ -20,8 +20,8 @@ import {
   type SensorKonfig,
   type WikiSeite,
 } from '../domain/typen'
-import { alkoholPotenzial, naehrsalzPlan, NAEHRSALZ_MAX_G_PRO_100L, NAEHRSALZ_PORTIONEN, oechsleAusSg, sgAusOechsle, schwefelDosierung, zuckerFuerOechsle } from '../domain/oenologie'
-import { ampelFuerCharge, behaelterVerfuegbar, befundeFuerCharge, gateFuerPhase, GRENZEN, pressGate, vermischungErlaubt } from '../domain/regeln'
+import { alkoholPotenzial, naehrsalzPlan, NAEHRSALZ_MAX_G_PRO_100L, NAEHRSALZ_PORTIONEN, oechsleAusSg, sgAusOechsle, schwefelDosierung, stammloesungMl, zuckerFuerOechsle } from '../domain/oenologie'
+import { abstichGate, ampelFuerCharge, behaelterVerfuegbar, befundeFuerCharge, fuellplan, gateFuerPhase, GRENZEN, pressGate, vermischungErlaubt } from '../domain/regeln'
 import { kalenderAlsIcs, reminderAlsIcs } from '../ics'
 import { alsKlimapunkt, ladeSensorverlauf, ladeSensorwert, pruefeSensorKonfiguration, type SensorVerlaufPunkt } from '../sensor'
 import { ersetzeFotos, speichereDatenstand, speichereFoto } from '../speicher/indexeddb'
@@ -56,7 +56,7 @@ import {
 declare const __BUILD_TIMESTAMP__: string
 declare const __BUILD_COMMIT__: string
 
-type Ansicht = 'heute' | 'runde' | 'journal' | 'charge' | 'erfassen' | 'messung-bearbeiten' | 'ereignis-bearbeiten' | 'rechner' | 'gate' | 'termine' | 'wiki' | 'wiki-seite' | 'wiki-editor' | 'mehr' | 'umverteilen'
+type Ansicht = 'heute' | 'runde' | 'journal' | 'charge' | 'erfassen' | 'messung-bearbeiten' | 'ereignis-bearbeiten' | 'rechner' | 'gate' | 'abstich' | 'termine' | 'wiki' | 'wiki-seite' | 'wiki-editor' | 'mehr' | 'umverteilen'
 type ChargeTab = 'befunde' | 'messungen' | 'ereignisse' | 'gefaess' | 'fotos'
 type RechnerTyp = 'schwefeln' | 'aufzuckern' | 'naehrsalz'
 type ErfassenModus = 'messung' | 'ereignis'
@@ -67,6 +67,8 @@ type DesktopZeitraum = 'sieben-tage' | 'gaerung' | 'alles'
 interface MessEntwurf {
   eingabe: string
   methode: MessMethode
+  unterSkala: boolean
+  skalenende: string
 }
 
 interface MessRundeErfolg {
@@ -212,6 +214,13 @@ interface UiZustand {
   rundenAbgeschlossen: boolean
   zuckerZielJeCharge: Record<string, number>
   gateCheckIndex: number
+  abstichLos: string | null
+  abstichZielIds: string[]
+  abstichBallonsAbgekuehlt: boolean | null
+  abstichVorziehenBegruendung: string
+  abstichZeit: string
+  abstichCheckIndex: number
+  abstichPhase: 'pruefen' | 'schwefeln' | 'fertig'
   desktopKurveTyp: DesktopKurveTyp
   desktopZeitraum: DesktopZeitraum
   updateVerfuegbar: boolean
@@ -270,6 +279,13 @@ export class WeinbegleiterApp {
       rundenAbgeschlossen: false,
       zuckerZielJeCharge: {},
       gateCheckIndex: 0,
+      abstichLos: null,
+      abstichZielIds: [],
+      abstichBallonsAbgekuehlt: null,
+      abstichVorziehenBegruendung: '',
+      abstichZeit: datetimeLocalWert(),
+      abstichCheckIndex: 0,
+      abstichPhase: 'pruefen',
       desktopKurveTyp: 'gaerung',
       desktopZeitraum: 'gaerung',
       updateVerfuegbar: false,
@@ -349,11 +365,16 @@ export class WeinbegleiterApp {
       this.ui.ansicht = ziel
       return
     }
+    if (ziel === 'abstich' && kennung && this.stand.chargen.some(charge => !charge.archiviert && charge.los === kennung)) {
+      this.bereiteAbstichVor(kennung)
+      return
+    }
     if (['heute', 'journal', 'termine', 'wiki', 'mehr'].includes(ziel ?? '')) this.ui.ansicht = ziel as Ansicht
   }
 
   private routeHash(): string {
     if (this.ui.ansicht === 'charge' || this.ui.ansicht === 'gate') return `${this.ui.ansicht}/${this.ui.chargeId}`
+    if (this.ui.ansicht === 'abstich' && this.ui.abstichLos) return `abstich/${encodeURIComponent(this.ui.abstichLos)}`
     if (this.ui.ansicht === 'runde') return 'runde'
     return this.ui.ansicht
   }
@@ -385,6 +406,7 @@ export class WeinbegleiterApp {
     if (this.ui.ansicht === 'rechner') this.aktualisiereRechner()
     if (this.ui.ansicht === 'erfassen') this.aktualisiereErfassenFormular()
     if (this.ui.ansicht === 'umverteilen') this.aktualisiereZielzeilen()
+    if (this.root.querySelector('#press-teilung-form')) this.aktualisierePressFuellplaene()
   }
 
   private renderHeader(): string {
@@ -403,7 +425,7 @@ export class WeinbegleiterApp {
   }
 
   private hauptAnsicht(): Ansicht {
-    if (['charge', 'erfassen', 'messung-bearbeiten', 'ereignis-bearbeiten', 'rechner', 'gate', 'umverteilen'].includes(this.ui.ansicht)) return 'heute'
+    if (['charge', 'erfassen', 'messung-bearbeiten', 'ereignis-bearbeiten', 'rechner', 'gate', 'abstich', 'umverteilen'].includes(this.ui.ansicht)) return 'heute'
     if (['wiki-seite', 'wiki-editor'].includes(this.ui.ansicht)) return 'wiki'
     return this.ui.ansicht
   }
@@ -430,6 +452,7 @@ export class WeinbegleiterApp {
       case 'ereignis-bearbeiten': return this.renderEreignisBearbeiten()
       case 'rechner': return this.renderRechner()
       case 'gate': return this.renderGate()
+      case 'abstich': return this.renderAbstich()
       case 'termine': return this.renderTermine()
       case 'wiki': return this.renderWiki()
       case 'wiki-seite': return this.renderWikiSeite()
@@ -533,14 +556,39 @@ export class WeinbegleiterApp {
     return messung.typ === 'sg' ? oechsleAusSg(messung.wert) : messung.wert
   }
 
+  private istUnterSkalaTyp(typ: MessTyp): boolean {
+    return typ === 'oechsle' || typ === 'sg'
+  }
+
+  private skalenendeStandard(typ: MessTyp): string {
+    return typ === 'sg' ? formatiereZahl(sgAusOechsle(-3), 4) : '-3'
+  }
+
+  private messwertText(messung: Messung): string {
+    if (messung.wert === null) return messung.text ?? '–'
+    const stellen = messung.typ === 'sg' ? 4 : messung.typ === 'oechsle' && Number.isInteger(messung.wert) ? 0 : 1
+    const wert = formatiereZahl(messung.wert, stellen).replace(/^-/, '−')
+    const grenze = messung.grenze === 'unter' ? '< ' : messung.grenze === 'ueber' ? '> ' : ''
+    const einheit = this.messEinheit(messung.typ)
+    return `${grenze}${wert}${einheit ? ` ${einheit}` : ''}`
+  }
+
+  private dichteOechsleText(messung: Messung | undefined): string {
+    const wert = this.dichteInOechsle(messung)
+    if (wert === undefined) return '–'
+    const grenze = messung?.grenze === 'unter' ? '< ' : messung?.grenze === 'ueber' ? '> ' : ''
+    return `${grenze}${formatiereZahl(wert, Number.isInteger(wert) ? 0 : 1).replace(/^-/, '−')}`
+  }
+
   private renderChargenZeile(charge: Charge): string {
     const ampel = ampelFuerCharge(this.stand, charge)
     const temperatur = this.letzteMessung(charge.id, 'temperatur')
     const dichten = this.stand.messungen.filter(messung => messung.chargeId === charge.id && DICHTE_KURVEN_TYPEN.includes(messung.typ) && messung.methode !== 'refraktometer').sort((a, b) => a.zeit.localeCompare(b.zeit))
     const ersteDichte = this.dichteInOechsle(dichten[0])
-    const letzteDichte = this.dichteInOechsle(dichten.at(-1))
-    const delta = ersteDichte !== undefined && letzteDichte !== undefined ? letzteDichte - ersteDichte : undefined
-    return `<button class="chargen-zeile" type="button" data-action="charge" data-id="${html(charge.id)}"><span class="listen-ampel ampel-${ampel.toLowerCase()}" aria-label="${html(AMPEL_LABEL[ampel])}"></span><span class="chargen-zeile-name"><strong>${html(charge.name)}</strong><small>${charge.mengeKg === undefined ? 'Menge offen' : `${formatiereZahl(charge.mengeKg)} kg`}</small></span><span class="chargen-zeile-wert"><strong>${letzteDichte === undefined ? '–' : formatiereZahl(letzteDichte, 0)}</strong><small>°Oe</small></span><span class="chargen-zeile-wert"><strong>${temperatur?.wert === null || temperatur?.wert === undefined ? '–' : formatiereZahl(temperatur.wert)}</strong><small>°C</small></span><span class="chargen-trend">${delta === undefined ? '–' : `${delta <= 0 ? '↓' : '↑'}${formatiereZahl(Math.abs(delta), 0)}`}<small>seit Start</small></span></button>`
+    const letzteDichteMessung = dichten.at(-1)
+    const letzteDichte = this.dichteInOechsle(letzteDichteMessung)
+    const delta = ersteDichte !== undefined && letzteDichte !== undefined && !dichten[0]?.grenze && !letzteDichteMessung?.grenze ? letzteDichte - ersteDichte : undefined
+    return `<button class="chargen-zeile" type="button" data-action="charge" data-id="${html(charge.id)}"><span class="listen-ampel ampel-${ampel.toLowerCase()}" aria-label="${html(AMPEL_LABEL[ampel])}"></span><span class="chargen-zeile-name"><strong>${html(charge.name)}</strong><small>${charge.mengeKg === undefined ? 'Menge offen' : `${formatiereZahl(charge.mengeKg)} kg`}</small></span><span class="chargen-zeile-wert"><strong>${html(this.dichteOechsleText(letzteDichteMessung))}</strong><small>°Oe</small></span><span class="chargen-zeile-wert"><strong>${temperatur?.wert === null || temperatur?.wert === undefined ? '–' : formatiereZahl(temperatur.wert)}</strong><small>°C</small></span><span class="chargen-trend">${delta === undefined ? '–' : `${delta <= 0 ? '↓' : '↑'}${formatiereZahl(Math.abs(delta), 0)}`}<small>seit Start</small></span></button>`
   }
 
   private renderFaelligeZeile(reminder: Reminder): string {
@@ -569,7 +617,7 @@ export class WeinbegleiterApp {
       const gaerstart = this.stand.ereignisse.filter(ereignis => ereignis.chargeId === charge.id && ereignis.art === 'anstellen').sort((a, b) => b.zeit.localeCompare(a.zeit))[0]?.zeit ?? charge.startdatum
       const punkte = this.stand.messungen
         .filter(messung => messung.chargeId === charge.id && DICHTE_KURVEN_TYPEN.includes(messung.typ) && messung.methode !== 'refraktometer' && new Date(messung.zeit).getTime() >= Math.max(abGaerstart ? new Date(gaerstart).getTime() : Number.NEGATIVE_INFINITY, untergrenze))
-        .flatMap(messung => { const sg = this.dichteAlsSg(messung); return sg === null ? [] : [{ zeit: messung.zeit, sg }] })
+        .flatMap(messung => { const sg = this.dichteAlsSg(messung); return sg === null ? [] : [{ zeit: messung.zeit, sg, messung }] })
         .sort((a, b) => a.zeit.localeCompare(b.zeit))
       return { charge, punkte, farbe: CHARGEN_FARBEN[index % CHARGEN_FARBEN.length]! }
     }).filter(serie => serie.punkte.length)
@@ -599,10 +647,10 @@ export class WeinbegleiterApp {
     const startSg = serien.reduce((summe, serie) => summe + serie.punkte[0]!.sg, 0) / serien.length
     const erwartetPfad = `M${x(startMs).toFixed(1)},${y(startSg).toFixed(1)} L${x(pressDatumMs).toFixed(1)},${y(pressGrenze).toFixed(1)}`
     const pressY = y(pressGrenze)
-    const tabellenText = serien.map(serie => `${serie.charge.name}: ${serie.punkte.map(punkt => `${datumZeitFormat.format(new Date(punkt.zeit))} SG ${formatiereZahl(punkt.sg, 4)}`).join(', ')}`).join(' · ')
+    const tabellenText = serien.map(serie => `${serie.charge.name}: ${serie.punkte.map(punkt => `${datumZeitFormat.format(new Date(punkt.zeit))} ${this.messwertText(punkt.messung)}`).join(', ')}`).join(' · ')
     const achsen = [90, 70, 50, 30, 10].map(oe => `<line class="klima-raster" x1="${links}" y1="${y(sgAusOechsle(oe)).toFixed(1)}" x2="${rechts}" y2="${y(sgAusOechsle(oe)).toFixed(1)}"></line><text class="achstext" x="6" y="${(y(sgAusOechsle(oe)) + 4).toFixed(1)}">${oe}</text>`).join('')
     const legende = serien.map(serie => `<span><i style="--serienfarbe:${serie.farbe}"></i>${html(serie.charge.name)}</span>`).join('')
-    return `<div class="kurve-karte kurve-gross"><div class="kurve-kopf"><h3>${html(titel)}</h3><div class="kurven-legende">${legende}<span><i class="erwartung"></i>Erwartung</span></div></div><svg class="gaerkurve" viewBox="0 0 ${breite} 330" preserveAspectRatio="none" role="img" aria-label="${html(titel)}. ${html(tabellenText)}"><rect class="pressband" x="${links}" y="${pressY.toFixed(1)}" width="${rechts - links}" height="${Math.max(0, unten - pressY).toFixed(1)}"></rect>${achsen}<text class="presslabel" x="${links + 6}" y="${Math.min(unten - 4, pressY + 16).toFixed(1)}">PRESSFENSTER · ${datumFormat.format(new Date(pressDatumMs))} · SG ≤ ${pressGrenzeText}</text><line class="kurvenachse" x1="${links}" y1="${unten}" x2="${rechts}" y2="${unten}"></line><path class="kurve-erwartet" d="${erwartetPfad}"></path>${serien.map(serie => { const pfad = serie.punkte.map((punkt, index) => `${index ? 'L' : 'M'}${x(punkt.zeit).toFixed(1)},${y(punkt.sg).toFixed(1)}`).join(' '); return `<path class="kurve-serie" style="--serienfarbe:${serie.farbe}" d="${pfad}"></path>${serie.punkte.map(punkt => `<circle class="kurvenpunkt" style="--serienfarbe:${serie.farbe}" cx="${x(punkt.zeit).toFixed(1)}" cy="${y(punkt.sg).toFixed(1)}" r="4"><title>${html(serie.charge.name)} · ${datumZeitFormat.format(new Date(punkt.zeit))}: SG ${formatiereZahl(punkt.sg, 4)} (${formatiereZahl(oechsleAusSg(punkt.sg), 0)} °Oe)</title></circle>`).join('')}` }).join('')}<text class="achstext" x="${links}" y="318">${kurzDatumFormat.format(new Date(startMs))}</text><text class="achstext achstext-rechts" x="${rechts}" y="318">${kurzDatumFormat.format(new Date(endeMs))}</text></svg>${this.renderErklaerschublade('Worauf du bei der Kurve achtest', `${erklaerung} Messwerte: ${tabellenText}`)}</div>`
+    return `<div class="kurve-karte kurve-gross"><div class="kurve-kopf"><h3>${html(titel)}</h3><div class="kurven-legende">${legende}<span><i class="erwartung"></i>Erwartung</span></div></div><svg class="gaerkurve" viewBox="0 0 ${breite} 330" preserveAspectRatio="none" role="img" aria-label="${html(titel)}. ${html(tabellenText)}"><rect class="pressband" x="${links}" y="${pressY.toFixed(1)}" width="${rechts - links}" height="${Math.max(0, unten - pressY).toFixed(1)}"></rect>${achsen}<text class="presslabel" x="${links + 6}" y="${Math.min(unten - 4, pressY + 16).toFixed(1)}">PRESSFENSTER · ${datumFormat.format(new Date(pressDatumMs))} · SG ≤ ${pressGrenzeText}</text><line class="kurvenachse" x1="${links}" y1="${unten}" x2="${rechts}" y2="${unten}"></line><path class="kurve-erwartet" d="${erwartetPfad}"></path>${serien.map(serie => { const pfad = serie.punkte.map((punkt, index) => `${index ? 'L' : 'M'}${x(punkt.zeit).toFixed(1)},${y(punkt.sg).toFixed(1)}`).join(' '); return `<path class="kurve-serie" style="--serienfarbe:${serie.farbe}" d="${pfad}"></path>${serie.punkte.map(punkt => `<circle class="kurvenpunkt" style="--serienfarbe:${serie.farbe}" cx="${x(punkt.zeit).toFixed(1)}" cy="${y(punkt.sg).toFixed(1)}" r="4"><title>${html(serie.charge.name)} · ${datumZeitFormat.format(new Date(punkt.zeit))}: ${html(this.messwertText(punkt.messung))}</title></circle>`).join('')}` }).join('')}<text class="achstext" x="${links}" y="318">${kurzDatumFormat.format(new Date(startMs))}</text><text class="achstext achstext-rechts" x="${rechts}" y="318">${kurzDatumFormat.format(new Date(endeMs))}</text></svg>${this.renderErklaerschublade('Worauf du bei der Kurve achtest', `${erklaerung} Messwerte: ${tabellenText}`)}</div>`
   }
 
   private renderBatteriewarnung(): string {
@@ -723,14 +771,20 @@ export class WeinbegleiterApp {
   }
 
   private renderRundenFeld(charge: Charge, definition: MessDefinition, entwurf: RundenEntwurf): string {
-    const wert = entwurf.messwerte[definition.typ] ?? { eingabe: '', methode: 'spindel' as const }
+    const wert = entwurf.messwerte[definition.typ] ?? { eingabe: '', methode: 'spindel' as const, unterSkala: false, skalenende: this.skalenendeStandard(definition.typ) }
     const feldId = `runde-${charge.id}-${definition.typ}`
     const feld = definition.art === 'zahl'
-      ? `<div class="runden-eingabeblock"><input id="${html(feldId)}" name="runde-${definition.typ}" data-runde-eingabe data-mess-typ="${definition.typ}" inputmode="decimal" value="${html(wert.eingabe)}"><span>${html(definition.einheit)}</span></div>`
+      ? `<div class="runden-eingabeblock"><input id="${html(feldId)}" name="runde-${definition.typ}" data-runde-eingabe data-skalen-wert data-mess-typ="${definition.typ}" inputmode="decimal" value="${html(wert.eingabe)}" ${wert.unterSkala ? 'disabled' : ''}><span>${html(definition.einheit)}</span></div>`
       : `<select id="${html(feldId)}" name="runde-${definition.typ}" data-runde-eingabe data-mess-typ="${definition.typ}"><option value="">Nicht erfasst</option>${(definition.optionen ?? []).map(option => `<option value="${html(option)}" ${option === wert.eingabe ? 'selected' : ''}>${html(option)}</option>`).join('')}</select>`
     const methode = DICHTE_TYPEN.includes(definition.typ) ? `<label class="runden-methode" for="runde-methode-${definition.typ}"><span>Messmethode</span><select id="runde-methode-${definition.typ}" name="methode-${definition.typ}" data-runde-methode data-mess-typ="${definition.typ}"><option value="spindel" ${wert.methode === 'spindel' ? 'selected' : ''}>Spindel</option><option value="refraktometer" ${wert.methode === 'refraktometer' ? 'selected' : ''}>Refraktometer</option><option value="sonstige" ${wert.methode === 'sonstige' ? 'selected' : ''}>Sonstige</option></select></label>` : ''
     const label = definition.typ === 'volumen' ? 'Füllstand' : definition.label
-    return `<div class="runden-feld"><div class="runden-feld-label"><label for="${html(feldId)}">${html(label)}</label>${definition.hinweis ? `<small>${html(definition.hinweis)}</small>` : ''}</div>${feld}${methode}</div>`
+    return `<div class="runden-feld" data-mess-block data-mess-typ="${definition.typ}"><div class="runden-feld-label"><label for="${html(feldId)}">${html(label)}</label>${definition.hinweis ? `<small>${html(definition.hinweis)}</small>` : ''}</div>${feld}${this.renderUnterSkala(definition.typ, feldId, wert)}${methode}</div>`
+  }
+
+  private renderUnterSkala(typ: MessTyp, prefix: string, entwurf: MessEntwurf): string {
+    if (!this.istUnterSkalaTyp(typ)) return ''
+    const einheit = this.messEinheit(typ)
+    return `<div class="unter-skala"><label class="unter-skala-schalter" for="${html(prefix)}-unter"><input id="${html(prefix)}-unter" name="grenze-${typ}" value="unter" type="checkbox" data-unter-skala data-mess-typ="${typ}" ${entwurf.unterSkala ? 'checked' : ''}><span>unter der Skala</span></label><label class="skalenende" for="${html(prefix)}-skalenende" ${entwurf.unterSkala ? '' : 'hidden'}><span>Skalenende</span><span class="skalenende-eingabe"><input id="${html(prefix)}-skalenende" name="skalenende-${typ}" data-skalenende data-mess-typ="${typ}" inputmode="decimal" value="${html(entwurf.skalenende || this.skalenendeStandard(typ))}" ${entwurf.unterSkala ? 'required' : ''}><small>${html(einheit)}</small></span></label></div>`
   }
 
   private renderRundenZugaben(charge: Charge, entwurf: RundenEntwurf): string {
@@ -752,12 +806,12 @@ export class WeinbegleiterApp {
         begruendung: vorschlag.begruendung,
         begruendungAutomatisch: true,
       }
-      return this.renderRundenZugabe(vorschlag, zugabe)
+      return this.renderRundenZugabe(charge, vorschlag, zugabe)
     }).join('')
     return `<section class="runden-zugaben" aria-labelledby="runden-zugaben-titel"><div class="runden-zugaben-kopf"><h2 id="runden-zugaben-titel">Zugaben</h2><span>Nur „Zugegeben“ wird protokolliert</span></div>${erinnerungsZeilen}<div class="runden-zugabe-liste">${zeilen}</div></section>`
   }
 
-  private renderRundenZugabe(vorschlag: ReturnType<typeof zugabeVorschlag>, zugabe: RundenZugabeEntwurf): string {
+  private renderRundenZugabe(charge: Charge, vorschlag: ReturnType<typeof zugabeVorschlag>, zugabe: RundenZugabeEntwurf): string {
     const menge = parseDeZahl(zugabe.menge)
     const vorrat = passendeVorratsZuordnung(this.stand, vorschlag.art, zugabe.stoff, zugabe.einheit, menge ?? undefined)
     const gesamtNachEingabe = (vorschlag.bisherGesamt ?? 0) + (menge ?? 0)
@@ -769,9 +823,17 @@ export class WeinbegleiterApp {
     const einheit = vorschlag.art === 'sonstiges'
       ? `<select name="zugabe-${vorschlag.art}-einheit" data-runde-zugabe-einheit aria-label="Einheit für sonstige Zugabe">${['g', 'kg', 'ml', 'L', 'Beutel'].map(option => `<option value="${option}" ${option === zugabe.einheit ? 'selected' : ''}>${option}</option>`).join('')}</select>`
       : `<span>${html(zugabe.einheit)}</span>`
+    const volumen = charge.fuellLiter ?? charge.erwarteteWeinLiter
+    const ph = this.letzteMessung(charge.id, 'ph')?.wert
+    const stammloesung = vorschlag.art === 'schwefeln' && volumen !== undefined && ph !== null && ph !== undefined
+      ? stammloesungMl(volumen, ph)
+      : null
+    const stammloesungText = stammloesung
+      ? `<div class="runden-stammloesung"><strong>${formatiereZahl(stammloesung.wert, 1)} ml Stammlösung</strong><span>zuerst abmessen · 1,00 g Kaliumpyrosulfit in 100 ml Wasser</span></div>`
+      : ''
     return `<article class="runden-zugabe ${zugabe.aktiv ? 'aktiv' : ''}" data-runde-zugabe data-zugabe-art="${vorschlag.art}"${vorschlag.gesamtMax === undefined ? '' : ` data-zugabe-max="${vorschlag.gesamtMax}" data-zugabe-bisher="${vorschlag.bisherGesamt ?? 0}"`}>
       <label class="runden-zugabe-aktiv"><input type="checkbox" name="zugabe-${vorschlag.art}-aktiv" data-runde-zugabe-aktiv ${zugabe.aktiv ? 'checked' : ''}><span>Zugegeben</span></label>
-      <div class="runden-zugabe-inhalt">${stoffFeld}<div class="runden-zugabe-menge"><label for="${feldId}">Menge</label><div><input id="${feldId}" name="zugabe-${vorschlag.art}-menge" data-runde-zugabe-menge inputmode="decimal" value="${html(zugabe.menge)}">${einheit}</div></div><p class="runden-zugabe-herkunft">${html(vorschlag.herkunft)}</p><p class="runden-zugabe-vorrat ${vorrat.warnung ? 'warnung' : ''}" data-runde-zugabe-vorrat>${html(vorrat.hinweis)}</p><div class="warnbox runden-zugabe-max" data-runde-zugabe-maxwarnung ${maxErreicht ? '' : 'hidden'}>Die erfasste Gesamtmenge erreicht oder überschreitet die Höchstmenge aus naehrsalzPlan(). Die Zugabe bleibt möglich; R-NAEHRSALZ-MAX bleibt unverändert die Regelquelle.</div><details class="runden-zugabe-begruendung"><summary>Begründung ansehen oder ändern</summary><textarea name="zugabe-${vorschlag.art}-begruendung" data-runde-zugabe-begruendung aria-label="Begründung für ${html(vorschlag.label)}">${html(zugabe.begruendung)}</textarea></details></div>
+      <div class="runden-zugabe-inhalt">${stammloesungText}${stoffFeld}<div class="runden-zugabe-menge"><label for="${feldId}">Menge</label><div><input id="${feldId}" name="zugabe-${vorschlag.art}-menge" data-runde-zugabe-menge inputmode="decimal" value="${html(zugabe.menge)}">${einheit}</div></div><p class="runden-zugabe-herkunft">${html(vorschlag.herkunft)}</p><p class="runden-zugabe-vorrat ${vorrat.warnung ? 'warnung' : ''}" data-runde-zugabe-vorrat>${html(vorrat.hinweis)}</p><div class="warnbox runden-zugabe-max" data-runde-zugabe-maxwarnung ${maxErreicht ? '' : 'hidden'}>Die erfasste Gesamtmenge erreicht oder überschreitet die Höchstmenge aus naehrsalzPlan(). Die Zugabe bleibt möglich; R-NAEHRSALZ-MAX bleibt unverändert die Regelquelle.</div><details class="runden-zugabe-begruendung"><summary>Begründung ansehen oder ändern</summary><textarea name="zugabe-${vorschlag.art}-begruendung" data-runde-zugabe-begruendung aria-label="Begründung für ${html(vorschlag.label)}">${html(zugabe.begruendung)}</textarea></details></div>
     </article>`
   }
 
@@ -781,8 +843,8 @@ export class WeinbegleiterApp {
     const zeilen = letzteJeTyp.map(({ definition, reihe }) => {
       const letzte = reihe[0]
       const davor = reihe[1]
-      const anzeige = !letzte ? '–' : letzte.wert === null ? html(letzte.text ?? '–') : `${formatiereZahl(letzte.wert, definition.typ === 'sg' ? 4 : 1)} ${html(definition.einheit)}`
-      const trend = letzte?.wert !== null && letzte?.wert !== undefined && davor?.wert !== null && davor?.wert !== undefined
+      const anzeige = !letzte ? '–' : html(this.messwertText(letzte))
+      const trend = letzte?.wert !== null && letzte?.wert !== undefined && davor?.wert !== null && davor?.wert !== undefined && !letzte.grenze && !davor.grenze
         ? `<span class="runden-trend">${letzte.wert >= davor.wert ? '↑' : '↓'} von ${formatiereZahl(davor.wert, definition.typ === 'sg' ? 4 : 1)}</span>`
         : ''
       return `<div><span>${html(definition.typ === 'volumen' ? 'Füllstand' : definition.label)}</span><strong>${anzeige}${trend}</strong></div>`
@@ -832,7 +894,7 @@ export class WeinbegleiterApp {
       { ansicht: 'mehr', label: 'Einstellungen', bild: 'mehr' },
     ]
     const letzterAbgleich = typeof this.stand.appMeta.letzterAbgleich === 'string' ? this.stand.appMeta.letzterAbgleich : null
-    return `<aside class="desktop-seite"><div class="desktop-logo"><span>${icon('traube')}</span><div><strong>Weinbegleiter</strong><small>Jahrgang ${this.stand.jahrgang} · Rotwein</small></div></div><nav aria-label="Hauptnavigation">${nav.map(eintrag => `<button class="desktop-nav-knopf ${this.hauptAnsicht() === eintrag.ansicht ? 'aktiv' : ''}" type="button" data-action="${eintrag.ansicht === 'runde' ? 'runde-start' : 'nav'}" data-view="${eintrag.ansicht}" ${this.hauptAnsicht() === eintrag.ansicht ? 'aria-current="page"' : ''}>${icon(eintrag.bild)}<span>${eintrag.label}</span></button>`).join('')}</nav><h2>Gefäße</h2><div class="desktop-gefaesse">${this.aktiveChargen().map(charge => { const ampel = ampelFuerCharge(this.stand, charge); const dichte = this.dichteInOechsle(this.letzteMessung(charge.id, 'oechsle') ?? this.letzteMessung(charge.id, 'sg')); return `<button class="desktop-gefaess ${charge.id === this.ui.chargeId ? 'aktiv' : ''}" type="button" data-action="desktop-charge" data-id="${html(charge.id)}"><span class="listen-ampel ampel-${ampel.toLowerCase()}"></span><strong>${html(charge.name)}</strong><small>${dichte === undefined ? '–' : `${formatiereZahl(dichte, 0)} °Oe`}</small></button>` }).join('')}</div><div class="desktop-fassung"><span>Abgleich ${letzterAbgleich ? datumZeitFormat.format(new Date(letzterAbgleich)) : 'noch nie'}</span><strong>Fassung vom ${BUILD_ZEIT_FORMAT.format(new Date(__BUILD_TIMESTAMP__))} (${html(__BUILD_COMMIT__)})</strong></div></aside>`
+    return `<aside class="desktop-seite"><div class="desktop-logo"><span>${icon('traube')}</span><div><strong>Weinbegleiter</strong><small>Jahrgang ${this.stand.jahrgang} · Rotwein</small></div></div><nav aria-label="Hauptnavigation">${nav.map(eintrag => `<button class="desktop-nav-knopf ${this.hauptAnsicht() === eintrag.ansicht ? 'aktiv' : ''}" type="button" data-action="${eintrag.ansicht === 'runde' ? 'runde-start' : 'nav'}" data-view="${eintrag.ansicht}" ${this.hauptAnsicht() === eintrag.ansicht ? 'aria-current="page"' : ''}>${icon(eintrag.bild)}<span>${eintrag.label}</span></button>`).join('')}</nav><h2>Gefäße</h2><div class="desktop-gefaesse">${this.aktiveChargen().map(charge => { const ampel = ampelFuerCharge(this.stand, charge); const dichte = this.letzteMessung(charge.id, 'oechsle') ?? this.letzteMessung(charge.id, 'sg'); return `<button class="desktop-gefaess ${charge.id === this.ui.chargeId ? 'aktiv' : ''}" type="button" data-action="desktop-charge" data-id="${html(charge.id)}"><span class="listen-ampel ampel-${ampel.toLowerCase()}"></span><strong>${html(charge.name)}</strong><small>${html(this.dichteOechsleText(dichte))} °Oe</small></button>` }).join('')}</div><div class="desktop-fassung"><span>Abgleich ${letzterAbgleich ? datumZeitFormat.format(new Date(letzterAbgleich)) : 'noch nie'}</span><strong>Fassung vom ${BUILD_ZEIT_FORMAT.format(new Date(__BUILD_TIMESTAMP__))} (${html(__BUILD_COMMIT__)})</strong></div></aside>`
   }
 
   private renderDesktopMitte(): string {
@@ -882,12 +944,12 @@ export class WeinbegleiterApp {
     const messungen = this.stand.messungen.filter(messung => messung.chargeId === charge.id).sort((a, b) => b.zeit.localeCompare(a.zeit))
     const ereignisse = this.stand.ereignisse.filter(ereignis => ereignis.chargeId === charge.id).sort((a, b) => b.zeit.localeCompare(a.zeit))
     const ampel = ampelFuerCharge(this.stand, charge)
-    return `<aside class="desktop-detail"><div class="desktop-detail-kopf"><div><h2>${html(charge.name)}</h2>${this.renderAmpel(ampel)}</div><button class="btn btn-klein" type="button" data-action="erfassen">Erfassen</button></div><p>${charge.mengeKg === undefined ? 'Menge offen' : `${formatiereZahl(charge.mengeKg)} kg`} · ${charge.erwarteteWeinLiter === undefined ? 'Ausbeute offen' : `${formatiereZahl(charge.erwarteteWeinLiter)} L erwartet`} · ${html(PHASEN_LABEL[charge.phase])}</p><h3>Messungen</h3><div class="desktop-tabelle-wrap"><table class="desktop-tabelle"><thead><tr><th>Zeit</th><th>Größe</th><th>Wert</th></tr></thead><tbody>${messungen.map(messung => `<tr class="mess-tabellenzeile" data-action="messung-bearbeiten" data-id="${html(messung.id)}" tabindex="0"><td>${datumZeitFormat.format(new Date(messung.zeit))}</td><td>${html(this.messLabel(messung.typ))}</td><td>${messung.wert === null ? html(messung.text ?? '–') : `${zahlFormat.format(messung.wert)} ${html(this.messEinheit(messung.typ))}`}</td></tr>`).join('')}</tbody></table></div><h3>Ereignisse</h3><div class="desktop-ereignisse">${ereignisse.map(ereignis => `<button type="button" data-action="ereignis-bearbeiten" data-id="${html(ereignis.id)}"><strong>${html(EREIGNIS_LABEL[ereignis.art])}${ereignis.mengeWert === undefined ? '' : ` · ${zahlFormat.format(ereignis.mengeWert)} ${html(ereignis.mengeEinheit)}`}</strong><small>${datumZeitFormat.format(new Date(ereignis.zeit))} · ${html(ereignis.begruendung)}</small></button>`).join('') || '<div class="leer">Noch keine Ereignisse.</div>'}</div></aside>`
+    return `<aside class="desktop-detail"><div class="desktop-detail-kopf"><div><h2>${html(charge.name)}</h2>${this.renderAmpel(ampel)}</div><button class="btn btn-klein" type="button" data-action="erfassen">Erfassen</button></div><p>${charge.mengeKg === undefined ? 'Menge offen' : `${formatiereZahl(charge.mengeKg)} kg`} · ${charge.erwarteteWeinLiter === undefined ? 'Ausbeute offen' : `${formatiereZahl(charge.erwarteteWeinLiter)} L erwartet`} · ${html(PHASEN_LABEL[charge.phase])}</p><h3>Messungen</h3><div class="desktop-tabelle-wrap"><table class="desktop-tabelle"><thead><tr><th>Zeit</th><th>Größe</th><th>Wert</th></tr></thead><tbody>${messungen.map(messung => `<tr class="mess-tabellenzeile" data-action="messung-bearbeiten" data-id="${html(messung.id)}" tabindex="0"><td>${datumZeitFormat.format(new Date(messung.zeit))}</td><td>${html(this.messLabel(messung.typ))}</td><td>${html(this.messwertText(messung))}</td></tr>`).join('')}</tbody></table></div><h3>Ereignisse</h3><div class="desktop-ereignisse">${ereignisse.map(ereignis => `<button type="button" data-action="ereignis-bearbeiten" data-id="${html(ereignis.id)}"><strong>${html(EREIGNIS_LABEL[ereignis.art])}${ereignis.mengeWert === undefined ? '' : ` · ${zahlFormat.format(ereignis.mengeWert)} ${html(ereignis.mengeEinheit)}`}</strong><small>${datumZeitFormat.format(new Date(ereignis.zeit))} · ${html(ereignis.begruendung)}</small></button>`).join('') || '<div class="leer">Noch keine Ereignisse.</div>'}</div></aside>`
   }
 
   private renderJournal(): string {
     const eintraege = [
-      ...this.stand.messungen.map(messung => ({ zeit: messung.zeit, art: 'messung' as const, id: messung.id, chargeId: messung.chargeId, titel: this.messLabel(messung.typ), text: messung.wert === null ? messung.text ?? '–' : `${zahlFormat.format(messung.wert)} ${this.messEinheit(messung.typ)}` })),
+      ...this.stand.messungen.map(messung => ({ zeit: messung.zeit, art: 'messung' as const, id: messung.id, chargeId: messung.chargeId, titel: this.messLabel(messung.typ), text: this.messwertText(messung) })),
       ...this.stand.ereignisse.map(ereignis => ({ zeit: ereignis.zeit, art: 'ereignis' as const, id: ereignis.id, chargeId: ereignis.chargeId, titel: EREIGNIS_LABEL[ereignis.art], text: ereignis.begruendung })),
     ].sort((a, b) => b.zeit.localeCompare(a.zeit))
     return `<section class="seite journal" aria-labelledby="journal-titel"><h1 class="seiten-titel" id="journal-titel">Journal</h1><div class="karte protokoll-liste">${eintraege.map(eintrag => `<button class="protokoll-eintrag" type="button" data-action="${eintrag.art === 'messung' ? 'messung-bearbeiten' : 'ereignis-bearbeiten'}" data-id="${html(eintrag.id)}"><span>${datumZeitFormat.format(new Date(eintrag.zeit))} · ${html(this.stand.chargen.find(charge => charge.id === eintrag.chargeId)?.name ?? eintrag.chargeId)}</span><b>${html(eintrag.titel)} · ${html(eintrag.text)}</b><small>Antippen zum Bearbeiten</small></button>`).join('') || '<div class="leer">Noch keine Einträge.</div>'}</div></section>`
@@ -901,7 +963,8 @@ export class WeinbegleiterApp {
     const gate = gateFuerPhase(this.stand, charge)
     const phaseIndex = PHASEN_REIHE.indexOf(charge.phase)
     const naechstePhase = PHASEN_REIHE[phaseIndex + 1]
-    const elternIds = charge.elternChargeId ? [charge.elternChargeId] : []
+    const elternIds = charge.herkunftIds?.length ? charge.herkunftIds : charge.elternChargeId ? [charge.elternChargeId] : []
+    const abstichMoeglich = Boolean(charge.los && ['NACHGAERUNG', 'GAERENDE_GATE', 'ERSTER_ABSTICH', 'AUSBAU'].includes(charge.phase))
     return `<section class="seite" aria-labelledby="charge-titel"><button class="zurueck" type="button" data-action="nav" data-view="heute">${icon('pfeil')}Heute</button><div class="charge-kopf charge-detail-kopf"><div><h1 class="seiten-titel" id="charge-titel">${html(charge.name)}</h1><div class="charge-meta">${charge.mengeKg === undefined ? 'Menge offen' : `${formatiereZahl(charge.mengeKg)} kg`} · ${html(PHASEN_LABEL[charge.phase])} · Tag ${this.tagDerPhase(charge)}</div></div>${this.renderAmpel(ampel)}</div>${this.renderErklaerschublade('Was die Ampel prüft', 'Oberfläche, Geruch, Kopfraum, Temperatur, Kontrollabstand und Zugabemengen fließen in die Bewertung ein. Gelb fordert eine Kontrolle. Orange isoliert die Charge. Rot sperrt Vermischung und Abfüllung.')}
       ${charge.archiviert ? '<div class="info-box">Archivierte Ausgangscharge. Messungen und Ereignisse bleiben unverändert erhalten.</div>' : ''}
       ${elternIds.length ? `<div class="karte"><h2>Herkunft</h2>${elternIds.map(elternId => { const eltern = this.stand.chargen.find(eintrag => eintrag.id === elternId); return `<button class="wiki-eintrag" type="button" data-action="charge" data-id="${html(elternId)}"><strong>${html(eltern?.name ?? elternId)}</strong><small>${eltern ? `${eltern.mengeKg === undefined ? 'Menge offen' : `${formatiereZahl(eltern.mengeKg)} kg`} · ${html(PHASEN_LABEL[eltern.phase])}` : 'Ausgangscharge'}</small></button>` }).join('')}</div>` : ''}
@@ -909,7 +972,7 @@ export class WeinbegleiterApp {
       <h2>Phase</h2><div class="karte">${this.renderZeitstrahl(charge)}</div>
       <div class="tabs" role="tablist" aria-label="Chargendetails">${tabs.map(([id, label]) => `<button class="tab ${this.ui.chargeTab === id ? 'aktiv' : ''}" type="button" role="tab" aria-selected="${this.ui.chargeTab === id}" data-action="charge-tab" data-tab="${id}">${label}</button>`).join('')}</div>
       ${this.renderChargeTab(charge)}
-      ${charge.archiviert ? '' : `<div class="button-grid"><button class="btn btn-haupt" type="button" data-action="erfassen">${icon('messung', 'icon-klein')} Erfassen</button><button class="btn" type="button" data-action="nav" data-view="rechner">${icon('rechner', 'icon-klein')} Zugabe berechnen</button><button class="btn" type="button" data-action="nav" data-view="gate">${icon('gate', 'icon-klein')} Gate prüfen</button><button class="btn" type="button" data-action="nav" data-view="umverteilen">Umverteilen</button></div>${naechstePhase ? `<div class="karte"><label for="phase-auswahl">Auf frühere Phase zurücksetzen</label><select id="phase-auswahl" data-action="phase">${PHASEN_REIHE.slice(0, phaseIndex + 1).map(eintrag => `<option value="${eintrag}" ${eintrag === charge.phase ? 'selected' : ''}>${html(PHASEN_LABEL[eintrag])}</option>`).join('')}</select><div class="hint">Vorwärts geht es nur Schritt für Schritt. Dadurch kann kein Gate übersprungen werden.</div>${gate ? `<button class="btn btn-haupt" type="button" data-action="phase-weiter" ${gate.freigegeben && ampel !== 'RED' ? '' : 'disabled'}>Weiter zu ${html(PHASEN_LABEL[naechstePhase])}</button><div class="hint">${ampel === 'RED' ? 'Die rote Ampel sperrt den Phasenwechsel.' : gate.freigegeben ? 'Gate freigegeben.' : 'Gate blockiert. Unbekannt und nicht erfüllt verhindern den Phasenwechsel.'}</div>` : `<button class="btn" type="button" data-action="phase-weiter" ${ampel === 'RED' ? 'disabled' : ''}>Weiter zu ${html(PHASEN_LABEL[naechstePhase])}</button>${ampel === 'RED' ? '<div class="hint">Die rote Ampel sperrt den Phasenwechsel.</div>' : ''}`}</div>` : ''}`}
+      ${charge.archiviert ? '' : `<div class="button-grid"><button class="btn btn-haupt" type="button" data-action="erfassen">${icon('messung', 'icon-klein')} Erfassen</button><button class="btn" type="button" data-action="nav" data-view="rechner">${icon('rechner', 'icon-klein')} Zugabe berechnen</button><button class="btn" type="button" data-action="nav" data-view="gate">${icon('gate', 'icon-klein')} Gate prüfen</button>${abstichMoeglich ? `<button class="btn btn-haupt" type="button" data-action="abstich-start" data-los="${html(charge.los!)}">Abstich</button>` : ''}<button class="btn" type="button" data-action="nav" data-view="umverteilen">Umverteilen</button></div>${naechstePhase ? `<div class="karte"><label for="phase-auswahl">Auf frühere Phase zurücksetzen</label><select id="phase-auswahl" data-action="phase">${PHASEN_REIHE.slice(0, phaseIndex + 1).map(eintrag => `<option value="${eintrag}" ${eintrag === charge.phase ? 'selected' : ''}>${html(PHASEN_LABEL[eintrag])}</option>`).join('')}</select><div class="hint">Vorwärts geht es nur Schritt für Schritt. Dadurch kann kein Gate übersprungen werden.</div>${gate ? `<button class="btn btn-haupt" type="button" data-action="phase-weiter" ${gate.freigegeben && ampel !== 'RED' ? '' : 'disabled'}>Weiter zu ${html(PHASEN_LABEL[naechstePhase])}</button><div class="hint">${ampel === 'RED' ? 'Die rote Ampel sperrt den Phasenwechsel.' : gate.freigegeben ? 'Gate freigegeben.' : 'Gate blockiert. Unbekannt und nicht erfüllt verhindern den Phasenwechsel.'}</div>` : `<button class="btn" type="button" data-action="phase-weiter" ${ampel === 'RED' ? 'disabled' : ''}>Weiter zu ${html(PHASEN_LABEL[naechstePhase])}</button>${ampel === 'RED' ? '<div class="hint">Die rote Ampel sperrt den Phasenwechsel.</div>' : ''}`}</div>` : ''}`}
     </section>`
   }
 
@@ -920,7 +983,7 @@ export class WeinbegleiterApp {
     }
     if (this.ui.chargeTab === 'messungen') {
       const messungen = this.stand.messungen.filter(m => m.chargeId === charge.id).sort((a, b) => b.zeit.localeCompare(a.zeit))
-      return `<div class="karte protokoll-liste">${messungen.length ? messungen.map(m => `<button class="protokoll-eintrag" type="button" data-action="messung-bearbeiten" data-id="${html(m.id)}"><span>${datumZeitFormat.format(new Date(m.zeit))} · ${html(this.messLabel(m.typ))}</span><b>${m.wert === null ? html(m.text ?? '–') : `${zahlFormat.format(m.wert)} ${html(this.messEinheit(m.typ))}`}${m.methode ? ` · ${html(m.methode)}` : ''}</b><small>Antippen zum Bearbeiten</small></button>`).join('') : '<div class="leer">Noch keine Messungen.</div>'}</div>`
+      return `<div class="karte protokoll-liste">${messungen.length ? messungen.map(m => `<button class="protokoll-eintrag" type="button" data-action="messung-bearbeiten" data-id="${html(m.id)}"><span>${datumZeitFormat.format(new Date(m.zeit))} · ${html(this.messLabel(m.typ))}</span><b>${html(this.messwertText(m))}${m.methode ? ` · ${html(m.methode)}` : ''}</b><small>Antippen zum Bearbeiten</small></button>`).join('') : '<div class="leer">Noch keine Messungen.</div>'}</div>`
     }
     if (this.ui.chargeTab === 'ereignisse') {
       const ereignisse = this.stand.ereignisse.filter(e => e.chargeId === charge.id).sort((a, b) => b.zeit.localeCompare(a.zeit))
@@ -1002,13 +1065,13 @@ export class WeinbegleiterApp {
   }
 
   private renderMessFeld(definition: MessDefinition, erforderlich = false): string {
-    const entwurf = this.ui.messEntwuerfe[definition.typ] ?? { eingabe: '', methode: 'spindel' as const }
+    const entwurf = this.ui.messEntwuerfe[definition.typ] ?? { eingabe: '', methode: 'spindel' as const, unterSkala: false, skalenende: this.skalenendeStandard(definition.typ) }
     const feldId = `mess-${definition.typ}`
     const eingabe = definition.art === 'zahl'
-      ? `<input id="${feldId}" name="${feldId}" data-mess-eingabe data-mess-typ="${definition.typ}" inputmode="decimal" value="${html(entwurf.eingabe)}" ${erforderlich ? 'required' : ''}>`
+      ? `<input id="${feldId}" name="${feldId}" data-mess-eingabe data-skalen-wert ${erforderlich ? 'data-skalen-required' : ''} data-mess-typ="${definition.typ}" inputmode="decimal" value="${html(entwurf.eingabe)}" ${erforderlich && !entwurf.unterSkala ? 'required' : ''} ${entwurf.unterSkala ? 'disabled' : ''}>`
       : `<select id="${feldId}" name="${feldId}" data-mess-eingabe data-mess-typ="${definition.typ}" ${erforderlich ? 'required' : ''}><option value="">${erforderlich ? 'Bitte wählen' : 'Nicht erfasst'}</option>${(definition.optionen ?? []).map(option => `<option value="${html(option)}" ${entwurf.eingabe === option ? 'selected' : ''}>${html(option)}</option>`).join('')}</select>`
     const methode = DICHTE_TYPEN.includes(definition.typ) ? `<div class="mess-methode"><label for="methode-${definition.typ}">Messmethode</label><select id="methode-${definition.typ}" name="methode-${definition.typ}" data-action="mess-methode" data-mess-typ="${definition.typ}"><option value="spindel" ${entwurf.methode === 'spindel' ? 'selected' : ''}>Spindel</option><option value="refraktometer" ${entwurf.methode === 'refraktometer' ? 'selected' : ''}>Refraktometer</option><option value="sonstige" ${entwurf.methode === 'sonstige' ? 'selected' : ''}>Sonstige</option></select><div class="mess-methode-hinweis" data-refraktometer-hinweis data-mess-typ="${definition.typ}"></div></div>` : ''
-    return `<div class="mess-feld"><div class="mess-feld-label"><label for="${feldId}">${html(definition.label)}</label>${definition.hinweis ? `<small>${html(definition.hinweis)}</small>` : ''}</div>${eingabe}<span class="mess-einheit">${html(definition.einheit)}</span>${methode}</div>`
+    return `<div class="mess-feld" data-mess-block data-mess-typ="${definition.typ}"><div class="mess-feld-label"><label for="${feldId}">${html(definition.label)}</label>${definition.hinweis ? `<small>${html(definition.hinweis)}</small>` : ''}</div>${eingabe}<span class="mess-einheit">${html(definition.einheit)}</span>${this.renderUnterSkala(definition.typ, feldId, entwurf)}${methode}</div>`
   }
 
   private renderMessZeitfelder(): string {
@@ -1039,8 +1102,9 @@ export class WeinbegleiterApp {
     if (!messung) return `<section class="seite"><button class="zurueck" type="button" data-action="nav" data-view="charge">${icon('pfeil')}Zur Charge</button><div class="fehlerbox">Messung nicht gefunden.</div></section>`
     const definition = MESS_DEFINITIONEN.find(eintrag => eintrag.typ === messung.typ)
     if (!definition) return `<section class="seite"><button class="zurueck" type="button" data-action="nav" data-view="charge">${icon('pfeil')}Zur Charge</button><div class="fehlerbox">Unbekannte Messgröße.</div></section>`
+    const editEntwurf: MessEntwurf = { eingabe: messung.wert === null ? '' : formatiereZahl(messung.wert, messung.typ === 'sg' ? 4 : 1), methode: messung.methode ?? 'spindel', unterSkala: messung.grenze === 'unter', skalenende: messung.grenze === 'unter' && messung.wert !== null ? formatiereZahl(messung.wert, messung.typ === 'sg' ? 4 : 1) : this.skalenendeStandard(messung.typ) }
     const wertFeld = definition.art === 'zahl'
-      ? `<label for="messung-edit-wert">Wert in ${html(definition.einheit || 'Zahlen')}</label><input id="messung-edit-wert" name="wert" inputmode="decimal" value="${messung.wert === null ? '' : html(zahlFormat.format(messung.wert))}" required>`
+      ? `<div data-mess-block data-mess-typ="${messung.typ}"><label for="messung-edit-wert">Wert in ${html(definition.einheit || 'Zahlen')}</label><input id="messung-edit-wert" name="wert" data-skalen-wert data-skalen-required inputmode="decimal" value="${messung.wert === null ? '' : html(formatiereZahl(messung.wert, messung.typ === 'sg' ? 4 : 1))}" ${editEntwurf.unterSkala ? 'disabled' : 'required'}>${this.renderUnterSkala(messung.typ, 'messung-edit', editEntwurf)}</div>`
       : `<label for="messung-edit-text">Wert</label><select id="messung-edit-text" name="text" required>${(definition.optionen ?? []).map(option => `<option value="${html(option)}" ${option === messung.text ? 'selected' : ''}>${html(option)}</option>`).join('')}</select>`
     const methodeFeld = DICHTE_TYPEN.includes(messung.typ)
       ? `<label for="messung-edit-methode">Messmethode</label><select id="messung-edit-methode" name="methode"><option value="spindel" ${messung.methode === 'spindel' ? 'selected' : ''}>Spindel</option><option value="refraktometer" ${messung.methode === 'refraktometer' ? 'selected' : ''}>Refraktometer</option><option value="sonstige" ${messung.methode === 'sonstige' ? 'selected' : ''}>Sonstige</option></select>`
@@ -1111,8 +1175,9 @@ export class WeinbegleiterApp {
     const definition = MESS_DEFINITIONEN.find(eintrag => eintrag.typ === typ)
     if (!definition) return ''
     const letzte = this.letzteMessung(this.ui.chargeId, typ)
+    const gateEntwurf: MessEntwurf = { eingabe: '', methode: 'spindel', unterSkala: false, skalenende: this.skalenendeStandard(typ) }
     const feld = definition.art === 'zahl'
-      ? `<label for="gate-wert">${html(definition.label)} in ${html(definition.einheit || 'Zahlen')}</label><input id="gate-wert" name="wert" inputmode="decimal" placeholder="${letzte?.wert === null || letzte?.wert === undefined ? '' : html(formatiereZahl(letzte.wert, typ === 'sg' ? 4 : 1))}" required>`
+      ? `<div data-mess-block data-mess-typ="${typ}"><label for="gate-wert">${html(definition.label)} in ${html(definition.einheit || 'Zahlen')}</label><input id="gate-wert" name="wert" data-skalen-wert data-skalen-required inputmode="decimal" placeholder="${letzte?.wert === null || letzte?.wert === undefined ? '' : html(formatiereZahl(letzte.wert, typ === 'sg' ? 4 : 1))}" required>${this.renderUnterSkala(typ, 'gate-wert', gateEntwurf)}</div>`
       : `<label for="gate-text">${html(definition.label)}</label><select id="gate-text" name="text" required><option value="">Bitte prüfen und wählen</option>${(definition.optionen ?? []).map(option => `<option value="${html(option)}">${html(option)}</option>`).join('')}</select>`
     const fuellLiter = this.aktuelleCharge()?.fuellLiter
     const fuellstand = typ === 'kopfraum' ? `<label for="gate-fuellwert">Füllstand in L</label><input id="gate-fuellwert" name="fuellwert" inputmode="decimal" value="${fuellLiter === undefined ? '' : html(formatiereZahl(fuellLiter))}" required>` : ''
@@ -1122,8 +1187,27 @@ export class WeinbegleiterApp {
 
   private renderPressTeilung(charge: Charge): string {
     const freieBehaelter = this.behaelterFuerAuswahl(charge.id)
-    const optionen = freieBehaelter.map(behaelter => `<option value="${html(behaelter.id)}">${html(behaelter.name)} · ${formatiereZahl(behaelter.bruttoLiter)} L</option>`).join('')
-    return `<form class="karte press-teilung" id="press-teilung-form"><h2>Pressen dokumentieren</h2><p>Vorlauf und Presswein bleiben getrennte Chargen. Füllvolumen, Kopfraum und Gefäß werden beim Anlegen festgehalten.</p><div class="press-spalten"><fieldset><legend>Vorlauf</legend><label for="vorlauf-liter">Füllvolumen in L</label><input id="vorlauf-liter" name="vorlaufLiter" inputmode="decimal" required><label for="vorlauf-kopfraum">Kopfraum in L</label><input id="vorlauf-kopfraum" name="vorlaufKopfraum" inputmode="decimal" required><label for="vorlauf-behaelter">Gefäß</label><select id="vorlauf-behaelter" name="vorlaufBehaelter" required><option value="">Bitte wählen</option>${optionen}</select></fieldset><fieldset><legend>Presswein</legend><label for="presswein-liter">Füllvolumen in L</label><input id="presswein-liter" name="pressweinLiter" inputmode="decimal" required><label for="presswein-kopfraum">Kopfraum in L</label><input id="presswein-kopfraum" name="pressweinKopfraum" inputmode="decimal" required><label for="presswein-behaelter">Gefäß</label><select id="presswein-behaelter" name="pressweinBehaelter" required><option value="">Bitte wählen</option>${optionen}</select></fieldset></div><label for="press-zeit">Zeitpunkt</label><input id="press-zeit" name="zeit" type="datetime-local" value="${datetimeLocalWert()}" required><div id="erfassen-fehler" role="alert"></div><button class="btn btn-haupt" type="submit">Zwei Chargen anlegen und Maische archivieren</button></form>`
+    const gefaessAuswahl = (fraktion: 'vorlauf' | 'presswein') => `<div class="press-gefaesse">${freieBehaelter.map(behaelter => `<label class="press-gefaess" for="${fraktion}-${html(behaelter.id)}"><input id="${fraktion}-${html(behaelter.id)}" name="${fraktion}BehaelterIds" value="${html(behaelter.id)}" type="checkbox" data-press-plan-trigger><span><strong>${html(behaelter.name)}</strong><small>${formatiereZahl(behaelter.bruttoLiter)} L</small></span></label>`).join('')}</div>`
+    return `<form class="karte press-teilung" id="press-teilung-form"><h2>Pressen dokumentieren</h2><p>Je Gefäß entsteht eine Charge. Die App verteilt die Gesamtmenge mit <code>fuellplan()</code>; die vorgeschlagenen Liter bleiben änderbar.</p><div class="press-spalten"><fieldset><legend>Vorlauf</legend><label for="vorlauf-volumen">Gesamtvolumen in L</label><input id="vorlauf-volumen" name="vorlaufVolumen" inputmode="decimal" data-press-plan-trigger required><span class="feld-hinweis">Ziel: bis zur Schulter</span><span class="press-auswahl-titel">Zielgefäße</span>${gefaessAuswahl('vorlauf')}<div class="press-fuellplan" data-press-fuellplan="vorlauf"></div></fieldset><fieldset><legend>Presswein</legend><label for="presswein-volumen">Gesamtvolumen in L</label><input id="presswein-volumen" name="pressweinVolumen" inputmode="decimal" data-press-plan-trigger required><span class="feld-hinweis">Ziel: bis zur Schulter</span><span class="press-auswahl-titel">Zielgefäße</span>${gefaessAuswahl('presswein')}<div class="press-fuellplan" data-press-fuellplan="presswein"></div></fieldset></div><label for="press-zeit">Zeitpunkt</label><input id="press-zeit" name="zeit" type="datetime-local" value="${datetimeLocalWert()}" required><div id="erfassen-fehler" role="alert"></div><button class="btn btn-haupt" type="submit">Chargen je Gefäß anlegen und Maische archivieren</button></form>`
+  }
+
+  private aktualisierePressFuellplaene(): void {
+    const formular = this.root.querySelector<HTMLFormElement>('#press-teilung-form')
+    if (!formular) return
+    const daten = new FormData(formular)
+    for (const fraktion of ['vorlauf', 'presswein'] as const) {
+      const container = formular.querySelector<HTMLElement>(`[data-press-fuellplan="${fraktion}"]`)
+      if (!container) continue
+      const volumen = parseDeZahl(daten.get(`${fraktion}Volumen`))
+      const ids = daten.getAll(`${fraktion}BehaelterIds`).map(String)
+      const gefaesse = ids.map(behaelterId => this.stand.behaelter.find(behaelter => behaelter.id === behaelterId)).filter((behaelter): behaelter is Behaelter => Boolean(behaelter))
+      if (volumen === null || volumen <= 0 || !gefaesse.length) {
+        container.innerHTML = '<div class="hint">Gesamtvolumen und mindestens ein Zielgefäß wählen.</div>'
+        continue
+      }
+      const plan = fuellplan(volumen, gefaesse.map(behaelter => ({ behaelterId: behaelter.id, bruttoLiter: behaelter.bruttoLiter })), { zielFuellung: 'schulter', trubAnteil: 0 })
+      container.innerHTML = `<h3>Füllplan</h3>${plan.befuellt.map(punkt => { const behaelter = gefaesse.find(eintrag => eintrag.id === punkt.behaelterId)!; return `<label class="press-plan-zeile" for="${fraktion}-fuell-${html(punkt.behaelterId)}"><span>${html(behaelter.name)}</span><span><input id="${fraktion}-fuell-${html(punkt.behaelterId)}" name="${fraktion}FuellLiter:${html(punkt.behaelterId)}" inputmode="decimal" value="${html(formatiereZahl(punkt.liter, 2))}" required> L</span></label>` }).join('')}${plan.frei.length ? `<div class="hint">Bleiben frei: ${html(plan.frei.map(behaelterId => this.stand.behaelter.find(behaelter => behaelter.id === behaelterId)?.name ?? behaelterId).join(', '))}</div>` : ''}${plan.hinweise.map(hinweis => `<div class="warnbox">${this.fachtext(hinweis)}</div>`).join('')}${plan.reichtNicht ? '<div class="form-fehler">Die gewählten Gefäße reichen nicht.</div>' : ''}`
+    }
   }
 
   private async speichereGateMessung(formular: HTMLFormElement): Promise<void> {
@@ -1145,9 +1229,10 @@ export class WeinbegleiterApp {
         { id: id('messung'), zuletztGeaendert: geaendert, chargeId: charge.id, zeit, typ: 'kopfraum', wert: kopfraum },
       )
     } else if (definition.art === 'zahl') {
-      const wert = parseDeZahl(daten.get('wert'))
+      const unterSkala = this.istUnterSkalaTyp(typ) && daten.get(`grenze-${typ}`) === 'unter'
+      const wert = parseDeZahl(unterSkala ? daten.get(`skalenende-${typ}`) : daten.get('wert'))
       if (wert === null) return this.formularFehler('Trage einen gültigen Zahlenwert ein.')
-      messungen.push({ id: id('messung'), zuletztGeaendert: geaendert, chargeId: charge.id, zeit, typ, wert, methode: DICHTE_TYPEN.includes(typ) ? String(daten.get('methode') ?? 'spindel') as MessMethode : undefined })
+      messungen.push({ id: id('messung'), zuletztGeaendert: geaendert, chargeId: charge.id, zeit, typ, wert, grenze: unterSkala ? 'unter' : undefined, methode: DICHTE_TYPEN.includes(typ) ? String(daten.get('methode') ?? 'spindel') as MessMethode : undefined })
     } else {
       const text = String(daten.get('text') ?? '').trim()
       if (!text) return this.formularFehler('Wähle den geprüften Befund aus.')
@@ -1169,37 +1254,174 @@ export class WeinbegleiterApp {
     const mischPruefung = vermischungErlaubt(this.stand, quelle, quelle)
     if (!mischPruefung.erlaubt) return this.formularFehler(mischPruefung.grund)
     const daten = new FormData(formular)
-    const vorlaufLiter = parseDeZahl(daten.get('vorlaufLiter'))
-    const vorlaufKopfraum = parseDeZahl(daten.get('vorlaufKopfraum'))
-    const pressweinLiter = parseDeZahl(daten.get('pressweinLiter'))
-    const pressweinKopfraum = parseDeZahl(daten.get('pressweinKopfraum'))
-    const vorlaufBehaelter = String(daten.get('vorlaufBehaelter') ?? '')
-    const pressweinBehaelter = String(daten.get('pressweinBehaelter') ?? '')
-    if (vorlaufLiter === null || pressweinLiter === null || vorlaufKopfraum === null || pressweinKopfraum === null || vorlaufLiter <= 0 || pressweinLiter <= 0 || vorlaufKopfraum < 0 || pressweinKopfraum < 0) return this.formularFehler('Liter und Kopfraum für beide Teilchargen vollständig eintragen.')
-    if (!vorlaufBehaelter || !pressweinBehaelter || vorlaufBehaelter === pressweinBehaelter) return this.formularFehler('Wähle zwei verschiedene Gefäße.')
-    const pruefeKapazitaet = (behaelterId: string, fuellLiter: number, kopfraumLiter: number) => {
-      const behaelter = this.stand.behaelter.find(eintrag => eintrag.id === behaelterId)
-      return behaelter && this.behaelterFuerAuswahl(quelle.id).some(eintrag => eintrag.id === behaelterId)
-        && fuellLiter + kopfraumLiter <= behaelter.bruttoLiter + 0.01
+    const freieIds = new Set(this.behaelterFuerAuswahl(quelle.id).map(behaelter => behaelter.id))
+    const bauePlan = (fraktion: 'vorlauf' | 'presswein') => {
+      const volumen = parseDeZahl(daten.get(`${fraktion}Volumen`))
+      const ids = daten.getAll(`${fraktion}BehaelterIds`).map(String)
+      const gefaesse = ids.map(behaelterId => this.stand.behaelter.find(behaelter => behaelter.id === behaelterId)).filter((behaelter): behaelter is Behaelter => Boolean(behaelter)).filter(behaelter => freieIds.has(behaelter.id))
+      if (volumen === null || volumen <= 0 || !gefaesse.length || gefaesse.length !== ids.length) return null
+      const plan = fuellplan(volumen, gefaesse.map(behaelter => ({ behaelterId: behaelter.id, bruttoLiter: behaelter.bruttoLiter })), { zielFuellung: 'schulter', trubAnteil: 0 })
+      if (plan.reichtNicht) return null
+      const befuellt = plan.befuellt.map(punkt => ({ ...punkt, liter: parseDeZahl(daten.get(`${fraktion}FuellLiter:${punkt.behaelterId}`)) ?? punkt.liter }))
+      if (befuellt.some(punkt => punkt.liter <= 0)) return null
+      return { volumen, plan: { ...plan, befuellt } }
     }
-    if (!pruefeKapazitaet(vorlaufBehaelter, vorlaufLiter, vorlaufKopfraum) || !pruefeKapazitaet(pressweinBehaelter, pressweinLiter, pressweinKopfraum)) return this.formularFehler('Füllvolumen plus Kopfraum überschreitet die Gefäßgröße.')
+    const vorlaufPlan = bauePlan('vorlauf')
+    const pressweinPlan = bauePlan('presswein')
+    if (!vorlaufPlan || !pressweinPlan) return this.formularFehler('Gesamtvolumen, Zielgefäße und Füllplan für Vorlauf und Presswein vollständig eintragen.')
+    const vorlaufIds = new Set(vorlaufPlan.plan.befuellt.map(punkt => punkt.behaelterId))
+    if (pressweinPlan.plan.befuellt.some(punkt => vorlaufIds.has(punkt.behaelterId))) return this.formularFehler('Ein Gefäß kann nur zu einem Los gehören.')
     const zeit = isoAusDatetimeLocal(daten.get('zeit'))
     const geaendert = new Date().toISOString()
-    const baueCharge = (typ: 'vorlauf' | 'presswein', name: string, fuellLiter: number, kopfraumLiter: number, behaelterId: string): Charge => ({
-      id: id('charge'), zuletztGeaendert: geaendert, jahrgang: quelle.jahrgang, name, typ, phase: 'NACHGAERUNG', phaseSeit: zeit, startdatum: quelle.startdatum, elternChargeId: quelle.id, behaelterId, erwarteteWeinLiter: fuellLiter,
-      volumenHistorie: [{ zeit, fuellLiter, kopfraumLiter, behaelterId, anlass: typ === 'vorlauf' ? 'Pressen · Vorlauf' : 'Pressen · Presswein' }], fuellLiter, kopfraumLiter, gesperrt: false, isoliert: false,
-    })
-    const vorlauf = baueCharge('vorlauf', `Vorlauf · ${quelle.name}`, vorlaufLiter, vorlaufKopfraum, vorlaufBehaelter)
-    const presswein = baueCharge('presswein', `Presswein · ${quelle.name}`, pressweinLiter, pressweinKopfraum, pressweinBehaelter)
-    quelle.archiviert = true
-    markiereGeaendert(quelle, geaendert)
-    this.stand.chargen.push(vorlauf, presswein)
-    this.stand.ereignisse.push({ id: id('ereignis'), zuletztGeaendert: geaendert, chargeId: quelle.id, zeit, art: 'pressen', mengeWert: vorlaufLiter + pressweinLiter, mengeEinheit: 'L', begruendung: 'Press-Gate erfüllt. Vorlauf und Presswein getrennt erfasst.' })
-    this.ui.chargeId = vorlauf.id
-    this.ui.status = { art: 'erfolg', text: 'Vorlauf und Presswein wurden angelegt; die Maische-Charge ist archiviert.' }
+    const quellen = this.aktiveChargen().filter(charge => charge.typ === 'maische' && charge.jahrgang === quelle.jahrgang)
+    const herkunftIds = quellen.map(charge => charge.id)
+    const baueChargen = (typ: 'vorlauf' | 'presswein', plan: typeof vorlaufPlan.plan): Charge[] => {
+      const los = `${typ === 'vorlauf' ? 'Vorlauf' : 'Presswein'} ${quelle.jahrgang}`
+      return plan.befuellt.map(punkt => {
+        const behaelter = this.stand.behaelter.find(eintrag => eintrag.id === punkt.behaelterId)!
+        return { id: id('charge'), zuletztGeaendert: geaendert, jahrgang: quelle.jahrgang, name: `${los} · ${behaelter.name}`, typ, los, herkunftIds: [...herkunftIds], phase: 'NACHGAERUNG', phaseSeit: zeit, startdatum: quelle.startdatum, elternChargeId: quelle.id, behaelterId: behaelter.id, erwarteteWeinLiter: punkt.liter, volumenHistorie: [{ zeit, fuellLiter: punkt.liter, behaelterId: behaelter.id, anlass: typ === 'vorlauf' ? 'Pressen · Vorlauf' : 'Pressen · Presswein' }], fuellLiter: punkt.liter, gesperrt: false, isoliert: false }
+      })
+    }
+    const vorlauf = baueChargen('vorlauf', vorlaufPlan.plan)
+    const presswein = baueChargen('presswein', pressweinPlan.plan)
+    quellen.forEach(charge => { charge.archiviert = true; markiereGeaendert(charge, geaendert) })
+    this.stand.chargen.push(...vorlauf, ...presswein)
+    this.stand.ereignisse.push({ id: id('ereignis'), zuletztGeaendert: geaendert, chargeId: quelle.id, zeit, art: 'pressen', mengeWert: [...vorlauf, ...presswein].reduce((summe, charge) => summe + (charge.fuellLiter ?? 0), 0), mengeEinheit: 'L', begruendung: `Press-Gate erfüllt. ${vorlauf.length} Vorlauf-Gefäße und ${presswein.length} Presswein-Gefäße getrennt erfasst.` })
+    this.ui.chargeId = vorlauf[0]?.id ?? presswein[0]?.id ?? ''
+    this.ui.status = { art: 'erfolg', text: `${vorlauf.length + presswein.length} Chargen in zwei Losen angelegt; ${quellen.length} Maische-Chargen archiviert.` }
     this.ui.ansicht = 'heute'
     await this.speichereLokalUndStarteAbgleich()
     this.schreibeHistory(true)
+    this.render()
+  }
+
+  private bereiteAbstichVor(los: string): void {
+    this.ui.ansicht = 'abstich'
+    this.ui.abstichLos = los
+    this.ui.abstichBallonsAbgekuehlt = null
+    this.ui.abstichVorziehenBegruendung = ''
+    this.ui.abstichZeit = datetimeLocalWert()
+    this.ui.abstichCheckIndex = 0
+    this.ui.abstichPhase = 'pruefen'
+    this.ui.abstichZielIds = this.abstichZielgefaesse(los).map(behaelter => behaelter.id)
+  }
+
+  private abstichQuellen(los = this.ui.abstichLos): Charge[] {
+    const phasen: Phase[] = ['NACHGAERUNG', 'GAERENDE_GATE', 'ERSTER_ABSTICH', 'AUSBAU']
+    return los ? this.stand.chargen.filter(charge => !charge.archiviert && charge.los === los && phasen.includes(charge.phase)) : []
+  }
+
+  private abstichZielgefaesse(los = this.ui.abstichLos): Behaelter[] {
+    const quellen = this.abstichQuellen(los)
+    const quellIds = new Set(quellen.map(charge => charge.id))
+    const quellBehaelterIds = new Set(quellen.map(charge => charge.behaelterId).filter((behaelterId): behaelterId is string => Boolean(behaelterId)))
+    const stichtag = isoAusDatetimeLocal(this.ui.abstichZeit || datetimeLocalWert()).slice(0, 10)
+    return this.stand.behaelter
+      .filter(behaelter => quellBehaelterIds.has(behaelter.id) || (behaelterVerfuegbar(behaelter, stichtag)
+        && !this.stand.chargen.some(charge => !charge.archiviert && !quellIds.has(charge.id) && charge.behaelterId === behaelter.id)))
+      .sort((a, b) => (a.regalPosition ?? Number.MAX_SAFE_INTEGER) - (b.regalPosition ?? Number.MAX_SAFE_INTEGER) || a.name.localeCompare(b.name, 'de'))
+  }
+
+  private abstichKontext() {
+    const quellen = this.abstichQuellen()
+    const kandidaten = this.abstichZielgefaesse()
+    const erlaubteIds = new Set(kandidaten.map(behaelter => behaelter.id))
+    const ziele = this.ui.abstichZielIds.filter(behaelterId => erlaubteIds.has(behaelterId)).map(behaelterId => kandidaten.find(behaelter => behaelter.id === behaelterId)!)
+    const volumenLiter = quellen.reduce((summe, charge) => summe + (charge.fuellLiter ?? 0), 0)
+    const pruefung = abstichGate(this.stand, { quellen, ziele, volumenLiter, ballonsAbgekuehlt: this.ui.abstichBallonsAbgekuehlt, vorziehenBegruendung: this.ui.abstichVorziehenBegruendung })
+    return { quellen, kandidaten, ziele, volumenLiter, volumenVollstaendig: quellen.length > 0 && quellen.every(charge => charge.fuellLiter !== undefined && charge.fuellLiter! > 0), pruefung }
+  }
+
+  private renderAbstich(): string {
+    const los = this.ui.abstichLos
+    if (!los) return '<section class="seite"><div class="fehlerbox">Kein Los für den Abstich gewählt.</div></section>'
+    if (this.ui.abstichPhase === 'schwefeln') return this.renderAbstichSchwefel(los)
+    if (this.ui.abstichPhase === 'fertig') return `<section class="seite abstich-fluss"><span class="gate-schritt">Abstich gespeichert</span><h1 class="seiten-titel">${html(los)}</h1><div class="erfolgbox"><strong>Der Abstich ist dokumentiert.</strong> Gefäße, Füllstände, Phasen und das Abstich-Ereignis sind gespeichert.</div><button class="btn btn-haupt" type="button" data-action="nav" data-view="heute">Zu Heute</button></section>`
+    const { quellen, kandidaten, volumenLiter, volumenVollstaendig, pruefung } = this.abstichKontext()
+    if (!quellen.length) return `<section class="seite"><button class="zurueck" type="button" data-action="nav" data-view="heute">${icon('pfeil')}Heute</button><div class="fehlerbox">Für ${html(los)} gibt es keine aktive Charge in einer Abstich-Phase.</div></section>`
+    const index = Math.min(Math.max(0, this.ui.abstichCheckIndex), Math.max(0, pruefung.checks.length - 1))
+    const check = pruefung.checks[index]!
+    const gaerendeOhneVorziehen = abstichGate(this.stand, { quellen, ziele: pruefung.plan.befuellt.map(punkt => kandidaten.find(behaelter => behaelter.id === punkt.behaelterId)!).filter(Boolean), volumenLiter, ballonsAbgekuehlt: this.ui.abstichBallonsAbgekuehlt }).checks.find(eintrag => eintrag.id === 'abstich-gaerende')?.erfuellt === true
+    const status = check.erfuellt === true ? 'Erfüllt' : check.erfuellt === false ? 'Blockiert' : 'Noch offen'
+    const plan = pruefung.plan
+    return `<section class="seite abstich-fluss" aria-labelledby="abstich-titel"><button class="zurueck" type="button" data-action="nav" data-view="charge">${icon('pfeil')}${html(los)}</button><form id="abstich-form"><div class="abstich-kopf"><div><span class="gate-schritt">Prüfung ${index + 1} von ${pruefung.checks.length}</span><h1 class="seiten-titel" id="abstich-titel">Abstich · ${html(los)}</h1><p>${quellen.length} Gefäße · ${formatiereZahl(volumenLiter, 2)} L vor dem Abstich</p></div>${this.renderAmpel(pruefung.freigegeben ? 'GREEN' : 'YELLOW')}</div><div class="gate-fortschritt" aria-hidden="true">${pruefung.checks.map((eintrag, nummer) => `<i class="${eintrag.erfuellt === true ? 'ok' : ''} ${nummer === index ? 'aktiv' : ''}"></i>`).join('')}</div><div class="abstich-grid"><article class="gate-frage karte" data-abstich-check="${html(check.id)}"><span class="gate-status ${check.erfuellt === null ? 'unbekannt' : check.erfuellt ? 'erfuellt' : 'offen'}">${html(status)}</span><h2>${this.fachtext(check.frage)}</h2><p>${this.fachtext(check.begruendung)}</p>${check.id === 'abstich-gaerende' && !gaerendeOhneVorziehen ? `<label for="abstich-vorziehen">Bewusst vorziehen · Begründung</label><textarea id="abstich-vorziehen" name="vorziehenBegruendung" data-abstich-entwurf placeholder="Warum wird vor bestätigtem Gärende abgezogen?">${html(this.ui.abstichVorziehenBegruendung)}</textarea>` : ''}${check.id === 'abstich-abgekuehlt' ? `<button class="abstich-bestaetigung ${this.ui.abstichBallonsAbgekuehlt ? 'aktiv' : ''}" type="button" data-action="abstich-abgekuehlt" aria-pressed="${this.ui.abstichBallonsAbgekuehlt === true}">${this.ui.abstichBallonsAbgekuehlt ? 'Bestätigt: Ballons ausgespült und abgekühlt' : 'Ballons ausgespült und abgekühlt'}</button>` : ''}</article><aside class="karte abstich-plan"><h2>Zielgefäße</h2><div class="abstich-gefaesse">${kandidaten.map(behaelter => `<label for="abstich-ziel-${html(behaelter.id)}"><input id="abstich-ziel-${html(behaelter.id)}" name="abstichZiele" value="${html(behaelter.id)}" type="checkbox" data-abstich-entwurf ${this.ui.abstichZielIds.includes(behaelter.id) ? 'checked' : ''}><span><strong>${html(behaelter.name)}</strong><small>${formatiereZahl(behaelter.bruttoLiter)} L</small></span></label>`).join('')}</div><h3>Füllplan · ${plan.zielFuellung === 'hals' ? 'bis in den Hals' : 'bis zur Schulter'}</h3>${plan.befuellt.map(punkt => `<div class="abstich-plan-zeile"><span>${html(this.stand.behaelter.find(behaelter => behaelter.id === punkt.behaelterId)?.name ?? punkt.behaelterId)}</span><strong>${formatiereZahl(punkt.liter, 2)} L</strong></div>`).join('') || '<div class="hint">Noch kein Gefäß befüllt.</div>'}<div class="abstich-plan-zeile"><span>Auffüllflaschen</span><strong>${formatiereZahl(plan.restLiter, 2)} L</strong></div>${plan.frei.length ? `<div class="hint">Bleiben frei: ${html(plan.frei.map(behaelterId => this.stand.behaelter.find(behaelter => behaelter.id === behaelterId)?.name ?? behaelterId).join(', '))}</div>` : ''}${plan.hinweise.map(hinweis => `<div class="warnbox">${this.fachtext(hinweis)}</div>`).join('')}</aside></div><div class="gate-navigation"><button class="btn" type="button" data-action="abstich-zurueck" ${index === 0 ? 'disabled' : ''}>Zurück</button><button class="btn" type="button" data-action="abstich-weiter" ${index >= pruefung.checks.length - 1 ? 'disabled' : ''}>Nächste Prüfung</button></div><label for="abstich-zeit">Zeitpunkt</label><input id="abstich-zeit" name="zeit" type="datetime-local" value="${html(this.ui.abstichZeit)}" data-abstich-entwurf required>${volumenVollstaendig ? '' : '<div class="form-fehler">Das Füllvolumen fehlt bei mindestens einer Quellcharge.</div>'}<div id="erfassen-fehler" role="alert"></div><button class="btn btn-haupt abstich-start" type="submit" ${pruefung.freigegeben && volumenVollstaendig ? '' : 'disabled'}>Abstich durchführen</button></form></section>`
+  }
+
+  private aktualisiereAbstichEntwurf(formular = this.root.querySelector<HTMLFormElement>('#abstich-form')): void {
+    if (!formular) return
+    const daten = new FormData(formular)
+    this.ui.abstichZielIds = daten.getAll('abstichZiele').map(String)
+    this.ui.abstichVorziehenBegruendung = String(daten.get('vorziehenBegruendung') ?? this.ui.abstichVorziehenBegruendung)
+    this.ui.abstichZeit = String(daten.get('zeit') ?? this.ui.abstichZeit)
+  }
+
+  private async speichereAbstich(formular: HTMLFormElement): Promise<void> {
+    this.aktualisiereAbstichEntwurf(formular)
+    const { quellen, ziele, volumenVollstaendig, pruefung } = this.abstichKontext()
+    if (!volumenVollstaendig) return this.formularFehler('Bei jeder Quellcharge muss das Füllvolumen erfasst sein.')
+    if (!pruefung.freigegeben || pruefung.plan.reichtNicht || !ziele.length) return this.formularFehler('Das Abstich-Gate ist nicht freigegeben.')
+    const zeit = isoAusDatetimeLocal(this.ui.abstichZeit)
+    const geaendert = new Date().toISOString()
+    const los = this.ui.abstichLos!
+    const zielPhase: Phase = pruefung.schwefelFreigegeben ? 'AUSBAU' : 'NACHGAERUNG'
+    const herkunftIds = quellen.map(charge => charge.id)
+    const befuellteChargen: Charge[] = []
+    pruefung.plan.befuellt.forEach((punkt, index) => {
+      const behaelter = this.stand.behaelter.find(eintrag => eintrag.id === punkt.behaelterId)!
+      const vorhanden = quellen[index]
+      const charge: Charge = vorhanden ?? { id: id('charge'), jahrgang: quellen[0]!.jahrgang, name: '', typ: quellen[0]!.typ, los, herkunftIds: [...herkunftIds], phase: zielPhase, startdatum: quellen[0]!.startdatum, gesperrt: false, isoliert: false }
+      charge.name = `${los} · ${behaelter.name}`
+      charge.behaelterId = behaelter.id
+      charge.phase = zielPhase
+      charge.phaseSeit = zeit
+      charge.fuellLiter = punkt.liter
+      if (pruefung.zielFuellung === 'hals') charge.kopfraumLiter = 0
+      else delete charge.kopfraumLiter
+      charge.archiviert = false
+      charge.volumenHistorie = [...(charge.volumenHistorie ?? []), { zeit, fuellLiter: punkt.liter, ...(pruefung.zielFuellung === 'hals' ? { kopfraumLiter: 0 } : {}), behaelterId: behaelter.id, anlass: 'Abstich' }]
+      markiereGeaendert(charge, geaendert)
+      if (!vorhanden) this.stand.chargen.push(charge)
+      befuellteChargen.push(charge)
+      this.stand.messungen.push({ id: id('messung'), zuletztGeaendert: geaendert, chargeId: charge.id, zeit, typ: 'fuellstand', wert: null, text: pruefung.zielFuellung === 'hals' ? 'im Hals' : 'an der Schulter' })
+    })
+    quellen.slice(pruefung.plan.befuellt.length).forEach(charge => { charge.archiviert = true; markiereGeaendert(charge, geaendert) })
+    const prueftext = pruefung.checks.map(check => `${check.frage} ${check.erfuellt === true ? 'Ja' : check.erfuellt === false ? 'Nein' : 'Offen'}: ${check.begruendung}`).join(' | ')
+    const plantext = pruefung.plan.befuellt.map(punkt => `${this.stand.behaelter.find(behaelter => behaelter.id === punkt.behaelterId)?.name ?? punkt.behaelterId}: ${formatiereZahl(punkt.liter, 2)} L`).join(', ')
+    this.stand.ereignisse.push({ id: id('ereignis'), zuletztGeaendert: geaendert, chargeId: befuellteChargen[0]!.id, zeit, art: 'abstich', mengeWert: pruefung.plan.volumenLiter, mengeEinheit: 'L', begruendung: `Abstich ${los}. Füllplan: ${plantext}; Auffüllflaschen ${formatiereZahl(pruefung.plan.restLiter, 2)} L. Prüfergebnis: ${prueftext}` })
+    this.ui.chargeId = befuellteChargen[0]!.id
+    this.ui.abstichPhase = pruefung.schwefelFreigegeben ? 'schwefeln' : 'fertig'
+    await this.speichereLokalUndStarteAbgleich()
+    this.schreibeHistory(true)
+    this.render()
+  }
+
+  private juengsterPhFuerLos(los: string): number | null {
+    const chargeIds = new Set(this.stand.chargen.filter(charge => charge.los === los).map(charge => charge.id))
+    return this.stand.messungen.filter(messung => chargeIds.has(messung.chargeId) && messung.typ === 'ph' && messung.wert !== null).sort((a, b) => b.zeit.localeCompare(a.zeit))[0]?.wert ?? null
+  }
+
+  private renderAbstichSchwefel(los: string): string {
+    const chargen = this.abstichQuellen(los)
+    const ph = this.juengsterPhFuerLos(los)
+    const vorschlaege = ph === null ? [] : chargen.filter(charge => charge.fuellLiter !== undefined).map(charge => ({ charge, ergebnis: stammloesungMl(charge.fuellLiter!, ph) }))
+    return `<section class="seite abstich-fluss" aria-labelledby="schwefel-titel"><span class="gate-schritt">Abstich gespeichert · danach schwefeln</span><h1 class="seiten-titel" id="schwefel-titel">${html(los)}</h1><div class="karte schwefel-anleitung"><strong>Stammlösung ansetzen</strong><span>1,00 g Kaliumpyrosulfit in 100 ml Wasser</span></div>${ph === null ? '<div class="warnbox"><strong>pH fehlt.</strong> Ohne pH gibt die App keinen Schwefelvorschlag aus.</div>' : `<form id="abstich-schwefel-form"><div class="schwefel-liste">${vorschlaege.map(({ charge, ergebnis }) => `<article class="karte schwefel-gefaess"><div><strong>${html(this.stand.behaelter.find(behaelter => behaelter.id === charge.behaelterId)?.name ?? charge.name)}</strong><span>${formatiereZahl(charge.fuellLiter!, 2)} L · pH ${formatiereZahl(ph, 2)}</span></div><div class="schwefel-menge"><strong>${formatiereZahl(ergebnis.wert, 1)} ml</strong><span>${formatiereZahl(ergebnis.wert * 0.01, 3)} g Kaliumpyrosulfit</span></div><small>${this.fachtext(ergebnis.formel)}</small></article>`).join('')}</div><div id="erfassen-fehler" role="alert"></div><button class="btn btn-haupt" type="submit">Schwefelung für alle Gefäße speichern</button></form>`}<button class="btn" type="button" data-action="abstich-schwefel-ueberspringen">${ph === null ? 'Ohne Vorschlag abschließen' : 'Jetzt nicht schwefeln'}</button></section>`
+  }
+
+  private async speichereAbstichSchwefel(): Promise<void> {
+    const los = this.ui.abstichLos
+    if (!los) return
+    const ph = this.juengsterPhFuerLos(los)
+    if (ph === null) return this.formularFehler('Der pH fehlt. Es wurde keine Schwefelung gespeichert.')
+    const zeit = isoAusDatetimeLocal(this.ui.abstichZeit)
+    const geaendert = new Date().toISOString()
+    const ereignisse = this.abstichQuellen(los).filter(charge => charge.fuellLiter !== undefined).map(charge => {
+      const ergebnis = stammloesungMl(charge.fuellLiter!, ph)
+      return { id: id('ereignis'), zuletztGeaendert: geaendert, chargeId: charge.id, zeit, art: 'schwefeln' as const, stoff: 'Kaliumpyrosulfit', mengeWert: Math.round(ergebnis.wert * 10) / 1000, mengeEinheit: 'g', begruendung: `Stammlösung: 1,00 g Kaliumpyrosulfit in 100 ml Wasser. ${ergebnis.formel}` }
+    })
+    this.stand.ereignisse.push(...ereignisse)
+    this.ui.abstichPhase = 'fertig'
+    await this.speichereLokalUndStarteAbgleich()
+    this.ui.status = { art: 'erfolg', text: `Schwefelung für ${ereignisse.length} Gefäße gespeichert.` }
     this.render()
   }
 
@@ -1331,12 +1553,20 @@ export class WeinbegleiterApp {
     formular.querySelectorAll<HTMLInputElement | HTMLSelectElement>('[data-runde-eingabe]').forEach(feld => {
       const typ = feld.dataset.messTyp as MessTyp | undefined
       if (!typ) return
-      entwurf.messwerte[typ] = { eingabe: feld.value, methode: entwurf.messwerte[typ]?.methode ?? 'spindel' }
+      const bisher = entwurf.messwerte[typ]
+      entwurf.messwerte[typ] = { eingabe: feld.value, methode: bisher?.methode ?? 'spindel', unterSkala: bisher?.unterSkala ?? false, skalenende: bisher?.skalenende ?? this.skalenendeStandard(typ) }
     })
     formular.querySelectorAll<HTMLSelectElement>('[data-runde-methode]').forEach(feld => {
       const typ = feld.dataset.messTyp as MessTyp | undefined
       if (!typ) return
-      entwurf.messwerte[typ] = { eingabe: entwurf.messwerte[typ]?.eingabe ?? '', methode: feld.value as MessMethode }
+      const bisher = entwurf.messwerte[typ]
+      entwurf.messwerte[typ] = { eingabe: bisher?.eingabe ?? '', methode: feld.value as MessMethode, unterSkala: bisher?.unterSkala ?? false, skalenende: bisher?.skalenende ?? this.skalenendeStandard(typ) }
+    })
+    formular.querySelectorAll<HTMLInputElement>('[data-unter-skala]').forEach(feld => {
+      const typ = feld.dataset.messTyp as MessTyp | undefined
+      if (!typ) return
+      const bisher = entwurf.messwerte[typ] ?? { eingabe: '', methode: 'spindel' as const, unterSkala: false, skalenende: this.skalenendeStandard(typ) }
+      entwurf.messwerte[typ] = { ...bisher, unterSkala: feld.checked, skalenende: formular.querySelector<HTMLInputElement>(`[data-skalenende][data-mess-typ="${typ}"]`)?.value ?? bisher.skalenende }
     })
     entwurf.untergestossen = Boolean(formular.querySelector<HTMLInputElement>('[data-runde-untergestossen]')?.checked)
     formular.querySelectorAll<HTMLElement>('[data-runde-zugabe]').forEach(zeile => {
@@ -1512,12 +1742,13 @@ export class WeinbegleiterApp {
     const neu: Messung[] = []
     for (const definition of MESS_DEFINITIONEN) {
       const feld = entwurf.messwerte[definition.typ]
-      const rohwert = feld?.eingabe.trim() ?? ''
+      const unterSkala = this.istUnterSkalaTyp(definition.typ) && Boolean(feld?.unterSkala)
+      const rohwert = unterSkala ? feld?.skalenende.trim() ?? '' : feld?.eingabe.trim() ?? ''
       if (!rohwert) continue
       const wert = definition.art === 'zahl' ? parseDeZahl(rohwert) : null
       if (definition.art === 'zahl' && wert === null) return this.formularFehler(`${definition.label}: Trage einen gültigen Zahlenwert ein.`)
       if ((definition.typ === 'volumen' || definition.typ === 'kopfraum') && wert !== null && wert < 0) return this.formularFehler(`${definition.label} muss mindestens 0 L betragen.`)
-      neu.push({ id: id('messung'), zuletztGeaendert: geaendert, chargeId: charge.id, zeit, typ: definition.typ, wert, text: definition.art === 'auswahl' ? rohwert : undefined, methode: DICHTE_TYPEN.includes(definition.typ) ? feld?.methode ?? 'spindel' : undefined })
+      neu.push({ id: id('messung'), zuletztGeaendert: geaendert, chargeId: charge.id, zeit, typ: definition.typ, wert, text: definition.art === 'auswahl' ? rohwert : undefined, methode: DICHTE_TYPEN.includes(definition.typ) ? feld?.methode ?? 'spindel' : undefined, grenze: unterSkala ? 'unter' : undefined })
     }
     const rundenZugaben = this.rundenZugabenAusEntwurf(charge, entwurf, zeit, geaendert)
     if (typeof rundenZugaben === 'string') return this.formularFehler(rundenZugaben)
@@ -1626,6 +1857,13 @@ export class WeinbegleiterApp {
       return this.navigiere(ziel.dataset.view as Ansicht)
     }
     if (action === 'charge') { this.ui.chargeId = ziel.dataset.id ?? ''; this.ui.ansicht = 'charge'; this.ui.chargeTab = 'befunde'; this.schreibeHistory(); return this.render() }
+    if (action === 'abstich-start') {
+      const los = ziel.dataset.los
+      if (!los) return
+      this.bereiteAbstichVor(los)
+      this.schreibeHistory()
+      return this.render()
+    }
     if (action === 'desktop-charge') { this.ui.chargeId = ziel.dataset.id ?? this.ui.chargeId; this.schreibeHistory(true); return this.render() }
     if (action === 'charge-tab') { this.ui.chargeTab = ziel.dataset.tab as ChargeTab; return this.render() }
     if (action === 'messung-bearbeiten') { this.ui.editMessungId = ziel.dataset.id ?? null; this.ui.ansicht = 'messung-bearbeiten'; this.schreibeHistory(); return this.render() }
@@ -1678,6 +1916,10 @@ export class WeinbegleiterApp {
     if (action === 'desktop-zeitraum') { this.ui.desktopZeitraum = ziel.dataset.zeitraum as DesktopZeitraum; return this.render() }
     if (action === 'gate-zurueck') { this.ui.gateCheckIndex = Math.max(0, this.ui.gateCheckIndex - 1); return this.render() }
     if (action === 'gate-weiter') { this.ui.gateCheckIndex += 1; return this.render() }
+    if (action === 'abstich-zurueck') { this.aktualisiereAbstichEntwurf(); this.ui.abstichCheckIndex = Math.max(0, this.ui.abstichCheckIndex - 1); return this.render() }
+    if (action === 'abstich-weiter') { this.aktualisiereAbstichEntwurf(); this.ui.abstichCheckIndex += 1; return this.render() }
+    if (action === 'abstich-abgekuehlt') { this.aktualisiereAbstichEntwurf(); this.ui.abstichBallonsAbgekuehlt = this.ui.abstichBallonsAbgekuehlt === true ? null : true; return this.render() }
+    if (action === 'abstich-schwefel-ueberspringen') { this.ui.abstichPhase = 'fertig'; return this.render() }
     if (action === 'phase-weiter') return this.phaseWeiter()
     if (action === 'gate-reminder') return this.legeGateReminderAn()
     if (action === 'ics-einzel') return this.exportiereEinzelIcs(ziel.dataset.id ?? '')
@@ -1733,6 +1975,8 @@ export class WeinbegleiterApp {
     if (formularId === 'runde-form') return this.speichereRunde(formular)
     if (formularId === 'gate-mess-form') return this.speichereGateMessung(formular)
     if (formularId === 'press-teilung-form') return this.speicherePressTeilung(formular)
+    if (formularId === 'abstich-form') return this.speichereAbstich(formular)
+    if (formularId === 'abstich-schwefel-form') return this.speichereAbstichSchwefel()
     if (formularId === 'mess-form') return this.speichereMessungen(formular)
     if (formularId === 'messung-bearbeiten-form') return this.aktualisiereMessung(formular)
     if (formularId === 'ereignis-form') return this.speichereEreignisse(formular)
@@ -1750,6 +1994,7 @@ export class WeinbegleiterApp {
 
   private async behandleAenderung(event: Event): Promise<void> {
     const ziel = event.target as HTMLInputElement | HTMLSelectElement
+    if (ziel.matches('[data-unter-skala]')) this.aktualisiereUnterSkalaFelder(ziel.closest<HTMLElement>('[data-mess-block]') ?? this.root)
     if (ziel.dataset.action === 'runden-zeit') {
       this.ui.rundenZeit = ziel.value
       this.aktualisiereAutomatischeRundenBegruendungen()
@@ -1760,6 +2005,8 @@ export class WeinbegleiterApp {
       this.aktualisiereRundenZugabeHinweise()
     }
     if (ziel.closest('#mess-form')) this.sichereMessFormularEntwurf()
+    if (ziel.closest('#press-teilung-form') && ziel.matches('[data-press-plan-trigger]')) this.aktualisierePressFuellplaene()
+    if (ziel.closest('#abstich-form') && ziel.matches('[data-abstich-entwurf]')) { this.aktualisiereAbstichEntwurf(); this.render(); return }
     if (ziel.dataset.action === 'mess-typ') { this.ui.messTyp = ziel.value as MessTyp; return this.render() }
     if (ziel.dataset.action === 'mess-methode') return this.aktualisiereRefraktometerHinweis()
     if (ziel.dataset.action === 'ereignis-art') return this.aktualisiereZugabeFelder(ziel.value as EreignisArt)
@@ -1793,6 +2040,8 @@ export class WeinbegleiterApp {
       this.aktualisiereRundenZugabeHinweise()
     }
     if (ziel.closest('#mess-form')) this.sichereMessFormularEntwurf()
+    if (ziel.closest('#press-teilung-form') && ziel.matches('[data-press-plan-trigger]')) this.aktualisierePressFuellplaene()
+    if (ziel.closest('#abstich-form') && ziel.matches('[data-abstich-entwurf]')) this.aktualisiereAbstichEntwurf()
     if (ziel.closest('#rechner-form')) this.aktualisiereRechner()
     if (ziel.closest('#ereignis-form')) this.aktualisiereZugabeVorschau()
     if (ziel.id === 'wiki-suche') {
@@ -1801,6 +2050,23 @@ export class WeinbegleiterApp {
       if (liste) liste.innerHTML = this.renderWikiListe()
     }
     if (ziel.closest('#umverteilen-form') && ziel.name === 'zielMenge') this.pruefeUmverteilung()
+  }
+
+  private aktualisiereUnterSkalaFelder(bereich: ParentNode = this.root): void {
+    bereich.querySelectorAll<HTMLInputElement>('[data-unter-skala]').forEach(schalter => {
+      const block = schalter.closest<HTMLElement>('[data-mess-block]')
+      if (!block) return
+      const aktiv = schalter.checked
+      const wert = block.querySelector<HTMLInputElement>('[data-skalen-wert]')
+      const skalenende = block.querySelector<HTMLInputElement>('[data-skalenende]')
+      const skalenendeLabel = skalenende?.closest<HTMLElement>('.skalenende')
+      if (wert) {
+        wert.disabled = aktiv
+        wert.required = !aktiv && wert.hasAttribute('data-skalen-required')
+      }
+      if (skalenende) skalenende.required = aktiv
+      if (skalenendeLabel) skalenendeLabel.hidden = !aktiv
+    })
   }
 
   private behandleTaste(event: KeyboardEvent): void {
@@ -1899,13 +2165,19 @@ export class WeinbegleiterApp {
       const typ = feld.dataset.messTyp as MessTyp | undefined
       if (!typ) return
       const bisher = this.ui.messEntwuerfe[typ]
-      this.ui.messEntwuerfe[typ] = { eingabe: feld.value, methode: bisher?.methode ?? 'spindel' }
+      this.ui.messEntwuerfe[typ] = { eingabe: feld.value, methode: bisher?.methode ?? 'spindel', unterSkala: bisher?.unterSkala ?? false, skalenende: bisher?.skalenende ?? this.skalenendeStandard(typ) }
     })
     formular.querySelectorAll<HTMLSelectElement>('[data-action="mess-methode"]').forEach(feld => {
       const typ = feld.dataset.messTyp as MessTyp | undefined
       if (!typ) return
       const bisher = this.ui.messEntwuerfe[typ]
-      this.ui.messEntwuerfe[typ] = { eingabe: bisher?.eingabe ?? '', methode: feld.value as MessMethode }
+      this.ui.messEntwuerfe[typ] = { eingabe: bisher?.eingabe ?? '', methode: feld.value as MessMethode, unterSkala: bisher?.unterSkala ?? false, skalenende: bisher?.skalenende ?? this.skalenendeStandard(typ) }
+    })
+    formular.querySelectorAll<HTMLInputElement>('[data-unter-skala]').forEach(feld => {
+      const typ = feld.dataset.messTyp as MessTyp | undefined
+      if (!typ) return
+      const bisher = this.ui.messEntwuerfe[typ] ?? { eingabe: '', methode: 'spindel' as const, unterSkala: false, skalenende: this.skalenendeStandard(typ) }
+      this.ui.messEntwuerfe[typ] = { ...bisher, unterSkala: feld.checked, skalenende: formular.querySelector<HTMLInputElement>(`[data-skalenende][data-mess-typ="${typ}"]`)?.value ?? bisher.skalenende }
     })
     this.ui.messZeit = formular.elements.namedItem('zeit') instanceof HTMLInputElement
       ? (formular.elements.namedItem('zeit') as HTMLInputElement).value
@@ -1916,7 +2188,7 @@ export class WeinbegleiterApp {
   }
 
   private leereMessEingaben(): void {
-    this.ui.messEntwuerfe = Object.fromEntries(Object.entries(this.ui.messEntwuerfe).map(([typ, entwurf]) => [typ, { ...entwurf, eingabe: '' }]))
+    this.ui.messEntwuerfe = Object.fromEntries(Object.entries(this.ui.messEntwuerfe).map(([typ, entwurf]) => [typ, { ...entwurf, eingabe: '', unterSkala: false, skalenende: this.skalenendeStandard(typ as MessTyp) }]))
     this.ui.messNotiz = ''
   }
 
@@ -1940,7 +2212,8 @@ export class WeinbegleiterApp {
     const notiz = String(daten.get('notiz') ?? '').trim() || undefined
     const neu: Messung[] = []
     for (const definition of MESS_DEFINITIONEN) {
-      const rohwert = String(daten.get(`mess-${definition.typ}`) ?? '').trim()
+      const unterSkala = this.istUnterSkalaTyp(definition.typ) && daten.get(`grenze-${definition.typ}`) === 'unter'
+      const rohwert = String(daten.get(unterSkala ? `skalenende-${definition.typ}` : `mess-${definition.typ}`) ?? '').trim()
       if (!rohwert) continue
       const wert = definition.art === 'zahl' ? parseDeZahl(rohwert) : null
       if (definition.art === 'zahl' && wert === null) return this.formularFehler(`${definition.label}: Trage einen gültigen Zahlenwert ein.`)
@@ -1955,6 +2228,7 @@ export class WeinbegleiterApp {
         wert,
         text: definition.art === 'auswahl' ? rohwert : undefined,
         methode,
+        grenze: unterSkala ? 'unter' : undefined,
         notiz,
       })
     }
@@ -1974,7 +2248,8 @@ export class WeinbegleiterApp {
     const typ = String(daten.get('typ')) as MessTyp
     const definition = MESS_DEFINITIONEN.find(eintrag => eintrag.typ === typ)
     if (!definition) return this.formularFehler('Unbekannte Messgröße.')
-    const eingabe = daten.get(`mess-${typ}`)
+    const unterSkala = this.istUnterSkalaTyp(typ) && daten.get(`grenze-${typ}`) === 'unter'
+    const eingabe = daten.get(unterSkala ? `skalenende-${typ}` : `mess-${typ}`)
     const wert = definition.art === 'zahl' ? parseDeZahl(eingabe) : null
     const text = definition.art === 'auswahl' ? String(eingabe ?? '') : undefined
     if (definition.art === 'zahl' && wert === null) return this.formularFehler('Trage einen gültigen Zahlenwert ein.')
@@ -1984,7 +2259,7 @@ export class WeinbegleiterApp {
     const methode = DICHTE_TYPEN.includes(typ) ? String(daten.get(`methode-${typ}`) ?? 'spindel') as MessMethode : undefined
     const notiz = String(daten.get('notiz') ?? '').trim() || undefined
     const geaendert = new Date().toISOString()
-    const neu: Messung[] = chargen.map(charge => ({ id: id('messung'), zuletztGeaendert: geaendert, chargeId: charge.id, zeit, typ, wert, text, methode, notiz }))
+    const neu: Messung[] = chargen.map(charge => ({ id: id('messung'), zuletztGeaendert: geaendert, chargeId: charge.id, zeit, typ, wert, text, methode, grenze: unterSkala ? 'unter' : undefined, notiz }))
     this.stand.messungen.push(...neu)
     this.aktualisiereVolumenAusMessungen(neu)
     await this.speichereLokalUndStarteAbgleich()
@@ -2176,7 +2451,8 @@ export class WeinbegleiterApp {
     const daten = new FormData(formular)
     const chargeId = String(daten.get('chargeId') ?? '')
     if (!this.stand.chargen.some(charge => charge.id === chargeId)) return this.formularFehler('Wähle eine gültige Charge aus.')
-    const wert = definition.art === 'zahl' ? parseDeZahl(daten.get('wert')) : null
+    const unterSkala = this.istUnterSkalaTyp(messung.typ) && daten.get(`grenze-${messung.typ}`) === 'unter'
+    const wert = definition.art === 'zahl' ? parseDeZahl(unterSkala ? daten.get(`skalenende-${messung.typ}`) : daten.get('wert')) : null
     const text = definition.art === 'auswahl' ? String(daten.get('text') ?? '') : undefined
     if (definition.art === 'zahl' && wert === null) return this.formularFehler('Trage einen gültigen Zahlenwert ein.')
     if ((messung.typ === 'volumen' || messung.typ === 'kopfraum') && wert !== null && wert < 0) return this.formularFehler('Volumenwerte müssen mindestens 0 L betragen.')
@@ -2187,6 +2463,7 @@ export class WeinbegleiterApp {
       wert,
       text,
       methode: DICHTE_TYPEN.includes(messung.typ) ? String(daten.get('methode') ?? 'spindel') as MessMethode : undefined,
+      grenze: unterSkala ? 'unter' : undefined,
       notiz: String(daten.get('notiz') ?? '').trim() || undefined,
     })
     markiereGeaendert(messung)

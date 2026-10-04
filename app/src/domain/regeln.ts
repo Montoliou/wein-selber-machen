@@ -880,7 +880,7 @@ export function abstichGate(stand: Datenstand, e: AbstichEingabe): AbstichPruefu
     id: 'abstich-gefaesse',
     frage: 'Reichen die Zielgefäße ohne halbvolles Gefäß?',
     erfuellt: !plan.reichtNicht,
-    begruendung: plan.reichtNicht ? plan.hinweise.join(' ') : `${plan.befuellt.length} Gefäße, ${plan.frei.length} bleiben frei.`,
+    begruendung: plan.reichtNicht ? plan.hinweise.join(' ') : `${plan.befuellt.length} Gefäße, ${plan.frei.length === 1 ? 'eines bleibt' : `${plan.frei.length} bleiben`} frei.`,
   })
 
   checks.push({

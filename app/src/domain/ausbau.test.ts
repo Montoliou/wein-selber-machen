@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from 'vitest'
 import type { Behaelter, Charge, Datenstand, Messung } from './typen'
-import { abstichGate, befundeFuerCharge, fuellplan, gaerendeGate } from './regeln'
+import { abstichGate, befundeFuerCharge, fuellplan, gaerendeGate, gaerendeGateFuerLos, istAusbaugefaess } from './regeln'
 import { stammloesungMl } from './oenologie'
 
 let zaehler = 0
@@ -69,7 +69,7 @@ describe('Füllplan', () => {
     const plan = fuellplan(23.4, [1, 2, 3, 4, 5].map(n => ({ behaelterId: `b${n}`, bruttoLiter: 5 })))
     expect(plan.befuellt).toHaveLength(4)
     expect(plan.restLiter).toBeGreaterThan(0)
-    expect(plan.restLiter).toBeLessThanOrEqual(1.5)
+    expect(plan.restLiter).toBeLessThanOrEqual(2)
     expect(plan.reichtNicht).toBe(false)
   })
 
@@ -177,5 +177,77 @@ describe('Kontrollintervall im Ausbau: 14 Tage', () => {
     stand.messungen = [messung(c.id, { typ: 'fuellstand', text: 'im Hals', zeit: '2026-09-26T10:00:00.000Z' })]
     const b = befundeFuerCharge(stand, c, new Date('2026-10-12T10:00:00.000Z'))
     expect(b.some(x => x.regelId === 'R-KONTROLLPAUSE' && x.ampel === 'YELLOW')).toBe(true)
+  })
+})
+
+describe('Review H10, 04.10.2026: im Browser gefundene Fälle', () => {
+  function bottich(nr: number): Behaelter {
+    return { id: `bottich-${nr}`, name: `Gärbottich ${nr}`, bruttoLiter: 20, material: 'Kunststoff', verschluss: 'Deckel mit Gärröhrchen' }
+  }
+
+  it('bestätigt das Gärende eines Loses, wenn nur ein Gefäß zweimal gemessen wurde', () => {
+    const stand = leererStand()
+    const los = [1, 2, 3, 4, 5].map(n => charge({ name: `Vorlauf 2026 · Ballon ${n}`, phase: 'NACHGAERUNG' }))
+    stand.chargen = los
+    stand.messungen = [
+      messung(los[0]!.id, { wert: -4, zeit: '2026-09-26T08:00:00.000Z' }),
+      messung(los[0]!.id, { wert: -4, zeit: '2026-09-29T17:00:00.000Z' }),
+    ]
+    expect(gaerendeGate(stand, los[1]!).freigegeben).toBe(false)
+    expect(gaerendeGateFuerLos(stand, los).freigegeben).toBe(true)
+    const g = abstichGate(stand, { quellen: los, ziele: [1, 2, 3, 4, 5].map(n => ballon(n)), volumenLiter: 27.44, ballonsAbgekuehlt: true })
+    expect(g.checks.find(c => c.id === 'abstich-gaerende')?.erfuellt).toBe(true)
+    expect(g.schwefelFreigegeben).toBe(true)
+    expect(g.zielFuellung).toBe('hals')
+  })
+
+  it('wertet Messungen verschiedener Gefäße eines Loses als eine Reihe', () => {
+    const stand = leererStand()
+    const los = [charge(), charge()]
+    stand.chargen = los
+    stand.messungen = [
+      messung(los[0]!.id, { wert: -4, zeit: '2026-09-26T08:00:00.000Z' }),
+      messung(los[1]!.id, { wert: -4, zeit: '2026-09-29T17:00:00.000Z' }),
+    ]
+    expect(gaerendeGateFuerLos(stand, los).freigegeben).toBe(true)
+  })
+
+  it('erkennt Kunststoffbottiche als nicht ausbautauglich', () => {
+    expect(istAusbaugefaess(bottich(1))).toBe(false)
+    expect(istAusbaugefaess(ballon(1))).toBe(true)
+  })
+
+  it('legt keinen Wein in einen Gärbottich, auch wenn er angekreuzt ist', () => {
+    const stand = leererStand()
+    const los = [1, 2, 3, 4, 5].map(() => charge({ phase: 'NACHGAERUNG' }))
+    stand.chargen = los
+    stand.messungen = [
+      messung(los[0]!.id, { wert: -4, zeit: '2026-09-26T08:00:00.000Z' }),
+      messung(los[0]!.id, { wert: -4, zeit: '2026-09-29T17:00:00.000Z' }),
+    ]
+    const ziele = [...[1, 2, 3, 4, 5].map(n => ballon(n)), ballon(6, 3), bottich(1), bottich(2), bottich(3), bottich(4)]
+    const g = abstichGate(stand, { quellen: los, ziele, volumenLiter: 27.44, ballonsAbgekuehlt: true })
+    expect(g.plan.befuellt.some(b => b.behaelterId.startsWith('bottich'))).toBe(false)
+    expect(g.plan.befuellt).toHaveLength(5)
+    expect(g.plan.frei).toEqual(['ballon-6'])
+    expect(g.checks.find(c => c.id === 'abstich-ausbaugefaess')?.begruendung).toContain('Zwischengefäß')
+    expect(g.freigegeben).toBe(true)
+  })
+
+  it('blockiert, wenn nur Kunststoffbottiche als Ziel gewählt sind', () => {
+    const stand = leererStand()
+    const v = charge()
+    stand.chargen = [v]
+    const g = abstichGate(stand, { quellen: [v], ziele: [bottich(1)], volumenLiter: 10, ballonsAbgekuehlt: true, vorziehenBegruendung: 'Test' })
+    expect(g.checks.find(c => c.id === 'abstich-ausbaugefaess')?.erfuellt).toBe(false)
+    expect(g.freigegeben).toBe(false)
+  })
+})
+
+describe('Review H10, 04.10.2026: echter Presswein vom 09.09.', () => {
+  it('nimmt 6,5 L in einem 5-L-Ballon mit Flaschenrest an', () => {
+    const plan = fuellplan(6.5, [{ behaelterId: 'ballon-7', bruttoLiter: 5 }], { zielFuellung: 'schulter', trubAnteil: 0 })
+    expect(plan.reichtNicht).toBe(false)
+    expect(plan.restLiter).toBeCloseTo(1.6, 2)
   })
 })

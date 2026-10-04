@@ -550,6 +550,8 @@ button.tag { min-height: 44px; cursor: pointer; }
 .press-gefaess input { width: 22px; height: 22px; min-height: 22px; flex: none; }
 .press-gefaess span, .press-gefaess strong, .press-gefaess small { display: block; }
 .press-gefaess small { margin-top: 2px; color: var(--text-3); }
+.press-gefaess-blockiert { cursor: not-allowed; opacity: .58; }
+.press-gefaess-blockiert small { color: var(--gold); }
 .press-fuellplan { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border); }
 .press-fuellplan h3 { margin: 0 0 8px; }
 .press-plan-zeile { display: flex; min-height: 50px; align-items: center; justify-content: space-between; gap: 12px; margin: 0; padding: 7px 0; border-bottom: 1px solid var(--border); }

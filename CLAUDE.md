@@ -388,3 +388,28 @@ vom 26.09. Erst dann stimmt der Stand in der App wieder.
 
 **Die App legt keine Kalendertermine an.** Bewusst nicht ins Mockup geschrieben: Sie kann nur
 `.ics` erzeugen. Termine pflegt Lucius im Google-Kalender „Andi Privat".
+
+## Review H10 und H11 (04.10.2026)
+
+**H11 (PR #11) abgenommen.** Im Browser mit einem alten Datenstand (sieben Wiki-Seiten)
+geprüft: Nach dem Laden stehen alle zwölf da. Bereit zum Merge.
+
+**H10 (PR #12) nicht abgenommen.** Durchgeklickt mit den echten Zahlen (Press-Gate 09.09.,
+Abstich 26.09.). Drei Fehler lagen in **meiner** Domäne, alle behoben und per Merge-Commit
+`6a37900` in den H10-Branch gebracht:
+- Abstich-Gate verlangte das Gärende je Gefäß → nie bestätigt, Schwefel dauerhaft gesperrt.
+  Jetzt `gaerendeGateFuerLos()`: alle Messungen des Loses als eine Reihe.
+- Füllplan legte 18,23 L in einen 20-L-Gärbottich. Jetzt `istAusbaugefaess()`
+  (Kunststoff nur als Zwischengefäß), eigene Prüfung `abstich-ausbaugefaess`.
+- Restgrenze 1,5 → 2,0 L; der echte Presswein (6,5 L) wurde abgewiesen.
+Sieben Oberflächenbefunde gehen als **H10b** an Codex, Basis ist der H10-Branch.
+Wichtigster: Das Press-Formular bricht bei `plan.reichtNicht` ab, bevor es die eingegebenen
+Liter ansieht, mit pauschaler Meldung.
+
+**Lehre:** Die Tests von H10 liefen grün, und die Domänentests auch — trotzdem wäre der
+Abstich im echten Betrieb nie zum Schwefeln gekommen. Gefunden hat es erst das Durchklicken
+mit Andis tatsächlicher Messweise (ein Gefäß stellvertretend). Testfälle mit echten Abläufen
+schreiben, nicht mit idealisierten.
+
+**Reihenfolge:** H10b → Review → PR #12 mergen → H12 einstellen. H12 muss bis zur Kontrolle
+am 10.10. nicht fertig sein; die Kontrolle funktioniert auch über den Kalendertermin.

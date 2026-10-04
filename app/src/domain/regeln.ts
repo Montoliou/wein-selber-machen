@@ -45,8 +45,12 @@ export const GRENZEN = {
   abstichTrubAnteil: 0.05,
   /** Ein Gefäß gilt als „voll genug", wenn es zu mindestens 90 % seines Nutzvolumens gefüllt ist. */
   fuellplanMindestFuellung: 0.9,
-  /** So viel Rest darf in Auffüllflaschen gehen, bevor die Gefäße als nicht ausreichend gelten. */
-  fuellplanMaxRestLiter: 1.5,
+  /**
+   * So viel Rest darf in Auffüllflaschen gehen, bevor die Gefäße als nicht ausreichend gelten.
+   * 2,0 statt 1,5 L: Der echte Presswein vom 09.09.2026 (6,5 L, ein 5-L-Ballon plus eine
+   * 1,5-L-Flasche) ergab im Plan 1,60 L Rest und wurde fälschlich als „reicht nicht" abgewiesen.
+   */
+  fuellplanMaxRestLiter: 2.0,
   gaertemperaturRotMin: 18,
   gaertemperaturRotMax: 28,
   maischeKaltMin: 4,
@@ -79,9 +83,10 @@ function alsSg(m: Messung | undefined): number | null {
  * sobald Alkohol im Spiel ist, zeigt ein Refraktometer zu hoch an. Ein damit
  * gemessenes "Gärende" wäre derselbe Selbstbetrug wie "kein Blubbern = fertig".
  */
-function dichtereihe(stand: Datenstand, chargeId: string): Messung[] {
+function dichtereihe(stand: Datenstand, chargeId: string | string[]): Messung[] {
+  const ids = new Set(Array.isArray(chargeId) ? chargeId : [chargeId])
   return stand.messungen
-    .filter(m => (m.typ === 'sg' || m.typ === 'oechsle') && m.chargeId === chargeId)
+    .filter(m => (m.typ === 'sg' || m.typ === 'oechsle') && ids.has(m.chargeId))
     .filter(m => m.methode !== 'refraktometer')
     .sort((a, b) => b.zeit.localeCompare(a.zeit))
 }
@@ -422,8 +427,24 @@ export function pressGate(stand: Datenstand, charge: Charge): GateErgebnis {
 }
 
 export function gaerendeGate(stand: Datenstand, charge: Charge): GateErgebnis {
+  return gaerendeAusReihe(dichtereihe(stand, charge.id))
+}
+
+/**
+ * Gärende eines Loses: alle Dichtemessungen der Gefäße als eine Reihe.
+ * Andi misst stellvertretend ein Gefäß oder die Mischung im Bottich, nicht jedes einzeln.
+ * Befund im Review von H10 (04.10.2026): Mit „jedes Gefäß einzeln" wäre das Gärende eines
+ * Loses nie bestätigt worden und der Schwefel nach dem Abstich dauerhaft gesperrt geblieben.
+ * Grenze: Vor dem ersten Abstich können die Gefäße eines Loses unterschiedlich weit sein
+ * (06.09.2026: Bottich 1 bei 12 °Oe, die anderen bei 0–4). Gewertet werden die beiden
+ * jüngsten Messungen; der Abstich vereinigt den Wein ohnehin.
+ */
+export function gaerendeGateFuerLos(stand: Datenstand, chargen: Charge[]): GateErgebnis {
+  return gaerendeAusReihe(dichtereihe(stand, chargen.map(c => c.id)))
+}
+
+function gaerendeAusReihe(reihe: Messung[]): GateErgebnis {
   const checks: GateCheck[] = []
-  const reihe = dichtereihe(stand, charge.id)
   const m0 = reihe[0]
   const m1 = reihe[1]
   const sg0 = alsSg(m0)
@@ -774,6 +795,17 @@ export function fuellplan(
   return { volumenLiter: volumen, zielFuellung, befuellt, restLiter, frei, reichtNicht, hinweise }
 }
 
+/**
+ * Taugt ein Gefäß für den monatelangen Ausbau? Kunststoffbottiche nicht: Sie lassen über
+ * Monate Sauerstoff durch und haben einen Deckel statt eines engen Halses. Im Abstich dienen
+ * sie nur als Zwischengefäß.
+ * Befund im Review von H10 (04.10.2026): Der Füllplan wählte einen 20-L-Gärbottich mit
+ * 18,23 L als „bestes" Ziel, weil dort am wenigsten Luft blieb.
+ */
+export function istAusbaugefaess(behaelter: Behaelter): boolean {
+  return !/kunststoff/i.test(behaelter.material)
+}
+
 export interface AbstichEingabe {
   /** Die Chargen, die abgezogen werden, z. B. Ballon 1–5 eines Loses. */
   quellen: Charge[]
@@ -800,7 +832,7 @@ export interface AbstichPruefung extends GateErgebnis {
  */
 export function abstichGate(stand: Datenstand, e: AbstichEingabe): AbstichPruefung {
   const checks: GateCheck[] = []
-  const gaerendeOk = e.quellen.length > 0 && e.quellen.every(q => gaerendeGate(stand, q).freigegeben)
+  const gaerendeOk = e.quellen.length > 0 && gaerendeGateFuerLos(stand, e.quellen).freigegeben
   const vorgezogen = !gaerendeOk && Boolean(e.vorziehenBegruendung?.trim())
   checks.push({
     id: 'abstich-gaerende',
@@ -831,7 +863,19 @@ export function abstichGate(stand: Datenstand, e: AbstichEingabe): AbstichPruefu
   })
 
   const zielFuellung = gaerendeOk ? 'hals' : 'schulter'
-  const plan = fuellplan(e.volumenLiter, e.ziele.map(z => ({ behaelterId: z.id, bruttoLiter: z.bruttoLiter })), { zielFuellung })
+  const ausbauZiele = e.ziele.filter(istAusbaugefaess)
+  const zwischen = e.ziele.filter(z => !istAusbaugefaess(z))
+  checks.push({
+    id: 'abstich-ausbaugefaess',
+    frage: 'Gehen nur Gefäße in den Füllplan, die für den Ausbau taugen?',
+    erfuellt: ausbauZiele.length > 0,
+    begruendung: ausbauZiele.length === 0
+      ? 'Kein ausbautaugliches Zielgefäß gewählt. Kunststoffbottiche dienen nur als Zwischengefäß.'
+      : zwischen.length
+        ? `Nur Zwischengefäß, nicht im Füllplan: ${zwischen.map(z => z.name).join(', ')}. Kunststoff lässt über Monate Sauerstoff durch.`
+        : 'Alle gewählten Zielgefäße taugen für den Ausbau.',
+  })
+  const plan = fuellplan(e.volumenLiter, ausbauZiele.map(z => ({ behaelterId: z.id, bruttoLiter: z.bruttoLiter })), { zielFuellung })
   checks.push({
     id: 'abstich-gefaesse',
     frage: 'Reichen die Zielgefäße ohne halbvolles Gefäß?',

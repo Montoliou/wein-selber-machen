@@ -413,3 +413,14 @@ schreiben, nicht mit idealisierten.
 
 **Reihenfolge:** H10b → Review → PR #12 mergen → H12 einstellen. H12 muss bis zur Kontrolle
 am 10.10. nicht fertig sein; die Kontrolle funktioniert auch über den Kalendertermin.
+
+## H11 live (09.10.2026)
+
+PR #11 gemergt und deployt, live byteidentisch mit dem Build (286.506 Bytes). Mitgeliefert:
+die fünf Playbooks im Wiki und die Domänenkorrekturen vom 04.10. (Gärende je Los,
+Ausbaugefäß-Prüfung, Restgrenze 2 L, Kontrollintervall 14 Tage, Füllstand-Stufe). Die
+Oberfläche nutzt die neuen Domänenfunktionen erst mit H10/H10b. Die Wiki-Seiten erscheinen
+beim nächsten Öffnen der App und wandern über den Abgleich auf alle Geräte.
+
+**Vorlauf am 09.10. geschwefelt** (Gärende bestätigt, Ballon 1 −4 °Oe wie am 26.09.). Der
+Wein klärt von oben. Zweiter Abstich in etwa 4–8 Wochen, wenn der Feintrub fest liegt.

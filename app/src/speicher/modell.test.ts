@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Datenstand, Ereignis } from '../domain/typen'
 import { erzeugeStartdaten } from '../startdaten'
+import { START_WIKI_SEITEN } from '../wiki-inhalte'
 import {
   APP_DATEN_VERSION,
   fuegeVolumenPunktHinzu,
@@ -49,6 +50,20 @@ function alsAltstand(): AppDatenstand {
       elternChargeIds: { b1: ['ernte-1'] },
     } as unknown as AppDatenstand['appMeta'],
   } as AppDatenstand
+}
+
+const NEUE_WIKI_IDS = [
+  'wiki-abziehen',
+  'wiki-schwefeln',
+  'wiki-messgeraete',
+  'wiki-vorlauf-pressen',
+  'wiki-weisswein',
+]
+
+function standMitSiebenAltenWikiSeiten(): AppDatenstand {
+  const stand = structuredClone(erzeugeStartdaten())
+  stand.wiki = stand.wiki.filter(seite => !NEUE_WIKI_IDS.includes(seite.id))
+  return stand
 }
 
 describe('Datenstand-Migration v1 auf v2', () => {
@@ -152,5 +167,56 @@ describe('Speicherschicht v2', () => {
     expect(() => speichereEreignisseMitVorrat(stand, [ereignis])).toThrow('Einheit stimmt nicht überein')
     expect(stand.vorrat.find(posten => posten.id === 'vorrat-naehrsalz')?.mengeWert).toBe(bestand)
     expect(stand.ereignisse).toHaveLength(anzahl)
+  })
+})
+
+describe('Wiki-Startseiten-Migration', () => {
+  it('ergänzt die fünf neuen Seiten in einem Stand mit den sieben alten Seiten', () => {
+    const migriert = migriereDatenstand(standMitSiebenAltenWikiSeiten())
+
+    expect(migriert.wiki).toHaveLength(START_WIKI_SEITEN.length)
+    expect(migriert.wiki.filter(seite => NEUE_WIKI_IDS.includes(seite.id)).map(seite => seite.id)).toEqual(NEUE_WIKI_IDS)
+  })
+
+  it('ergänzt eine gelöschte Startseite nicht erneut', () => {
+    const stand = standMitSiebenAltenWikiSeiten()
+    stand.geloescht = [{
+      id: 'wiki-abziehen',
+      sammlung: 'wiki',
+      zeit: '2026-09-26T19:00:00.000Z',
+    }]
+
+    const migriert = migriereDatenstand(stand)
+
+    expect(migriert.wiki.some(seite => seite.id === 'wiki-abziehen')).toBe(false)
+    expect(migriert.geloescht).toContainEqual(expect.objectContaining({ id: 'wiki-abziehen', sammlung: 'wiki' }))
+  })
+
+  it('behält den geänderten Inhalt einer vorhandenen Startseite', () => {
+    const stand = standMitSiebenAltenWikiSeiten()
+    const kopfraum = stand.wiki.find(seite => seite.id === 'wiki-kopfraum')!
+    kopfraum.inhalt = '# Eigene Fassung\n\nDiese Änderung bleibt erhalten.'
+
+    const migriert = migriereDatenstand(stand)
+
+    expect(migriert.wiki.find(seite => seite.id === 'wiki-kopfraum')?.inhalt).toBe(kopfraum.inhalt)
+  })
+
+  it('bleibt bei wiederholter Migration frei von Dubletten', () => {
+    const einmal = migriereDatenstand(standMitSiebenAltenWikiSeiten())
+    const zweimal = migriereDatenstand(einmal)
+
+    expect(zweimal.wiki).toHaveLength(einmal.wiki.length)
+    expect(new Set(zweimal.wiki.map(seite => seite.id)).size).toBe(zweimal.wiki.length)
+  })
+
+  it('setzt für ergänzte Seiten ein gültiges Änderungsdatum aus der Startfassung', () => {
+    const migriert = migriereDatenstand(standMitSiebenAltenWikiSeiten())
+
+    for (const id of NEUE_WIKI_IDS) {
+      const seite = migriert.wiki.find(eintrag => eintrag.id === id)!
+      expect(seite.zuletztGeaendert).toBe(seite.aktualisiert)
+      expect(Number.isFinite(new Date(seite.zuletztGeaendert!).getTime())).toBe(true)
+    }
   })
 })

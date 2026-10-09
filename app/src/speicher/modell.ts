@@ -13,6 +13,7 @@ import {
   type Vorratsposten,
   type WikiSeite,
 } from '../domain/typen'
+import { START_WIKI_SEITEN } from '../wiki-inhalte'
 
 export const APP_DATEN_VERSION = 3
 
@@ -316,6 +317,15 @@ export function migriereDatenstand(stand: MigrierbarerDatenstand): AppDatenstand
     ...eintrag,
     zuletztGeaendert: isoZeit(eintrag.zuletztGeaendert, eintrag.aktualisiert),
   }))
+  const vorhandeneWikiIds = new Set(wiki.map(eintrag => eintrag.id))
+  const geloeschteWikiIds = new Set((stand.geloescht ?? [])
+    .filter(eintrag => eintrag.sammlung === 'wiki')
+    .map(eintrag => eintrag.id))
+  for (const startseite of START_WIKI_SEITEN) {
+    if (vorhandeneWikiIds.has(startseite.id) || geloeschteWikiIds.has(startseite.id)) continue
+    wiki.push({ ...startseite, tags: [...startseite.tags], zuletztGeaendert: startseite.aktualisiert })
+    vorhandeneWikiIds.add(startseite.id)
+  }
   const klima: Klimapunkt[] = stand.klima.map(eintrag => {
     const alt = eintrag as Klimapunkt & { id?: string }
     const zeit = isoZeit(alt.zeit, startAnker)

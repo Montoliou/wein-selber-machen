@@ -894,3 +894,12 @@ Konzentration (10 mg/ml), Dosis unverändert 12 ml.
 Kellerregal, **alle bis in den Hals gefüllt**, Kellersensor direkt davor. Farbe deutlich tiefer
 (Rubin bis Purpur) und klarer als vor dem Abstich. Fünf volle 5-L-Ballons Vorlauf entsprechen
 etwa 26–27 L; die Trubverluste waren kleiner als angesetzt.
+
+## 09.10.2026 — Gärende bestätigt, Vorlauf wird geschwefelt
+
+**Ballon 1: −4 °Oe**, wie am 26.09. Dreizehn Tage Abstand, kein Unterschied: **Gärende
+bestätigt.** Die Schwefelung des Vorlaufs war ab 29.09. geplant und hat sich um zehn Tage
+verschoben; der Wein stand in der Zeit randvoll unter Gärstopfen bei 19,5–20,2 °C, pH 3,28.
+
+**Schwefel:** 1,00 g Kaliumdisulfit (= Kaliumpyrosulfit) auf 100 ml, je 5-L-Ballon 16 ml,
+Ballon 1–5. Ballon 7 (Presswein) war bereits am 26.09. geschwefelt.

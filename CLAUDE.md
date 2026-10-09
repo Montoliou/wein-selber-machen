@@ -424,3 +424,16 @@ beim nächsten Öffnen der App und wandern über den Abgleich auf alle Geräte.
 
 **Vorlauf am 09.10. geschwefelt** (Gärende bestätigt, Ballon 1 −4 °Oe wie am 26.09.). Der
 Wein klärt von oben. Zweiter Abstich in etwa 4–8 Wochen, wenn der Feintrub fest liegt.
+
+## Review H10b (PR #13, 09.10.2026)
+
+**Abgenommen.** Im Browser mit den echten Zahlen durchgespielt (Press-Gate 09.09., Abstich
+26.09., Schwefel 09.10.), 110 Tests grün. Alle sieben Punkte erfüllt: Klickschleife statt
+fester Prüfungszahl, Press-Formular nimmt den echten Presswein an (5,0 L + Vermerk
+„Auffüllflasche 1,5 L"), Bottiche nur als Zwischengefäß und nicht vorangekreuzt, eigener
+Schwefelzeitpunkt, Literanzeige statt „Menge offen", kein Funktionsname im Text, Konflikt
+Vorlauf/Presswein sofort sichtbar.
+
+**Kleiner Restpunkt:** Die Schwefelmenge nach dem Abstich ist nicht änderbar. Die App
+speichert ihren Vorschlag (16,8 ml je 5,3 L), Andi hat real 16 ml gegeben. 5 % Abweichung,
+für den Nachtrag hinnehmbar; gehört als Kriterium in H12.

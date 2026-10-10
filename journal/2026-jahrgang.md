@@ -903,3 +903,21 @@ verschoben; der Wein stand in der Zeit randvoll unter Gärstopfen bei 19,5–20,
 
 **Schwefel:** 1,00 g Kaliumdisulfit (= Kaliumpyrosulfit) auf 100 ml, je 5-L-Ballon 16 ml,
 Ballon 1–5. Ballon 7 (Presswein) war bereits am 26.09. geschwefelt.
+
+## 10.10.2026 — Feinspindel gesucht
+
+Andi fragt nach einer Feinspindel für die Messung vor dem Abfüllen. Ergebnis der Suche:
+
+- **Empfohlen:** Präzisions-Hydrometer Vinoferm 0,985–1,003 SG (−15 bis +3 °Oe), Teilung
+  0,0002 SG = 0,2 °Oe, 335 mm lang, Artikel 013.021.1, 36,99 € bei
+  [Braumarkt](https://braumarkt.com/de/dichtemessgerate/10316-prazisions-hydrometer-vinoferm-0985-1003-sg.html)
+  (deutscher Shop von Brouwland). Am 10.10. nicht auf Lager, angekündigt für 18.10.2026.
+- **Verworfen:** Labor-Aräometer L50 0,950–1,000 (Buddeberg, 49,24 €, Bezugstemperatur 15 °C,
+  nicht lieferbar) — teurer und gröber. Dreiskalen-Hydrometer 0,990–1,170 für 8 € — reicht
+  zwar unter null, löst aber nur 2 °Oe auf und ist damit schlechter als die vorhandene
+  Mostwaage. US-Kunststoffspindeln 0,980–1,020 sind in Deutschland nicht im Handel.
+- **Kein Messzylinder.** Gemessen wird wie am 26.09. im Gärbottich, einmal beim zweiten Abstich
+  und einmal beim Abfüllen. Ungeprüft: Die Spindel braucht rund 28–30 cm Flüssigkeitstiefe,
+  der Bottich muss dafür mit etwa 19 L gefüllt sein.
+
+Kalendertermin „Feinspindel bestellen" für Mo 19.10.2026 18:00 in „Andi Privat" angelegt.

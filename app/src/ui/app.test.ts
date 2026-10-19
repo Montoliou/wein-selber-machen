@@ -82,7 +82,7 @@ describe('Runde im DOM', () => {
 
   it('erzeugt aus leeren Rundenfeldern keinen Datensatz', () => {
     const root = document.querySelector<HTMLElement>('#app')!
-    const stand = erzeugeStartdaten()
+    const stand = structuredClone(erzeugeStartdaten())
     const vorher = stand.messungen.length
     new WeinbegleiterApp(root, stand, []).start()
     starteRunde(root)
@@ -95,7 +95,7 @@ describe('Runde im DOM', () => {
 
   it('gibt allen Werten denselben Zeitpunkt und springt nach dem Speichern nicht weiter', async () => {
     const root = document.querySelector<HTMLElement>('#app')!
-    const stand = erzeugeStartdaten()
+    const stand = structuredClone(erzeugeStartdaten())
     new WeinbegleiterApp(root, stand, []).start()
     starteRunde(root)
     aendere(root.querySelector<HTMLInputElement>('#runden-zeit')!, '2026-09-04T08:05')
@@ -434,7 +434,7 @@ describe('Gefäßverwaltung im DOM', () => {
 
     const formular = root.querySelector<HTMLFormElement>('#press-teilung-form')!
     expect(formular).not.toBeNull()
-    expect(formular.querySelector('option[value="ballon-1"]')).toBeNull()
+    expect(formular.querySelector('[name$="BehaelterIds"][value="ballon-1"]')).toBeNull()
   })
 
   it('lehnt Ausmustern ohne Grund ab', async () => {
@@ -736,9 +736,9 @@ describe('Press-Gate im DOM', () => {
     expect(root.querySelector('.fehlerbox')).toBeNull()
   })
 
-  it('legt Vorlauf und Presswein mit Abstammung, Volumen und Gefäß an', async () => {
+  it('legt fünf Vorlauf-Chargen und eine Presswein-Charge in zwei Losen an', async () => {
     const root = document.querySelector<HTMLElement>('#app')!
-    const stand = erzeugeStartdaten()
+    const stand = structuredClone(erzeugeStartdaten())
     const quelle = stand.chargen[0]!
     quelle.phase = 'PRESS_GATE'
     quelle.phaseSeit = '2026-09-04T08:00:00+02:00'
@@ -748,20 +748,237 @@ describe('Press-Gate im DOM', () => {
 
     const formular = root.querySelector<HTMLFormElement>('#press-teilung-form')!
     expect(formular).not.toBeNull()
-    formular.querySelector<HTMLInputElement>('[name="vorlaufLiter"]')!.value = '4'
-    formular.querySelector<HTMLInputElement>('[name="vorlaufKopfraum"]')!.value = '1'
-    formular.querySelector<HTMLInputElement>('[name="pressweinLiter"]')!.value = '3'
-    formular.querySelector<HTMLInputElement>('[name="pressweinKopfraum"]')!.value = '2'
-    formular.querySelector<HTMLSelectElement>('[name="vorlaufBehaelter"]')!.value = 'ballon-1'
-    formular.querySelector<HTMLSelectElement>('[name="pressweinBehaelter"]')!.value = 'ballon-2'
-    formular.dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true }))
+    aendere(formular.querySelector<HTMLInputElement>('[name="vorlaufVolumen"]')!, '24,5')
+    for (const nr of [1, 2, 3, 4, 5]) klicke(formular.querySelector(`[name="vorlaufBehaelterIds"][value="ballon-${nr}"]`))
+    aendere(formular.querySelector<HTMLInputElement>('[name="pressweinVolumen"]')!, '4,9')
+    klicke(formular.querySelector('[name="pressweinBehaelterIds"][value="ballon-6"]'))
+
+    klicke(formular.querySelector('button[type="submit"]'))
     await warteAufRendern()
 
-    const kinder = stand.chargen.filter(charge => charge.elternChargeId === quelle.id)
-    expect(quelle.archiviert).toBe(true)
-    expect(kinder.map(charge => charge.typ)).toEqual(['vorlauf', 'presswein'])
+    const kinder = stand.chargen.filter(charge => charge.herkunftIds?.includes(quelle.id))
+    expect(stand.chargen.filter(charge => charge.typ === 'maische').every(charge => charge.archiviert)).toBe(true)
+    expect(kinder.filter(charge => charge.los === 'Vorlauf 2026')).toHaveLength(5)
+    expect(kinder.filter(charge => charge.los === 'Presswein 2026')).toHaveLength(1)
     expect(kinder.every(charge => charge.phase === 'NACHGAERUNG')).toBe(true)
-    expect(kinder.map(charge => [charge.fuellLiter, charge.kopfraumLiter, charge.volumenHistorie?.length])).toEqual([[4, 1, 1], [3, 2, 1]])
-    expect(kinder.map(charge => charge.behaelterId)).toEqual(['ballon-1', 'ballon-2'])
+    expect(kinder.every(charge => charge.name === `${charge.los} · ${stand.behaelter.find(behaelter => behaelter.id === charge.behaelterId)?.name}`)).toBe(true)
+    expect(kinder.every(charge => charge.herkunftIds?.length === 4 && charge.volumenHistorie?.length === 1)).toBe(true)
+  })
+
+  it('speichert 5,0 L Presswein im 5-L-Ballon und dokumentiert den Rest als Auffüllflasche', async () => {
+    const root = document.querySelector<HTMLElement>('#app')!
+    const stand = structuredClone(erzeugeStartdaten())
+    const quelle = stand.chargen[0]!
+    quelle.phase = 'PRESS_GATE'
+    quelle.phaseSeit = '2026-09-04T08:00:00+02:00'
+    stand.messungen.push({ id: 'test-press-dichte-echte-liter', chargeId: quelle.id, zeit: '2026-09-04T08:05:00+02:00', typ: 'oechsle', wert: 8, methode: 'spindel' })
+    history.replaceState(null, '', `/#gate/${quelle.id}`)
+    new WeinbegleiterApp(root, stand, []).start()
+
+    const formular = root.querySelector<HTMLFormElement>('#press-teilung-form')!
+    aendere(formular.querySelector<HTMLInputElement>('[name="vorlaufVolumen"]')!, '24,5')
+    for (const nr of [1, 2, 3, 4, 5]) klicke(formular.querySelector(`[name="vorlaufBehaelterIds"][value="ballon-${nr}"]`))
+    aendere(formular.querySelector<HTMLInputElement>('[name="pressweinVolumen"]')!, '4,9')
+    klicke(formular.querySelector('[name="pressweinBehaelterIds"][value="ballon-6"]'))
+    aendere(formular.querySelector<HTMLInputElement>('[name="pressweinFuellLiter:ballon-6"]')!, '5,0')
+
+    klicke(formular.querySelector('button[type="submit"]'))
+    expect(formular.querySelector('#erfassen-fehler')?.textContent).toContain('Presswein: Die eingetragenen Gefäßmengen')
+    expect(formular.querySelector('#erfassen-fehler')?.textContent).toContain('überschreiten das Gesamtvolumen von 4,90 L')
+
+    aendere(formular.querySelector<HTMLInputElement>('[name="pressweinVolumen"]')!, '6,5')
+    aendere(formular.querySelector<HTMLInputElement>('[name="pressweinFuellLiter:ballon-6"]')!, '5,0')
+    klicke(formular.querySelector('button[type="submit"]'))
+    await warteAufRendern()
+
+    const presswein = stand.chargen.find(charge => charge.typ === 'presswein')!
+    expect(presswein.fuellLiter).toBe(5)
+    expect(presswein.volumenHistorie?.[0]?.anlass).toContain('Auffüllflasche 1,5 L')
+    expect(stand.ereignisse.find(ereignis => ereignis.art === 'pressen')?.mengeWert).toBe(31)
+    expect(stand.chargen.filter(charge => charge.typ === 'maische').every(charge => charge.archiviert)).toBe(true)
+  })
+
+  it('deaktiviert ein beim Vorlauf gewähltes Gefäß sofort beim Presswein', () => {
+    const root = document.querySelector<HTMLElement>('#app')!
+    const stand = structuredClone(erzeugeStartdaten())
+    const quelle = stand.chargen[0]!
+    quelle.phase = 'PRESS_GATE'
+    quelle.phaseSeit = '2026-09-04T08:00:00+02:00'
+    stand.messungen.push({ id: 'test-press-dichte-konflikt', chargeId: quelle.id, zeit: '2026-09-04T08:05:00+02:00', typ: 'oechsle', wert: 8, methode: 'spindel' })
+    history.replaceState(null, '', `/#gate/${quelle.id}`)
+    new WeinbegleiterApp(root, stand, []).start()
+
+    const vorlauf = root.querySelector<HTMLInputElement>('[name="vorlaufBehaelterIds"][value="ballon-1"]')!
+    const presswein = root.querySelector<HTMLInputElement>('[name="pressweinBehaelterIds"][value="ballon-1"]')!
+    klicke(vorlauf)
+
+    expect(presswein.disabled).toBe(true)
+    expect(presswein.closest('label')?.textContent).toContain('beim Vorlauf gewählt')
+
+    klicke(vorlauf)
+    klicke(presswein)
+    expect(vorlauf.disabled).toBe(true)
+    expect(vorlauf.closest('label')?.textContent).toContain('beim Presswein gewählt')
+  })
+})
+
+function abstichStand(typen: Array<'vorlauf' | 'presswein'>, volumenGesamt: number, mitPh = false) {
+  const stand = erzeugeStartdaten()
+  const los = 'Vorlauf 2026'
+  stand.behaelter = typen.map((_, index) => ({ id: `test-ballon-${index + 1}`, name: `Ballon ${index + 1}`, bruttoLiter: 5, material: 'Glas', verschluss: 'Stopfen', regalPosition: index + 1 }))
+  stand.behaelter.push({ id: 'test-ballon-klein', name: 'Ballon klein', bruttoLiter: 3, material: 'Glas', verschluss: 'Stopfen', regalPosition: 99 })
+  stand.chargen = typen.map((typ, index) => ({
+    id: `test-charge-${index + 1}`, jahrgang: 2026, name: `${los} · Ballon ${index + 1}`, typ, los,
+    phase: 'GAERENDE_GATE', phaseSeit: '2026-09-26T08:00:00.000Z', startdatum: '2026-09-09T08:00:00.000Z',
+    behaelterId: `test-ballon-${index + 1}`, fuellLiter: volumenGesamt / typen.length,
+    volumenHistorie: [{ zeit: '2026-09-09T08:00:00.000Z', fuellLiter: volumenGesamt / typen.length, behaelterId: `test-ballon-${index + 1}`, anlass: 'Pressen' }],
+    gesperrt: false, isoliert: false,
+  }))
+  stand.messungen = [
+    { id: `${stand.chargen[0]!.id}-d1`, chargeId: stand.chargen[0]!.id, zeit: '2026-09-23T08:00:00.000Z', typ: 'oechsle' as const, wert: -4, methode: 'spindel' as const },
+    { id: `${stand.chargen[0]!.id}-d2`, chargeId: stand.chargen[0]!.id, zeit: '2026-09-26T08:00:00.000Z', typ: 'oechsle' as const, wert: -4, methode: 'spindel' as const },
+  ]
+  if (mitPh) stand.messungen.push({ id: 'test-ph', chargeId: stand.chargen[0]!.id, zeit: '2026-09-26T09:00:00.000Z', typ: 'ph', wert: 3.28 })
+  stand.ereignisse = []
+  return stand
+}
+
+async function fuehreAbstichBisZumSpeichern(root: HTMLElement, abstichZeit?: string): Promise<void> {
+  klicke(root.querySelector('[data-action="abstich-start"]'))
+  if (abstichZeit) aendere(root.querySelector<HTMLInputElement>('#abstich-zeit')!, abstichZeit)
+  let weiter = root.querySelector<HTMLButtonElement>('[data-action="abstich-weiter"]:not([disabled])')
+  while (weiter) {
+    const pruefungVorher = root.querySelector('[data-abstich-check]')?.getAttribute('data-abstich-check')
+    klicke(weiter)
+    expect(root.querySelector('[data-abstich-check]')?.getAttribute('data-abstich-check')).not.toBe(pruefungVorher)
+    weiter = root.querySelector<HTMLButtonElement>('[data-action="abstich-weiter"]:not([disabled])')
+  }
+  klicke(root.querySelector('[data-action="abstich-abgekuehlt"]'))
+  const senden = root.querySelector<HTMLButtonElement>('#abstich-form button[type="submit"]')!
+  const pruefstand = [...root.querySelectorAll<HTMLElement>('.gate-fortschritt i')].map(eintrag => eintrag.className || 'offen').join(', ')
+  expect(senden.disabled, `${root.querySelector('.gate-frage')?.textContent ?? 'Abstichprüfung fehlt'} [${pruefstand}]`).toBe(false)
+  klicke(senden)
+  await warteAufRendern()
+}
+
+describe('Ausbau im DOM', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '<div id="app"></div>'
+    history.replaceState(null, '', '/')
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024 })
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: false })
+  })
+
+  it('führt beim Abstich fünf Chargen weiter und lässt den 3-L-Ballon frei', async () => {
+    const root = document.querySelector<HTMLElement>('#app')!
+    const stand = abstichStand(['vorlauf', 'vorlauf', 'vorlauf', 'vorlauf', 'vorlauf'], 27.73)
+    history.replaceState(null, '', `/#charge/${stand.chargen[0]!.id}`)
+    new WeinbegleiterApp(root, stand, []).start()
+    const idsVorher = stand.chargen.map(charge => charge.id)
+
+    await fuehreAbstichBisZumSpeichern(root)
+
+    const aktiv = stand.chargen.filter(charge => !charge.archiviert)
+    expect(stand.chargen).toHaveLength(5)
+    expect(aktiv.map(charge => charge.id)).toEqual(idsVorher)
+    expect(aktiv.every(charge => charge.phase === 'AUSBAU')).toBe(true)
+    expect(aktiv.some(charge => charge.behaelterId === 'test-ballon-klein')).toBe(false)
+    expect(stand.messungen.filter(messung => messung.typ === 'fuellstand' && messung.text === 'im Hals')).toHaveLength(5)
+  })
+
+  it('wählt nur ausbautaugliche Gefäße des Loses vor und kennzeichnet Gärbottiche', () => {
+    const root = document.querySelector<HTMLElement>('#app')!
+    const stand = abstichStand(['vorlauf'], 5)
+    stand.behaelter.push({ id: 'test-gaerbottich', name: 'Gärbottich', bruttoLiter: 20, material: 'Kunststoff', verschluss: 'Deckel', regalPosition: 100 })
+    history.replaceState(null, '', `/#charge/${stand.chargen[0]!.id}`)
+    new WeinbegleiterApp(root, stand, []).start()
+
+    klicke(root.querySelector('[data-action="abstich-start"]'))
+
+    expect(root.querySelector<HTMLInputElement>('[name="abstichZiele"][value="test-ballon-1"]')?.checked).toBe(true)
+    expect(root.querySelector<HTMLInputElement>('[name="abstichZiele"][value="test-ballon-klein"]')?.checked).toBe(false)
+    const gaerbottich = root.querySelector<HTMLInputElement>('[name="abstichZiele"][value="test-gaerbottich"]')!
+    expect(gaerbottich.checked).toBe(false)
+    expect(gaerbottich.closest('label')?.textContent).toContain('nur Zwischengefäß')
+  })
+
+  it('zeigt Füllliter unter Heute und im Kopf der Chargenseite', () => {
+    const root = document.querySelector<HTMLElement>('#app')!
+    const stand = abstichStand(['vorlauf'], 5.3)
+    new WeinbegleiterApp(root, stand, []).start()
+
+    const karte = root.querySelector<HTMLElement>(`[data-action="charge"][data-id="${stand.chargen[0]!.id}"]`)!
+    expect(karte.textContent).toContain('5,3 L')
+    expect(karte.textContent).not.toContain('Menge offen')
+
+    klicke(karte)
+    expect(root.querySelector('.charge-meta')?.textContent).toContain('5,3 L')
+    expect(root.querySelector('.charge-meta')?.textContent).not.toContain('Menge offen')
+  })
+
+  it('blockiert einen Abstich, der Presswein und Vorlauf mischt', () => {
+    const root = document.querySelector<HTMLElement>('#app')!
+    const stand = abstichStand(['vorlauf', 'presswein'], 10)
+    history.replaceState(null, '', `/#charge/${stand.chargen[0]!.id}`)
+    new WeinbegleiterApp(root, stand, []).start()
+
+    klicke(root.querySelector('[data-action="abstich-start"]'))
+    klicke(root.querySelector('[data-action="abstich-weiter"]'))
+
+    expect(root.querySelector('[data-abstich-check="abstich-getrennt"]')?.textContent).toContain('Presswein und Vorlauf würden zusammenlaufen')
+    expect(root.querySelector<HTMLButtonElement>('#abstich-form button[type="submit"]')?.disabled).toBe(true)
+    expect(stand.chargen.every(charge => !charge.archiviert)).toBe(true)
+  })
+
+  it('speichert und zeigt eine Dichtemessung unter dem Skalenende', async () => {
+    const root = document.querySelector<HTMLElement>('#app')!
+    const stand = structuredClone(erzeugeStartdaten())
+    new WeinbegleiterApp(root, stand, []).start()
+    starteRunde(root)
+
+    klicke(root.querySelector('[name="grenze-oechsle"]'))
+    klicke(root.querySelector('#runde-form button[type="submit"]'))
+    await warteAufRendern()
+
+    const messung = stand.messungen.filter(eintrag => eintrag.chargeId === stand.chargen[0]!.id && eintrag.typ === 'oechsle').at(-1)!
+    expect(messung).toMatchObject({ wert: -3, grenze: 'unter' })
+    klicke(root.querySelector('[data-action="runde-abbrechen"]'))
+    klicke(root.querySelector(`[data-action="charge"][data-id="${stand.chargen[0]!.id}"]`))
+    klicke(root.querySelector('[data-action="charge-tab"][data-tab="messungen"]'))
+    expect(root.querySelector('.protokoll-liste')?.textContent).toContain('< −3 °Oe')
+  })
+
+  it('zeigt nach dem Abstich für 5,3 L bei pH 3,28 genau 16,8 ml Stammlösung', async () => {
+    const root = document.querySelector<HTMLElement>('#app')!
+    const stand = abstichStand(['vorlauf'], 5.58, true)
+    stand.behaelter = stand.behaelter.filter(behaelter => behaelter.id === 'test-ballon-1')
+    history.replaceState(null, '', `/#charge/${stand.chargen[0]!.id}`)
+    new WeinbegleiterApp(root, stand, []).start()
+
+    await fuehreAbstichBisZumSpeichern(root)
+
+    expect(root.querySelector('.schwefel-gefaess .schwefel-menge')?.textContent).toContain('16,8 ml')
+    klicke(root.querySelector('#abstich-schwefel-form button[type="submit"]'))
+    await warteAufRendern()
+    expect(stand.ereignisse.find(ereignis => ereignis.art === 'schwefeln')).toMatchObject({ stoff: 'Kaliumpyrosulfit', mengeWert: 0.168, mengeEinheit: 'g' })
+  })
+
+  it('speichert für die Schwefelung einen änderbaren eigenen Zeitpunkt', async () => {
+    const root = document.querySelector<HTMLElement>('#app')!
+    const stand = abstichStand(['vorlauf'], 5.58, true)
+    stand.behaelter = stand.behaelter.filter(behaelter => behaelter.id === 'test-ballon-1')
+    history.replaceState(null, '', `/#charge/${stand.chargen[0]!.id}`)
+    new WeinbegleiterApp(root, stand, []).start()
+
+    await fuehreAbstichBisZumSpeichern(root, '2026-09-26T08:00')
+
+    const schwefelZeit = root.querySelector<HTMLInputElement>('#abstich-schwefel-zeit')!
+    expect(schwefelZeit.value).toBe('2026-09-26T08:00')
+    aendere(schwefelZeit, '2026-10-04T10:15')
+    klicke(root.querySelector('#abstich-schwefel-form button[type="submit"]'))
+    await warteAufRendern()
+
+    expect(stand.ereignisse.find(ereignis => ereignis.art === 'abstich')?.zeit).toBe(new Date('2026-09-26T08:00').toISOString())
+    expect(stand.ereignisse.find(ereignis => ereignis.art === 'schwefeln')?.zeit).toBe(new Date('2026-10-04T10:15').toISOString())
   })
 })
